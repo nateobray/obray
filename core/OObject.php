@@ -33,15 +33,14 @@
 	
 	Class OObject {
 	
-		public $object = '';
-		public $status_code = '200';
-		private $delegate = FALSE;
-		private $starttime;
-		public $content_type = 'application/json';
-		private $stack = array();
+		public $object = '';                                                                        // stores the name of the class
+		public $status_code = '200';                                                                // stores the status code of this object 
+		private $delegate = FALSE;                                                                  // does this object have a delegate
+		private $starttime;                                                                         // records the start time (time the object was created).  Cane be used for performance tuning
+		public $content_type = 'application/json';                                                  // stores the content type of this class or how it should be represented externally
 		
-		public function __construct(){
-			$this->starttime = microtime(TRUE);
+		public function __construct(){                                                              // object constructor
+			$this->starttime = microtime(TRUE);                                                     // start the timer
 		}
 		
 		public function route( $path , $params = array() ) {
@@ -78,7 +77,7 @@
 					if (file_exists( $obj_path . $obj . '/' . $obj . '.php' ) ) {                   // test if object exists (object must be in folder and php file bearing its name
 						require_once $obj_path . $obj . '/' . $obj . '.php';                        // if found require_once the file
 						if (!class_exists( $obj )) {                                                // see if we can find the object class in the file
-							$this->throwError(500,"Could not find object: $obj");                   // if we can't find the object class throw an error
+							$this->throwError(404,"Could not find object: $obj");                   // if we can't find the object class throw an error
 							return $obj;                                                            // return object
 						} else {                                                                    // if we can find the object start the factory
 							try{                                                                    // handle errors and return if necessary
@@ -99,20 +98,20 @@
 				/***********************************************
     				ASSEMBLY LINE: Attempt to call a function
     				               of an object created in the
-    				               factory.
+    				               FACTORY.
     			***********************************************/
 				
-				if(count($path_array) == 0){
-					$path = str_replace('/','',$path);
-					if( method_exists($this,$path) ){
-					   try{
-						$this->$path($params);
-						} catch (Exception $e){
-    					    $this->throwError(500,$e->getMessage());
+				if(count($path_array) == 0){                                                        // If no objects were found from the path attempt to run it as a function of the current object
+					$path = str_replace('/','',$path);                                              // remove the "/"s from the path
+					if( method_exists($this,$path) ){                                               // test if method exists in this object and if so attempt to call it
+					   try{                                                                         
+						$this->$path($params);                                                      // call method in $this
+						} catch (Exception $e){                                                     // handle resulting errors
+    					    $this->throwError(500,$e->getMessage());                                // throw 500 error if an error occurs and apply the message to this object
 					    } 
-						return $this;
+						return $this;                                                               // return this which will allow chaining
 					} else {
-						$this->throwError(404,"Not Found");
+						$this->throwError(404,"Not Found");                                         // if method not found send 404 error
 					}
 				}
 			
@@ -125,24 +124,22 @@
 			***********************************************/
 				
 			} else {
-				
+				// This is where we want to handle http calls to and external OObject or other web service
 			}
 			
 			return $this;
 			
 		}
 		
-		public function setObject($obj){
-			$this->object = get_class($obj);
+		public function setObject($obj){ $this->object = get_class($obj);}                           // set the object type of this class
+		
+		public function throwError($status_code,$message){                                           // used for error handling to set the proper error parameters
+    		$this->status_code = $status_code;                                                       // set the status code parameter
+    		$this->error_message = $message;                                                         // set the error message parameter
 		}
 		
-		public function throwError($status_code,$message){
-    		$this->status_code = $status_code;
-    		$this->error_message = $message;
-		}
-		
-		public function getStatusCode(){ return $this->status_code; }
-		public function getContentType(){ return $this->content_type; }
+		public function getStatusCode(){ return $this->status_code; }                                // gets the internal status code
+		public function getContentType(){ return $this->content_type; }                              // gets the internal content type
 		
 		
 		
