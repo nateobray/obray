@@ -22,40 +22,47 @@
 	
 	if (!class_exists( 'OObject' )) { die(); }
 	
-	/**
-	 
-	 */
+	/********************************************************************************************************************
+		
+		ORouter:	ORouter is an OObject class that adds additional response handling.  Router is primarily responsible
+		            for handling incoming HTTP requests from the server and handing back appropriate responses from
+		            OOjbects.
+		
+	********************************************************************************************************************/
+	
 	Class ORouter extends OObject{
 		
 		public function route($path,$params=array()){
 			
-			$obj = parent::route($path,$params);
+			$obj = parent::route($path,$params);                                                     // Call the parent class default route function
 			
-			$status_codes = array(
-			 500 => "Internal Server Error",
-			 404 => "Not Found",
-			 200 => "OK"
+			$status_codes = array(                                                                   // available status codes that the application can return to the browser
+			 500 => "Internal Server Error",                                                         // 500 - Internal Server Error
+			 404 => "Not Found",                                                                     // 404 - Not Found
+			 200 => "OK"                                                                             // 200 - OK (default)
 			);
 			
-			header("HTTP/1.0 ".$obj->getStatusCode()." " . $status_codes[$obj->getStatusCode()] );
-			header("Content-Type: " . $obj->getContentType() );
+			header("HTTP/1.0 ".$obj->getStatusCode()." " . $status_codes[$obj->getStatusCode()] );   // set HTTP Header
+			header("Content-Type: " . $obj->getContentType() );                                      // set Content-Type
 			
-			switch($obj->getContentType()){
+			switch($obj->getContentType()){                                                          // handle OObject content types
     			
-    			 case 'application/json':
+    			 case 'application/json':                                                            // Handle JSON (default)
     			 
     			     echo json_encode($obj,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK);
     			     break;
     			 
-    			 case 'text/html':
+    			 case 'text/html':                                                                   // Handle HTML
     			 
     			     break;
     			     
-    			 case 'application/xml':
+    			 case 'application/xml':                                                             // Handle XML
     			 
     			     break;
     			
 			}
+			
+			return $obj;
 			
 			
 			

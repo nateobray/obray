@@ -27,7 +27,8 @@
 		OOBJECT:	Object provides the basic routing functionality of an Obray application.  Every object that would
 					like to have this capability should extend this object.
 					
-					Router is a way of instantiating objects and calling public function with an object based on
+					OObject is a way of instantiating objects and calling public function with an object based on
+					a simple URI.
 		
 	********************************************************************************************************************/
 	
@@ -149,11 +150,6 @@
 		public function getStatusCode(){ return $this->status_code; }                                // gets the internal status code
 		public function getContentType(){ return $this->content_type; }                              // gets the internal content type
 		public function setCustomRouter($router){ $this->custom_router = $router; }
-		
-		
-		
-		
-		
 		
 		
 	}
