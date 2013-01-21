@@ -33,8 +33,12 @@
 	
 	Class OObject {
 	
-		public $delegate = FALSE;
-		public $class = '';
+		public $object = '';
+		public $status_code = '200';
+		private $delegate = FALSE;
+		private $starttime;
+		public $content_type = 'application/json';
+		private $stack = array();
 		
 		public function __construct(){
 			$this->starttime = microtime(TRUE);
@@ -42,71 +46,106 @@
 		
 		public function route( $path , $params = array() ) {
 			
-			$cmd = $path;												// store the original path
+			$cmd = $path;                                                                           // store the original path
 			
 			/***********************************************
+				
 				Handle Internal Routes
+				
+				    e.g. $new_obj = $obj->route('/cmd/widgets/WClass/myFunction/?myQueryString');   // call function in new object (NOTE: does not modify existing object but will create a new one, also $obj may be $this)
+				    e.g. $obj->route('myFunction');                                                 // call function from existing object (NOTE: modifies object potentially)
+				
 			***********************************************/
-			
 			
 			if( !preg_match('(http[s]?://)',$path) ){
 			
-				$path = preg_replace('(/obray/|/cmd/)','',$path);		// remove the cmd or obray
-				$path = preg_split('([\][?])',$path);
-				if(count($path) > 1){ parse_str($path[1],$params); }
-				$path = $path[0];
+				$path = preg_replace('(/obray/|/cmd/)','',$path);                                   // remove the cmd or obray from path
+				$path = preg_split('([\][?])',$path);                                               // split path from query string
+				if(count($path) > 1){ parse_str($path[1],$params); }                                // parse query string into $params array
+				$path = $path[0];                                                                   // reset path to a clean path string
 				
+				$path_array = preg_split('[/]',$path,NULL,PREG_SPLIT_NO_EMPTY);                     // split path into an array of paths
+				$path = "/";                                                                        // reset path to store only $used path_array elements
 				
-				$path_array = preg_split('[/]',$path,NULL,PREG_SPLIT_NO_EMPTY);
-				$path = "/";
-				while(count($path_array)>0){
-					$obj = array_pop($path_array);
-					$obj_path = _SELF_ . implode('/',$path_array) . '/';
-					if (file_exists( $obj_path . $obj . '/' . $obj . '.php' ) ) { 
-						require_once $obj_path . $obj . '/' . $obj . '.php';
-						
-						if (!class_exists( $obj )) {
-							echo "Could not find object: " .$obj;
-						} else {
-							/*** Factory ***/ 
-				    		$obj = new $obj;								// dynamically create the specified obj
-				    		$obj->setClass($obj);
-					        $obj->route($path,$params);						// call the objects route function to call the specified function
-					        return $obj;									// return the object (this allows chaining)
+				/***********************************************
+    				FACTORY:  Attempt to create an object from
+    				          a path.
+    			***********************************************/
+				
+				while(count($path_array)>0){                                                        // loop through path until we find an valid object
+					$obj = array_pop($path_array);                                                  // set object we are going to attempt to find
+					$obj_path = _SELF_ . implode('/',$path_array) . '/';                            // setup path to the object we want to find
+					if (file_exists( $obj_path . $obj . '/' . $obj . '.php' ) ) {                   // test if object exists (object must be in folder and php file bearing its name
+						require_once $obj_path . $obj . '/' . $obj . '.php';                        // if found require_once the file
+						if (!class_exists( $obj )) {                                                // see if we can find the object class in the file
+							$this->throwError(500,"Could not find object: $obj");                   // if we can't find the object class throw an error
+							return $obj;                                                            // return object
+						} else {                                                                    // if we can find the object start the factory
+							try{                                                                    // handle errors and return if necessary
+    				    		$obj = new $obj;								                    // dynamically create the specified obj
+    				    		$obj->setObject($obj);                                              // set the object name
+    					        $obj->route($path,$params);						                    // call the objects route function to call the specified function
+					        } catch (Exception $e){                                                 // catch to handle exception
+    					        $this->throwError(500,$e->getMessage());                            // set and return error message and status
+					        } 
+					        return $obj;									                        // return the object (this allows chaining)
 						}
-						
-						break; 
+						break;                                                                      // if we find an object then we are done with this loop as we only want to find one per path
 					} else {
-						$path .= $obj . '/';
+						$path .= $obj . '/';                                                        // set unused $obj from the $path_array to the $path to later be used to call a function in an object
 					}
-					
 				}
 				
-				// call function
+				/***********************************************
+    				ASSEMBLY LINE: Attempt to call a function
+    				               of an object created in the
+    				               factory.
+    			***********************************************/
+				
 				if(count($path_array) == 0){
 					$path = str_replace('/','',$path);
 					if( method_exists($this,$path) ){
+					   try{
 						$this->$path($params);
+						} catch (Exception $e){
+    					    $this->throwError(500,$e->getMessage());
+					    } 
 						return $this;
 					} else {
-						// This is where you can put in a hook for a CMS to parse the path of a page
-						echo "The method or object you attempted does not exist.  You tried to call: ".$cmd;
+						$this->throwError(404,"Not Found");
 					}
 				}
 			
 			/***********************************************
-				Handle External Routes (REST)
+				
+				Handle External Routes (HTTP(S))
+				
+				    e.g. $obj->route('http://www.myhost.com/cmd/widgets/WWidget/WWidget/myFunction/?myQueryString');
+				
 			***********************************************/
 				
 			} else {
 				
 			}
 			
+			return $this;
+			
 		}
 		
-		public function setClass($obj){
-			$this->class = get_class($obj);
+		public function setObject($obj){
+			$this->object = get_class($obj);
 		}
+		
+		public function throwError($status_code,$message){
+    		$this->status_code = $status_code;
+    		$this->error_message = $message;
+		}
+		
+		public function getStatusCode(){ return $this->status_code; }
+		public function getContentType(){ return $this->content_type; }
+		
+		
+		
 		
 		
 		

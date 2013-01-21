@@ -23,14 +23,40 @@
 	if (!class_exists( 'OObject' )) { die(); }
 	
 	/**
-	 * An alternative router for Obray applications, implementing the same rules as the original,
-	 * default "Route" class
+	 
 	 */
 	Class ORouter extends OObject{
 		
 		public function route($path,$params=array()){
 			
-			parent::route($path,$params);
+			$obj = parent::route($path,$params);
+			
+			$status_codes = array(
+			 500 => "Internal Server Error",
+			 404 => "Not Found",
+			 200 => "OK"
+			);
+			
+			header("HTTP/1.0 ".$obj->getStatusCode()." " . $status_codes[$obj->getStatusCode()] );
+			header("Content-Type: " . $obj->getContentType() );
+			
+			switch($obj->getContentType()){
+    			
+    			 case 'application/json':
+    			 
+    			     echo json_encode($obj,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK);
+    			     break;
+    			 
+    			 case 'text/html':
+    			 
+    			     break;
+    			     
+    			 case 'application/xml':
+    			 
+    			     break;
+    			
+			}
+			
 			
 			
 		}
