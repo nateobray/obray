@@ -2,7 +2,7 @@
 
 	/***********************************************************************
 	
-	Obray - Super lightweight framework.  Write a little, do a lot.
+	Obray - Super lightweight framework.  Write a little, do a lot, fast.
     Copyright (C) 2013  Nathan A Obray
 
     This program is free software: you can redistribute it and/or modify
@@ -26,60 +26,86 @@
 		
 		OOBJECT:	Object provides the basic routing functionality of an Obray application.  Every object that would
 					like to have this capability should extend this object.
+					
+					Router is a way of instantiating objects and calling public function with an object based on
 		
 	********************************************************************************************************************/
 	
 	Class OObject {
 	
 		public $delegate = FALSE;
+		public $class = '';
 		
-		public function route( $path ) {
+		public function __construct(){
+			$this->starttime = microtime(TRUE);
+		}
+		
+		public function route( $path , $params = array() ) {
 			
 			$cmd = $path;												// store the original path
+			
+			/***********************************************
+				Handle Internal Routes
+			***********************************************/
+			
 			
 			if( !preg_match('(http[s]?://)',$path) ){
 			
 				$path = preg_replace('(/obray/|/cmd/)','',$path);		// remove the cmd or obray
-				 
-				//	Determine which object/function to call by parsing the path
-				$path_array = preg_split('@([/][O][A-Z][a-zA-Z0-9]*)@',$path,-1,PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
-				$class_path = _SELF_ . $path_array[0] .'/';				// determine the path to the class file
-				$obj = str_replace('/','',$path_array[1]);				// parse the object
+				$path = preg_split('([\][?])',$path);
+				if(count($path) > 1){ parse_str($path[1],$params); }
+				$path = $path[0];
 				
-				// If file doesn't exist for the specified path/object attempt to call it as a function of this object
-				if (!file_exists( $class_path . $obj . '/' . $obj . '.php' ) ) {
+				
+				$path_array = preg_split('[/]',$path,NULL,PREG_SPLIT_NO_EMPTY);
+				$path = "/";
+				while(count($path_array)>0){
+					$obj = array_pop($path_array);
+					$obj_path = _SELF_ . implode('/',$path_array) . '/';
+					if (file_exists( $obj_path . $obj . '/' . $obj . '.php' ) ) { 
+						require_once $obj_path . $obj . '/' . $obj . '.php';
 						
-						$path = split('\?',$path);
-						parse_str($path[1],$params);
-						$path = str_replace('/','',$path[0]);
-						if( method_exists($this,$path) ){
-							$this->$path($params);
-							return $this;
+						if (!class_exists( $obj )) {
+							echo "Could not find object: " .$obj;
 						} else {
-							echo "The method you attempted does not exist.  You tried to call: ".$cmd;
+							/*** Factory ***/ 
+				    		$obj = new $obj;								// dynamically create the specified obj
+				    		$obj->setClass($obj);
+					        $obj->route($path,$params);						// call the objects route function to call the specified function
+					        return $obj;									// return the object (this allows chaining)
 						}
-				
-				// If the class and file exist then generate an instance of the object and call objects route to call the function
-				} else {
-					
-					$path = $path_array[2];
-					require_once ( $class_path . $obj . '/' . $obj . '.php' );
-					if (!class_exists( $obj )) {
-						die();
+						
+						break; 
 					} else {
-						
-						/*** Factory ***/ 
-			    		$obj = new $obj;								// dynamically create the specified obj
-				        $obj = $obj->route($path);						// call the objects route function to call the specified function
-				        return $obj;									// return the object (this allows chaining)
-						
+						$path .= $obj . '/';
+					}
+					
+				}
+				
+				// call function
+				if(count($path_array) == 0){
+					$path = str_replace('/','',$path);
+					if( method_exists($this,$path) ){
+						$this->$path($params);
+						return $this;
+					} else {
+						// This is where you can put in a hook for a CMS to parse the path of a page
+						echo "The method or object you attempted does not exist.  You tried to call: ".$cmd;
 					}
 				}
 			
-			} else  {
-				echo "hello";
+			/***********************************************
+				Handle External Routes (REST)
+			***********************************************/
+				
+			} else {
+				
 			}
 			
+		}
+		
+		public function setClass($obj){
+			$this->class = get_class($obj);
 		}
 		
 		
