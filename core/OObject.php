@@ -111,7 +111,15 @@
 					    } 
 						return $this;                                                               // return this which will allow chaining
 					} else {
-						$this->throwError(404,"Not Found");                                         // if method not found send 404 error
+						
+						// This is where we can handle custom routes.  A good exampel would 
+						// be handling a route to a page in a CMS rather than to a specific 
+						// object
+						if( isSet($this->custom_router) ){                                          // see if a custom router is defined
+						  $this->custom_router->route($cmd,$params);                                // call the custom router
+						} else {
+    						$this->throwError(404,"Route not found: $cmd.");                        // if method not found send 404 error  						
+						}                                     
 					}
 				}
 			
@@ -140,6 +148,7 @@
 		
 		public function getStatusCode(){ return $this->status_code; }                                // gets the internal status code
 		public function getContentType(){ return $this->content_type; }                              // gets the internal content type
+		public function setCustomRouter($router){ $this->custom_router = $router; }
 		
 		
 		
