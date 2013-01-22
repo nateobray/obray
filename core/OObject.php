@@ -75,15 +75,18 @@
 				while(count($path_array)>0){                                                        // loop through path until we find an valid object
 					$obj = array_pop($path_array);                                                  // set object we are going to attempt to find
 					$obj_path = _SELF_ . implode('/',$path_array) . '/';                            // setup path to the object we want to find
+					
 					if (file_exists( $obj_path . $obj . '/' . $obj . '.php' ) ) {                   // test if object exists (object must be in folder and php file bearing its name
 						require_once $obj_path . $obj . '/' . $obj . '.php';                        // if found require_once the file
 						if (!class_exists( $obj )) {                                                // see if we can find the object class in the file
 							$this->throwError(404,"Could not find object: $obj");                   // if we can't find the object class throw an error
 							return $obj;                                                            // return object
 						} else {                                                                    // if we can find the object start the factory
+						      
 							try{                                                                    // handle errors and return if necessary
     				    		$obj = new $obj;								                    // dynamically create the specified obj
     				    		$obj->setObject($obj);                                              // set the object name
+    				    		$this->setContentType($obj->content_type);                          // this allows an object to pick up on another objects content type.  This way your objects JSON won't pring in OView
     					        $obj->route($path,$params);						                    // call the objects route function to call the specified function
 					        } catch (Exception $e){                                                 // catch to handle exception
     					        $this->throwError(500,$e->getMessage());                            // set and return error message and status
@@ -149,6 +152,7 @@
 		
 		public function getStatusCode(){ return $this->status_code; }                                // gets the internal status code
 		public function getContentType(){ return $this->content_type; }                              // gets the internal content type
+		public function setCOntentType($type){ if($this->content_type != 'text/html'){ $this->content_type = $type; } }
 		public function setCustomRouter($router){ $this->custom_router = $router; }
 		
 		
