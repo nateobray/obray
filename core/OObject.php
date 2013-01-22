@@ -42,6 +42,7 @@
 		
 		public function __construct(){                                                              // object constructor
 			$this->starttime = microtime(TRUE);                                                     // start the timer
+			 
 		}
 		
 		public function route( $path , $params = array() ) {
