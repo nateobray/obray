@@ -45,24 +45,24 @@
 	Class ORC extends OView{
 		
        public function concatenate($params){
-    		if( isSet($_REQUEST["refresh"]) ){ 
-    		  unset($_REQUEST["refresh"]);
-        		$resource = '';	
-        		$extension = $params["extension"];
-            	$d = $this->sdir(_SELF_.'widgets/');
+           if( isSet($_REQUEST["refresh"]) ){ 
+               unset($_REQUEST["refresh"]);
+               $resource = '';	
+               $extension = $params["extension"];
+               $d = $this->sdir(_SELF_.'widgets/');
             	
-            	$del = $this->sdir('assets/'.$extension.'/','[!.]*.'.$extension);
-    			forEach($del as $file){	unlink('./assets/'.$extension.'/'.$file);	}
+               $del = $this->sdir('assets/'.$extension.'/','[!.]*.'.$extension);
+               forEach($del as $file){	unlink('./assets/'.$extension.'/'.$file);	}
             	
-            	forEach($d as $dir){
-                	$v = $this->sdir(_SELF_.'widgets/'.$dir.'/views/');
-                	forEach($v as $sub_dir){
-                    	$r = $this->sdir(_SELF_.'widgets/'.$dir.'/views/'.$sub_dir.'/'.$extension.'/','[!.~]*.'.$extension);
-                    	forEach($r as $file){ 
-                    	   $resource .= $this->get_include_contents(_SELF_.'widgets/'.$dir.'/views/'.$sub_dir.'/'.$extension.'/'.$file); 
-                        }   
-                	}
-            	}
+               forEach($d as $dir){
+                   $v = $this->sdir(_SELF_.'widgets/'.$dir.'/views/');
+                   forEach($v as $sub_dir){
+                       $r = $this->sdir(_SELF_.'widgets/'.$dir.'/views/'.$sub_dir.'/'.$extension.'/','[!.~]*.'.$extension);
+                       forEach($r as $file){ 
+                           $resource .= $this->get_include_contents(_SELF_.'widgets/'.$dir.'/views/'.$sub_dir.'/'.$extension.'/'.$file); 
+                       }   
+                    }
+                }
             	$new_file = 'assets/'.$extension.'/resources-'.time().'.'.$extension;
             	file_put_contents($new_file,$resource);
             	
