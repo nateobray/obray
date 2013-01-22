@@ -45,10 +45,13 @@
 	Class ORC extends OView{
 		
        public function concatenate($params){
+           
+           $extension = $params["extension"];
            if( isSet($_REQUEST["refresh"]) ){ 
+                
                unset($_REQUEST["refresh"]);
                $resource = '';	
-               $extension = $params["extension"];
+               
                $d = $this->sdir(_SELF_.'widgets/');
             	
                $del = $this->sdir('assets/'.$extension.'/','[!.]*.'.$extension);
@@ -66,11 +69,17 @@
             	$new_file = 'assets/'.$extension.'/resources-'.time().'.'.$extension;
             	file_put_contents($new_file,$resource);
             	
+            	
+        	}
+        	
+        	$f = $this->sdir('assets/'.$extension.'/','[!.]*.'.$extension);
+        	forEach($f as $file){
             	switch($extension){
-                	case "css": echo '<link rel="stylesheet" type="text/css" href="/'.$new_file.'"/>'; break;
-                	case "js": echo '<script src="/'.$new_file.'"></script>'; break;
+                	case "css": echo '<link rel="stylesheet" type="text/css" href="/assets/css/'.$file.'"/>'; break;
+                	case "js":  echo '<script src="/assets/js/'.$file.'"></script>'; break;
             	}
         	}
+        	
 		}
 		
 		private function sdir( $path='.', $mask='*', $nocache=0 ){ 
