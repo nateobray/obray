@@ -48,8 +48,7 @@
            
            $extension = $params["extension"];
            if( isSet($_REQUEST["refresh"]) ){ 
-                
-               unset($_REQUEST["refresh"]);
+               
                $resource = '';	
                
                $d = $this->sdir(_SELF_.'widgets/');
@@ -69,10 +68,10 @@
             	$new_file = 'assets/'.$extension.'/resources-'.time().'.'.$extension;
             	file_put_contents($new_file,$resource);
             	
-            	
         	}
         	
         	$f = $this->sdir('assets/'.$extension.'/','[!.]*.'.$extension);
+        	
         	forEach($f as $file){
             	switch($extension){
                 	case "css": echo '<link rel="stylesheet" type="text/css" href="/assets/css/'.$file.'"/>'; break;
@@ -83,7 +82,7 @@
 		}
 		
 		private function sdir( $path='.', $mask='*', $nocache=0 ){ 
-    		$sdir = array(); static $dir = array(); // cache result in memory 
+    		$sdir = array(); //static $dir = array(); // cache result in memory 
 		    if ( !isset($dir[$path]) || $nocache) { 
 		        $dir[$path] = scandir($path); 
 		    } 

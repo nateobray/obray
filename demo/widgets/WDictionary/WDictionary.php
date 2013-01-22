@@ -30,11 +30,24 @@
 	
 	Class WDictionary extends OObject{
 	   
-	   
 	   public function output(){
+	   
+	       $this->dictionary = $this->route('/cmd/widgets/WDictionary/models/MDictionary/get/');
+    	   $this->view = $this->route('/cmd/widgets/WDictionary/views/VDictionary/',$this->dictionary->data);
+    	   $this->view->route('/setDelegate/?delegate='.urlencode('/cmd/widgets/WDictionary/'));
+    	   $this->view->route('/output/',$this->dictionary->data);
     	   
+	   }
+	   
+	   public function add($params){
+	   
+    	   $this->dictionary = $this->route('/cmd/widgets/WDictionary/models/MDictionary/add/?word=test&definition=test');
     	   
-    	   $this->view = $this->route('/cmd/widgets/WDictionary/views/VDictionary/output/');
+	   }
+	   
+	   public function delete($params){
+	   
+    	   $this->dictionary = $this->route('/cmd/widgets/WDictionary/models/MDictionary/delete/?word='.$params["word"]);
     	   
 	   }
 	    

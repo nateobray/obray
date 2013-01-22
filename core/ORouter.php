@@ -47,8 +47,8 @@
 			 200 => "OK"                                                                             // 200 - OK (default)
 			);
 			
-			header("HTTP/1.0 ".$obj->getStatusCode()." " . $status_codes[$obj->getStatusCode()] );   // set HTTP Header
-			header("Content-Type: " . $obj->getContentType() );                                      // set Content-Type
+			if(!headers_sent()){ header("HTTP/1.0 ".$obj->getStatusCode()." " . $status_codes[$obj->getStatusCode()] );}    // set HTTP Header
+			if(!headers_sent()){ header("Content-Type: " . $obj->getContentType() ); }                                      // set Content-Type
 			
 			switch($obj->getContentType()){                                                          // handle OObject content types
     			

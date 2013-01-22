@@ -24,24 +24,37 @@
 	
 	/********************************************************************************************************************
 		
-		OView:	The purpose of OView is to set the content type to text/html and prepare for delivery.  Objects
-		        that inherit form here when called with expect to output HTML content.
+		WDictionary:	This is our controller object for our Dictionary application.
 		
 	********************************************************************************************************************/
 	
-	Class VDictionary extends OView{
+	Class MDictionary extends OObject{
 	   
-	   public function output($params){
+	   
+	   public function __construct(){
     	   
-    	   include "includes/inc_vdictionary.php";
+    	   if(!isSet($_SESSION["wdictionary"])){ $_SESSION["wdictionary"] = array(); }
+    	   $this->data = &$_SESSION["wdictionary"];
+	   }
+	   
+	   public function get($params){
+    	   
+    	   
     	   
 	   }
 	   
-	   public function add(){
-    	   $this->content_type = "application/json";
+	   public function add($params){
+    	   
+    	   $this->data[$params["word"].(count($this->data))] = $params["definition"];
+    	   
 	   }
 	   
-	   
+	   public function delete($params){
+    	   unset($this->data[$params["word"]]);
+	   }
+	    
+		
+		
 	}
 	
 	

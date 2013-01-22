@@ -14,7 +14,7 @@
         <div class="container">
             <h2>Dictionary</h2>
             <div class="row">
-                <div class="span2 offset10"><a class="btn btn-block"> <i class="icon-plus"></i> Definition</a></div>
+                <div class="span2 offset10"><a id="add-btn" class="btn btn-block"> <i class="icon-plus"></i> Definition</a></div>
             </div>
             <table class="table table-striped table-hover table-bordered">
                 <colgroup>
@@ -30,25 +30,24 @@
                     </tr>
                 </thead>
                 <tbody>
+                    <?php $i = 0; ?>
+                    <?php forEach($params as $word => $def){ ?>
                     <tr>
-                        <td class="span2">New Word</td>
-                        <td class="span9">Indicates a successful or positive action. Indicates a successful or positive action. Indicates a successful or positive action.</td>
-                        <td class="span1" style="text-align:center"><a class="btn btn-danger"><i class="icon-trash"></i></a></td>
+                        <td class="span2"><?php echo $word; ?></td>
+                        <td class="span9"><?php echo $def; ?></td>
+                        <td class="span1" style="text-align:center"><a id="btn-trash-<?php echo ++$i;?>" class="btn btn-danger"><i class="icon-trash"></i></a></td>
                     </tr>
-                    <tr>
-                        <td>Word</td>
-                        <td>Definition....</td>
-                        <td class="span1" style="text-align:center"><a class="btn btn-danger"><i class="icon-trash"></i></a></td>
-                    </tr>
-                    <tr>
-                        <td>Word</td>
-                        <td>Definition....</td>
-                        <td class="span1" style="text-align:center"><a class="btn btn-danger"><i class="icon-trash"></i></a></td>
-                    </tr>
+                    <script>$('#btn-trash-<?php echo $i;?>').bind('click',function(){ $.ajax({'url':'<?php echo $this->delegate; ?>delete/?word=<?php echo urlencode($word)?>','complete':function(){ window.location.reload(true); }}) })</script>
+                    <?php } ?>
                 </tbody>
             </table>
                         
             
         </div>
+        <script>
+            $('#add-btn').bind('click',function(){
+                $.ajax({'url':'<?php echo $this->delegate; ?>add/','complete':function(){ window.location.reload(true); }})
+            });
+        </script>
     </body>
 </html>

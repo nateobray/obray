@@ -32,10 +32,15 @@
 	Class OView extends OObject{
 	   
 	    public $content_type = 'text/html';
+	    public $delegate = '';
 	    
 	    public function __construct(){
     	    parent::__construct();
     	    header('Content-Type: text/html');
+	    }
+	    
+	    public function setDelegate($params){
+    	    $this->delegate = $params["delegate"];
 	    }
 		
 		
