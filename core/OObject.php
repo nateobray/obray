@@ -34,15 +34,19 @@
 	
 	Class OObject {
 	
-		public $object = '';                                                                        // stores the name of the class
-		public $status_code = '200';                                                                // stores the status code of this object 
+		// private data members
 		private $delegate = FALSE;                                                                  // does this object have a delegate
 		private $starttime;                                                                         // records the start time (time the object was created).  Cane be used for performance tuning
+		
+		// public data members
+		public $object = '';                                                                        // stores the name of the class
+		public $status_code = '200';                                                                // stores the status code of this object 
+		public $error_message = '';
 		public $content_type = 'application/json';                                                  // stores the content type of this class or how it should be represented externally
+		public $error_message_array = array();
 		
 		public function __construct(){                                                              // object constructor
 			$this->starttime = microtime(TRUE);                                                     // start the timer
-			 
 		}
 		
 		public function route( $path , $params = array() ) {
@@ -53,13 +57,14 @@
 				
 				Handle Internal Routes
 				
-				    e.g. $new_obj = $obj->route('/cmd/widgets/WClass/myFunction/?myQueryString');   // call function in new object (NOTE: does not modify existing object but will create a new one, also $obj may be $this)
-				    e.g. $obj->route('myFunction');                                                 // call function from existing object (NOTE: modifies object potentially)
+				    e.g. $new_obj = $obj->route('/cmd/widgets/WClass/myFunction/?myQueryString',$params);   // call function in new object (NOTE: does not modify existing object but will create a new one, also $obj may be $this)
+				    e.g. $new_obj->route('myFunction?myQueryString',$params);                               // call function from existing object (NOTE: modifies object potentially)
+				    e.g. $new_obj->myFunction($params);                                                     // So, this doesn't use router, but wanted to show all the available conventions
 				
 			***********************************************/
 			
 			if( !preg_match('(http[s]?://)',$path) ){
-			
+			    
 				$path = preg_replace('(/obray/|/cmd/)','',$path);                                   // remove the cmd or obray from path
 				$path = preg_split('([\][?])',$path);                                               // split path from query string
 				if(count($path) > 1){ parse_str($path[1],$params); }                                // parse query string into $params array
@@ -86,6 +91,9 @@
     				    		$obj = new $obj;								                    // dynamically create the specified obj
     				    		$obj->setObject($obj);                                              // set the object name
     				    		$this->setContentType($obj->content_type);                          // this allows an object to pick up on another objects content type.  This way your objects JSON won't pring in OView
+    				    		if( method_exists($obj,'setDatabaseConnection') ){
+    				    		  $obj->setDatabaseConnection(getDatabaseConnection());
+    				    		}
     					        $obj->route($path,$params);						                    // call the objects route function to call the specified function
 					        } catch (Exception $e){                                                 // catch to handle exception
     					        $this->throwError(500,$e->getMessage());                            // set and return error message and status
@@ -107,14 +115,15 @@
 				if(count($path_array) == 0){                                                        // If no objects were found from the path attempt to run it as a function of the current object
 					$path = str_replace('/','',$path);                                              // remove the "/"s from the path
 					if( method_exists($this,$path) ){                                               // test if method exists in this object and if so attempt to call it
-					   try{                                                                         
+					   try{
 						$this->$path($params);                                                      // call method in $this
 						} catch (Exception $e){                                                     // handle resulting errors
     					    $this->throwError(500,$e->getMessage());                                // throw 500 error if an error occurs and apply the message to this object
-					    } 
+					    }
 						return $this;                                                               // return this which will allow chaining
+				    } else if( $path == "" ) {
+				        return $this;
 					} else {
-						
 						// This is where we can handle custom routes.  A good exampel would 
 						// be handling a route to a page in a CMS rather than to a specific 
 						// object
@@ -135,7 +144,7 @@
 			***********************************************/
 				
 			} else {
-				// This is where we want to handle http calls to and external OObject or other web service
+				// This is where we want to handle http calls to an external OObject or other web service
 			}
 			
 			return $this;
@@ -144,9 +153,19 @@
 		
 		public function setObject($obj){ $this->object = get_class($obj);}                           // set the object type of this class
 		
-		public function throwError($status_code,$message){                                           // used for error handling to set the proper error parameters
+		public function throwError($status_code,$message,$element=''){                               // used for error handling to set the proper error parameters
     		$this->status_code = $status_code;                                                       // set the status code parameter
-    		$this->error_message = $message;                                                         // set the error message parameter
+    		
+    		
+    		$this->error_message_array[] = new stdClass();
+    		$this->error_message_array[count($this->error_message_array)-1]->status_code = $status_code;
+    		$this->error_message_array[count($this->error_message_array)-1]->error_message = $message;
+    		$this->error_message_array[count($this->error_message_array)-1]->field = $element;
+    		
+		}
+		
+		public function isError(){
+    		if($this->status_code == 200){ return FALSE; } else { return TRUE; }
 		}
 		
 		public function getStatusCode(){ return $this->status_code; }                                // gets the internal status code

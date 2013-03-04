@@ -20,10 +20,14 @@
     
     ***********************************************************************/
 	
-	require_once 'dbug.php';
-	require_once 'OObject.php';
-	require_once 'ORouter.php';
-	require_once 'OView.php';
+	
+	if( is_file(_SELF_.'settings.php') ){ require_once _SELF_.'settings.php'; }                  // see if a setting file exists for a given application (looks at the base path where your obray.php file exists)
+	
+	require_once 'dbug.php';                                                                        // easy readout function (i.e. new dBug($yourvariable);
+	require_once 'functions.php';
+	require_once 'OObject.php';                                                                     // the base object for all obray objects (basically everything will extend this or a class that has already extended it)
+	require_once 'OView.php';                                                                       // object that extends OObject but is specifically for an HTML view
+	require_once 'ODBO.php';                                                                        // object that extends OObject but includes database functionality and table definition support
 	
 	if (!class_exists( 'OObject' )) { die(); }
 	
@@ -40,6 +44,7 @@
 		public function route($path,$params=array()){
 			
 			$obj = parent::route($path,$params);                                                     // Call the parent class default route function
+			$obj->cleanUp();
 			
 			$status_codes = array(                                                                   // available status codes that the application can return to the browser
 			 500 => "Internal Server Error",                                                         // 500 - Internal Server Error
