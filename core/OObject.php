@@ -30,6 +30,12 @@
 					OObject is a way of instantiating objects and calling public function with an object based on
 					a simple URI.
 		
+		
+		Things to do: 
+			
+			1)	Add Permissions for calls from ORouter
+			2)	
+		
 	********************************************************************************************************************/
 	
 	Class OObject {
@@ -37,13 +43,15 @@
 		// private data members
 		private $delegate = FALSE;                                                                  // does this object have a delegate
 		private $starttime;                                                                         // records the start time (time the object was created).  Cane be used for performance tuning
+		private $custom_paths = array();															// custom paths 
+		private $error_type = 'none';
+		private $is_error = FALSE;
+		private $status_code = 200;
+		private $content_type = 'application/json';                                                  // stores the content type of this class or how it should be represented externally
+		private $path = '';
 		
 		// public data members
 		public $object = '';                                                                        // stores the name of the class
-		public $status_code = '200';                                                                // stores the status code of this object 
-		public $error_message = '';
-		public $content_type = 'application/json';                                                  // stores the content type of this class or how it should be represented externally
-		public $error_message_array = array();
 		
 		public function __construct(){                                                              // object constructor
 			$this->starttime = microtime(TRUE);                                                     // start the timer
@@ -65,13 +73,11 @@
 			
 			if( !preg_match('(http[s]?://)',$path) ){
 			    
-				$path = preg_replace('(/obray/|/cmd/)','',$path);                                   // remove the cmd or obray from path
-				$path = preg_split('([\][?])',$path);                                               // split path from query string
-				if(count($path) > 1){ parse_str($path[1],$params); }                                // parse query string into $params array
-				$path = $path[0];                                                                   // reset path to a clean path string
+				$parsed = $this->parsePath($path);
+				$path_array = $parsed["path_array"];
+				$path = $parsed["path"];
 				
-				$path_array = preg_split('[/]',$path,NULL,PREG_SPLIT_NO_EMPTY);                     // split path into an array of paths
-				$path = "/";                                                                        // reset path to store only $used path_array elements
+				if( count($path_array) > 0 && isSet($this->custom_paths[$path_array[0]]) ){ $working_dir = $this->custom_paths[$path_array[0]]->path; array_shift($path_array); } else { $working_dir = _SELF_; }
 				
 				/***********************************************
     				FACTORY:  Attempt to create an object from
@@ -80,11 +86,12 @@
 				
 				while(count($path_array)>0){                                                        // loop through path until we find an valid object
 					$obj = array_pop($path_array);                                                  // set object we are going to attempt to find
-					$obj_path = _SELF_ . implode('/',$path_array) . '/';                            // setup path to the object we want to find
+					$obj_path = $working_dir . implode('/',$path_array) . '/';                      // setup path to the object we want to find
+					$this->path = $obj_path . $obj . '/' . $obj . '.php';
 					if (file_exists( $obj_path . $obj . '/' . $obj . '.php' ) ) {                   // test if object exists (object must be in folder and php file bearing its name
 						require_once $obj_path . $obj . '/' . $obj . '.php';                        // if found require_once the file
 						if (!class_exists( $obj )) {                                                // see if we can find the object class in the file
-							$this->throwError(404,"Could not find object: $obj");                   // if we can't find the object class throw an error
+							$this->throwError("Could not find object: $obj",404,"notfound");        // if we can't find the object class throw an error
 							return $obj;                                                            // return object
 						} else {                                                                    // if we can find the object start the factory
 							try{                                                                    // handle errors and return if necessary
@@ -96,7 +103,7 @@
     				    		}
     					        $obj->route($path,$params);						                    // call the objects route function to call the specified function
 					        } catch (Exception $e){                                                 // catch to handle exception
-    					        $this->throwError(500,$e->getMessage());                            // set and return error message and status
+    					        $this->throwError($e->getMessage());				                // set and return error message and status
 					        } 
 					        return $obj;									                        // return the object (this allows chaining)
 						}
@@ -118,19 +125,22 @@
 					   try{
 						$this->$path($params);                                                      // call method in $this
 						} catch (Exception $e){                                                     // handle resulting errors
-    					    $this->throwError(500,$e->getMessage());                                // throw 500 error if an error occurs and apply the message to this object
+    					    $this->throwError($e->getMessage());                      				// throw 500 error if an error occurs and apply the message to this object
 					    }
 						return $this;                                                               // return this which will allow chaining
 				    } else if( $path == "" ) {
 				        return $this;
 					} else {
+					
 						// This is where we can handle custom routes.  A good exampel would 
 						// be handling a route to a page in a CMS rather than to a specific 
 						// object
-						if( isSet($this->custom_router) ){                                          // see if a custom router is defined
-						  $this->custom_router->route($cmd,$params);                                // call the custom router
+						
+						if( isSet($this->custom_router) ){											// see if a custom router is defined
+							if( method_exists($this->custom_router,'setDatabaseConnection') ){ $this->custom_router->setDatabaseConnection(getDatabaseConnection()); }
+						  	return $this->custom_router->route($cmd,$params);								// call the custom router
 						} else {
-    						$this->throwError(404,"Route not found: $cmd.");                        // if method not found send 404 error  						
+    						$this->throwError("Route not found: $cmd.",404,"general");						// if method not found send 404 error  						
 						}                                     
 					}
 				}
@@ -151,28 +161,40 @@
 			
 		}
 		
-		public function setObject($obj){ $this->object = get_class($obj);}                           // set the object type of this class
-		
-		public function throwError($status_code,$message,$element=''){                               // used for error handling to set the proper error parameters
-    		$this->status_code = $status_code;                                                       // set the status code parameter
-    		
-    		
-    		$this->error_message_array[] = new stdClass();
-    		$this->error_message_array[count($this->error_message_array)-1]->status_code = $status_code;
-    		$this->error_message_array[count($this->error_message_array)-1]->error_message = $message;
-    		$this->error_message_array[count($this->error_message_array)-1]->field = $element;
-    		
+		public function parsePath($path){
+			
+			$path = preg_replace('(/obray/|/cmd/)','',$path);                                   // remove the cmd or obray from path
+			$path = preg_split('([\][?])',$path);                                               // split path from query string
+			if(count($path) > 1){ parse_str($path[1],$params); }                                // parse query string into $params array
+			$path = $path[0];                                                                   // reset path to a clean path string
+			
+			$path_array = preg_split('[/]',$path,NULL,PREG_SPLIT_NO_EMPTY);                     // split path into an array of paths
+			$path = "/";                                                                        // reset path to store only $used path_array elements
+			
+			return array("path_array"=>$path_array,"path"=>$path);
+			
 		}
 		
-		public function isError(){
-    		if($this->status_code == 200){ return FALSE; } else { return TRUE; }
+		public function addCustomPath($path,$keyword){ $this->custom_paths[$keyword] = new stdClass; $this->custom_paths[$keyword]->path = $path; }
+		
+		public function setObject($obj){ $this->object = get_class($obj);}                      // set the object type of this class
+		
+		// used for general error handling
+		
+		public function throwError($message,$status_code=500,$type='general'){
+			$this->is_error = TRUE;
+    		if( empty($this->errors) ){ $this->errors = []; }
+    		$this->errors[$type] = $message;
+    		$this->status_code = $status_code;
 		}
+		
+		public function isError(){ return $this->is_error; }
 		
 		public function getStatusCode(){ return $this->status_code; }                                // gets the internal status code
 		public function getContentType(){ return $this->content_type; }                              // gets the internal content type
 		public function setCOntentType($type){ if($this->content_type != 'text/html'){ $this->content_type = $type; } }
 		public function setCustomRouter($router){ $this->custom_router = $router; }
-		
+		public function cleanUp(){}
 		
 	}
 	

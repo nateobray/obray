@@ -172,7 +172,7 @@
             /*************************************************************************************************************
 				ASSIGN PRIMARY KEY AND DEFUALT CHARSET (utf8 for multilangual support)
 			*************************************************************************************************************/
-			
+
 			if( !empty($this->primary_key_column) ){ $sql .= ", PRIMARY KEY (" . $this->primary_key_column . ") ) ENGINE=".__DBEngine__." DEFAULT CHARSET=".__DBCharSet__."; "; }
 			
 			/*************************************************************************************************************
@@ -382,6 +382,12 @@
         	
         }
         
+        /********************************************************************
+            
+            
+            
+        ********************************************************************/
+        
         private function getDataType($def){
             if( !isSet($def["data_type"]) ){ return FALSE; }												   // make sure datatype is set
             $data_type = explode("(",$def["data_type"]);                                                       // explode datatypes that contain a size i.e. varchar(255)
@@ -391,6 +397,8 @@
         }
         
         /********************************************************************
+            
+            
             
         ********************************************************************/
         
@@ -410,6 +418,12 @@
             
         }
         
+        /********************************************************************
+            
+            
+            
+        ********************************************************************/
+        
         private function reorder($order,$order_key,$order_value){
             $params = array("order"=>$order,"order_value"=>$order_value);
             $sql = " UPDATE $this->table SET order_variable = (order_variable+1) WHERE order_variable >= :order ";
@@ -417,6 +431,12 @@
             $statement = $this->dbh->prepare($sql);
             $statement->execute($params);
         }
+        
+        /********************************************************************
+            
+            
+            
+        ********************************************************************/
         
         public function cleanUp(){
 	        
