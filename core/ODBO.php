@@ -103,6 +103,8 @@
                 )));
             
             }
+            
+            
 
 	    }
 	    
@@ -110,12 +112,21 @@
 	       
 	       $this->dbh = $dbh; 
 	       if(isSet($_REQUEST["refresh"]) && __DebugMode__){ $this->scriptTable(array()); }
+	       if( __DebugMode__ == TRUE && isSet($_REQUEST["refresh"]) ){ $this->alterTable(); }
 	       
 	    }
 	    
         /*************************************************************************************************************
             
             Script Table
+            
+            	What this does:
+            	
+            		1.  Script a table new based on the table definition ($_RQUEST["refresh"] must be set )
+            		
+            	What this doesn't do
+            	
+            		1.	Will only script datatypes set in the __DATATYPES__ constant
             
         *************************************************************************************************************/
         
@@ -188,9 +199,103 @@
             
             Alter Table
             
+            	What it does:
+            		
+            		1.	Update field data type if table is different from table definition.
+            		2.	Remove columns that don't exist in the table definition if enableDrop
+			        	is set.
+			        3.	Add fields if they don't exist in the table but do in the table definition
+            		
+            	What it does not do:
+            	
+            		1.	Will not change a column name (WARNING: if enableDrop is set it will drop the old column and 
+            			add the new	which may result in data loss)
+            		
+            	WARNING
+            	
+            		DATA LOSS IS POSSIBLE: 	Certain combinations like setting a size smaller than existing data will
+            								result in data loss.  As a result this will attempt to dump the table
+            								to _SELF_/backups/ if there are sufficient priveldeges to this path.
+            
         *************************************************************************************************************/
         
         public function alterTable(){
+        	
+        	$this->dump();
+        	
+        	$sql = "DESCRIBE $this->table;";
+        	$statement = $this->dbh->prepare($sql);
+        	$statement->execute();
+        	
+        	$statement->setFetchMode(PDO::FETCH_OBJ);
+        	$this->data = $statement->fetchAll();
+        	
+        	new dBug($this->data);
+        	
+        	$temp_def = $this->table_definition;
+        	$obray_fields = array(0=>"slug",1=>"order_variable",2=>"parent_id",3=>"OCDT",4=>"OCU",5=>"OMDT",6=>"OMU");
+        	forEach( $obray_fields as $of ){ unset($this->table_definition[$of]); }
+        	
+        	$data_types = unserialize(__DATATYPES__);
+        	
+        	forEach($this->data as $def){
+	        	if( array_search($def->Field,$obray_fields) === FALSE ){
+		        	if( isSet($this->table_definition[$def->Field]) ){
+			        	
+			        	
+			        	/*********************************************************************************
+			        		
+			        		1.	Update field data type if table is different from table definition.
+			        		
+			        	*********************************************************************************/
+			        	
+			        	if( isSet($this->table_definition[$def->Field]["data_type"]) ){
+			        		$data_type = $this->getDataType($this->table_definition[$def->Field]);
+			        		
+			        		new dBug($data_types[$data_type["data_type"]]);
+			        		if( str_replace('size',$data_type["size"],$data_types[$data_type["data_type"]]["my_sql_type"]) != $def->Type ){
+				        		$sql = "ALTER TABLE $this->table MODIFY COLUMN ".$def->Field." ".str_replace('size',$data_type["size"],$data_types[$data_type["data_type"]]["sql"]);
+				        		$statement = $this->dbh->prepare($sql);
+				        		$statement->execute();
+			        		} 
+				        	
+			        	}
+			        	
+			        	unset( $this->table_definition[$def->Field] );
+			        	
+			        	/*********************************************************************************
+			        		
+			        		2.	Remove columns that don't exist in the table definition if enableDrop
+			        			is set.
+			        		
+			        	*********************************************************************************/
+			        	
+		        	} else {
+			        	if( isSet($_REQUEST["enableDrop"]) ){ 
+    						$sql = "ALTER TABLE $this->table DROP COLUMN $def->Field";
+			        		$statement = $this->dbh->prepare($sql);
+			        		$statement->execute();
+			        	}
+		        	}
+	        	}
+        	}
+        	
+        	/*********************************************************************************
+        		
+        		3.	Add fields if they don't exist in the table but do in the table definition
+        		
+        	*********************************************************************************/
+        	
+        	forEach($this->table_definition as $key => $def){
+        		$data_type = $this->getDataType($def);
+	        	$sql = "ALTER TABLE $this->table ADD ($key ".str_replace('size',$data_type["size"],$data_types[$data_type["data_type"]]["sql"]).")";
+	        	echo $sql;
+        		$statement = $this->dbh->prepare($sql);
+        		$statement->execute();
+        	}
+        	
+        	exit();
+        	$this->table_definition = $temp_def;
         	
         }
         
@@ -380,6 +485,22 @@
         	$statement->setFetchMode(PDO::FETCH_OBJ);
         	$this->data = $statement->fetchAll();
         	
+        }
+        
+        /********************************************************************
+            
+            DUMP
+            
+            	What this does:
+            	
+            		1.	This does a mysqldump of the current table
+            
+        ********************************************************************/
+        
+        public function dump($params=array()){
+	        
+	        exec('mysqldump --user='.__DBUserName__.' --password='.__DBPassword__.' --host='.__DBHost__.' '.__DB__.' '.$this->table.' | gzip > '._SELF_.'backups/'.$this->table.'-'.time().'.sql.gz');
+	        
         }
         
         /********************************************************************
