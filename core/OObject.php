@@ -31,33 +31,44 @@
 					a simple URI.
 		
 		
-		Things to do: 
-			
-			1)	Add Permissions for calls from ORouter
-			2)	
+		
 		
 	********************************************************************************************************************/
 	
 	Class OObject {
 	
 		// private data members
-		private $delegate = FALSE;                                                                  // does this object have a delegate
-		private $starttime;                                                                         // records the start time (time the object was created).  Cane be used for performance tuning
-		private $custom_paths = array();															// custom paths 
-		private $error_type = 'none';
-		private $is_error = FALSE;
-		private $status_code = 200;
-		private $content_type = 'application/json';                                                  // stores the content type of this class or how it should be represented externally
-		private $path = '';
+		private $delegate = FALSE;																	// does this object have a delegate
+		private $starttime;																			// records the start time (time the object was created).  Cane be used for performance tuning
+		private $is_error = FALSE;																	// error bit
+		private $status_code = 200;																	// status code - used to translate to HTTP 1.1 status codes
+		private $content_type = 'application/json';													// stores the content type of this class or how it should be represented externally
+		private $path = '';																			// the path of this object
+		private $permissions = array();																// stores permissions of a particular object
 		
 		// public data members
 		public $object = '';                                                                        // stores the name of the class
 		
-		public function __construct(){                                                              // object constructor
-			$this->starttime = microtime(TRUE);                                                     // start the timer
-		}
+		/***********************************************************************
 		
-		public function route( $path , $params = array() ) {
+			OBJECT CONSTRUCTOR
+			
+				This may be overridden to add additional functionality to
+				the oobject at the time of instantiation.
+		
+		***********************************************************************/
+		
+		public function __construct(){ $this->starttime = microtime(TRUE); }
+		
+		/***********************************************************************
+		
+			ROUTE FUNCTION
+			
+				
+		
+		***********************************************************************/
+		
+		public function route( $path , $params = array(), $direct = TRUE ) {
 			
 			$cmd = $path;                                                                           // store the original path
 			
@@ -65,9 +76,9 @@
 				
 				Handle Internal Routes
 				
-				    e.g. $new_obj = $obj->route('/cmd/widgets/WClass/myFunction/?myQueryString',$params);   // call function in new object (NOTE: does not modify existing object but will create a new one, also $obj may be $this)
-				    e.g. $new_obj->route('myFunction?myQueryString',$params);                               // call function from existing object (NOTE: modifies object potentially)
-				    e.g. $new_obj->myFunction($params);                                                     // So, this doesn't use router, but wanted to show all the available conventions
+				    $new_obj = $obj->route('/cmd/widgets/WClass/myFunction/?myQueryString',$params);   // call function in new object (NOTE: does not modify existing object but will create a new one, also $obj may be $this)
+				    $new_obj->route('myFunction?myQueryString',$params);                               // call function from existing object (NOTE: modifies object potentially)
+				    $new_obj->myFunction($params);                                                     // So, this doesn't use router, but wanted to show all the available conventions
 				
 			***********************************************/
 			
@@ -76,54 +87,54 @@
 				$parsed = $this->parsePath($path);
 				$path_array = $parsed["path_array"];
 				$path = $parsed["path"];
+				$base_path = $parsed["base_path"];
+				$params = array_merge($params,$parsed["params"]);
+								
 				
-				if( count($path_array) > 0 && isSet($this->custom_paths[$path_array[0]]) ){ $working_dir = $this->custom_paths[$path_array[0]]->path; array_shift($path_array); } else { $working_dir = _SELF_; }
 				
-				/***********************************************
-    				FACTORY:  Attempt to create an object from
-    				          a path.
-    			***********************************************/
+				if( !empty($base_path) ){
 				
-				while(count($path_array)>0){                                                        // loop through path until we find an valid object
-					$obj = array_pop($path_array);                                                  // set object we are going to attempt to find
-					$obj_path = $working_dir . implode('/',$path_array) . '/';                      // setup path to the object we want to find
-					$this->path = $obj_path . $obj . '/' . $obj . '.php';
-					if (file_exists( $obj_path . $obj . '/' . $obj . '.php' ) ) {                   // test if object exists (object must be in folder and php file bearing its name
-						require_once $obj_path . $obj . '/' . $obj . '.php';                        // if found require_once the file
-						if (!class_exists( $obj )) {                                                // see if we can find the object class in the file
-							$this->throwError("Could not find object: $obj",404,"notfound");        // if we can't find the object class throw an error
-							return $obj;                                                            // return object
-						} else {                                                                    // if we can find the object start the factory
-							try{                                                                    // handle errors and return if necessary
-    				    		$obj = new $obj;								                    // dynamically create the specified obj
-    				    		$obj->setObject($obj);                                              // set the object name
-    				    		$this->setContentType($obj->content_type);                          // this allows an object to pick up on another objects content type.  This way your objects JSON won't pring in OView
-    				    		if( method_exists($obj,'setDatabaseConnection') ){
-    				    		  $obj->setDatabaseConnection(getDatabaseConnection());
-    				    		}
-    					        $obj->route($path,$params);						                    // call the objects route function to call the specified function
-					        } catch (Exception $e){                                                 // catch to handle exception
-    					        $this->throwError($e->getMessage());				                // set and return error message and status
-					        } 
-					        return $obj;									                        // return the object (this allows chaining)
+					while(count($path_array)>0){																	// loop through path until we find an valid object
+						$obj = array_pop($path_array);																// set object we are going to attempt to find
+						$obj_path = $base_path . implode('/',$path_array).'/';										// setup path to the object we want to find
+						$this->path = $obj_path . $obj . '.php';													// the path to the object
+						if (file_exists( $this->path ) ) {															// test if object exists (object must be in folder and php file bearing its name
+							require_once $this->path;																// if found require_once the file
+							if (!class_exists( $obj )) {															// see if we can find the object class in the file
+								$this->throwError("Could not find object: $obj",404,"notfound");        // if we can't find the object class throw an error
+								return $this;                                                            // return object
+							} else {                                                                    // if we can find the object start the factory
+								try{                                                                    // handle errors and return if necessary
+	    				    		$obj = new $obj();								                    // dynamically create the specified obj
+	    				    		$obj->setObject(get_class($obj));                                   // set the object name
+	    				    		$obj->setContentType($obj->content_type);                          	// this allows an object to pick up on another objects content type.  This way your objects JSON won't pring in OView
+	    				    		
+	    				    		if( !$obj->hasPermission("object") ){ $obj->throwError("You cannot access this resource.",403,"forbidden"); return $obj; }
+	    				    		
+	    				    		if( method_exists($obj,'setDatabaseConnection') ){
+	    				    		  $obj->setDatabaseConnection(getDatabaseConnection());
+	    				    		}
+	    					        $obj->route($path,$params);						                    // call the objects route function to call the specified function
+						        } catch (Exception $e){                                                 // catch to handle exception
+	    					        $this->throwError($e->getMessage());				                // set and return error message and status
+						        } 
+						        return $obj;									                        // return the object (this allows chaining)
+							}
+							break;                                                                      // if we find an object then we are done with this loop as we only want to find one per path
+						} else {
+							$path = '/'.$obj . $path;                                                   // set unused $obj from the $path_array to the $path to later be used to call a function in an object
 						}
-						break;                                                                      // if we find an object then we are done with this loop as we only want to find one per path
-					} else {
-						$path = '/'.$obj . $path;                                                   // set unused $obj from the $path_array to the $path to later be used to call a function in an object
 					}
-				}
 				
-				/***********************************************
-    				ASSEMBLY LINE: Attempt to call a function
-    				               of an object created in the
-    				               FACTORY.
-    			***********************************************/
-				
-				if(count($path_array) == 0){                                                        // If no objects were found from the path attempt to run it as a function of the current object
-					$path = str_replace('/','',$path);                                              // remove the "/"s from the path
+				} else if( count($path_array) == 1 ) {
+					
+					
+					
+					$path = $path_array[0];
 					if( method_exists($this,$path) ){                                               // test if method exists in this object and if so attempt to call it
 					   try{
-						$this->$path($params);                                                      // call method in $this
+							if( !$this->hasPermission($path) ){ $this->throwError("You cannot access this resource.",403,"forbidden"); return $this; }
+							$this->$path($params);                                                  // call method in $this
 						} catch (Exception $e){                                                     // handle resulting errors
     					    $this->throwError($e->getMessage());                      				// throw 500 error if an error occurs and apply the message to this object
 					    }
@@ -131,19 +142,13 @@
 				    } else if( $path == "" ) {
 				        return $this;
 					} else {
-					
-						// This is where we can handle custom routes.  A good exampel would 
-						// be handling a route to a page in a CMS rather than to a specific 
-						// object
 						
-						if( isSet($this->custom_router) ){											// see if a custom router is defined
-							if( method_exists($this->custom_router,'setDatabaseConnection') ){ $this->custom_router->setDatabaseConnection(getDatabaseConnection()); }
-						  	return $this->custom_router->route($cmd,$params);								// call the custom router
-						} else {
-    						$this->throwError("Route not found: $cmd.",404,"general");						// if method not found send 404 error  						
-						}                                     
+    					$this->throwError("Route not found: $cmd.",404,"general");						// if method not found send 404 error  						
+						                                     
 					}
-				}
+					
+				
+				} else if( !empty($path_array)) {$this->throwError("Route not found: $path.",404,"general"); }
 			
 			/***********************************************
 				
@@ -163,21 +168,24 @@
 		
 		public function parsePath($path){
 			
-			$path = preg_replace('(/obray/|/cmd/)','',$path);                                   // remove the cmd or obray from path
+			
 			$path = preg_split('([\][?])',$path);                                               // split path from query string
-			if(count($path) > 1){ parse_str($path[1],$params); }                                // parse query string into $params array
+			if(count($path) > 1){ parse_str($path[1],$params); } else { $params = array(); }    // parse query string into $params array
 			$path = $path[0];                                                                   // reset path to a clean path string
 			
 			$path_array = preg_split('[/]',$path,NULL,PREG_SPLIT_NO_EMPTY);                     // split path into an array of paths
 			$path = "/";                                                                        // reset path to store only $used path_array elements
 			
-			return array("path_array"=>$path_array,"path"=>$path);
+			$routes = unserialize(__ROUTES__);
+			if( !empty($path_array) && isSet($routes[$path_array[0]]) ){ $base_path = $routes[array_shift($path_array)]; } else { $base_path = ""; }
+			
+			return array("path_array"=>$path_array,"path"=>$path,"base_path"=>$base_path,"params"=>$params);
 			
 		}
 		
 		public function addCustomPath($path,$keyword){ $this->custom_paths[$keyword] = new stdClass; $this->custom_paths[$keyword]->path = $path; }
 		
-		public function setObject($obj){ $this->object = get_class($obj);}                      // set the object type of this class
+		private function setObject($obj){ $this->object = $obj;}                      // set the object type of this class
 		
 		// used for general error handling
 		
@@ -195,6 +203,10 @@
 		public function setCOntentType($type){ if($this->content_type != 'text/html'){ $this->content_type = $type; } }
 		public function setCustomRouter($router){ $this->custom_router = $router; }
 		public function cleanUp(){}
+		
+		public function hasPermission($object){ if( isSet($this->permissions[$object]) && $this->permissions[$object] === 'any'){ return TRUE; } else { return FALSE; }	}
+		
+		
 		
 	}
 	

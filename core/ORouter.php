@@ -21,7 +21,7 @@
     ***********************************************************************/
 	
 	
-	if( is_file(_SELF_.'settings.php') ){ require_once _SELF_.'settings.php'; }                  // see if a setting file exists for a given application (looks at the base path where your obray.php file exists)
+	require_once 'settings.php';										                  // see if a setting file exists for a given application (looks at the base path where your obray.php file exists)
 	
 	require_once 'dbug.php';                                                                        // easy readout function (i.e. new dBug($yourvariable);
 	require_once 'functions.php';
@@ -45,11 +45,10 @@
 	
 	Class ORouter extends OObject{
 		
-		public function route($path,$params=array()){
+		public function route($path,$params=array(),$direct=FALSE){
 			
-			$obj = parent::route($path,$params);													// Call the parent class default route function
+			$obj = parent::route($path,$params,FALSE);												// Call the parent class default route function
 			$obj->cleanUp();
-			
 			
 			/*****************************************************************************************
 				
@@ -116,6 +115,9 @@
 			 505 => "HTTP Version Not Supported"													// 505 - The server does not support, or refuses to support, the HTTP protocol version that was used in the request message. 
 			 
 			);
+			
+			if( $obj->getStatusCode() == 401 ){	header('WWW-Authenticate: Basic realm="'.__APP__.'"');
+			}
 			
 			if(!headers_sent()){ header("HTTP/1.1 ".$obj->getStatusCode()." " . $status_codes[$obj->getStatusCode()] );}    // set HTTP Header
 			

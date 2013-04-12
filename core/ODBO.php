@@ -81,8 +81,11 @@
 	Class ODBO extends OObject {
 	
 	    private $dbh;
-	    private $primary_key;
+	    private $primary_key_column;
 	    private $data_types;
+	    private $enable_column_additions = TRUE;
+	    private $enable_column_removal = TRUE;
+	    private $enable_data_type_changes = TRUE;
 	    
 	    public function __construct(){
 	    
@@ -101,7 +104,7 @@
                     "datetime"  =>  array("sql"=>" DATETIME ","validation_regex"=>""),
                     "password"  =>  array("sql"=>" VARCHAR(255) ","validation_regex"=>"")
                 )));
-            
+                
             }
             
             
@@ -228,9 +231,7 @@
         	$statement->execute();
         	
         	$statement->setFetchMode(PDO::FETCH_OBJ);
-        	$this->data = $statement->fetchAll();
-        	
-        	new dBug($this->data);
+        	$data = $statement->fetchAll();
         	
         	$temp_def = $this->table_definition;
         	$obray_fields = array(0=>"slug",1=>"order_variable",2=>"parent_id",3=>"OCDT",4=>"OCU",5=>"OMDT",6=>"OMU");
@@ -238,7 +239,7 @@
         	
         	$data_types = unserialize(__DATATYPES__);
         	
-        	forEach($this->data as $def){
+        	forEach($data as $def){
 	        	if( array_search($def->Field,$obray_fields) === FALSE ){
 		        	if( isSet($this->table_definition[$def->Field]) ){
 			        	
@@ -249,14 +250,15 @@
 			        		
 			        	*********************************************************************************/
 			        	
-			        	if( isSet($this->table_definition[$def->Field]["data_type"]) ){
+			        	if( $this->enable_data_type_changes && isSet($this->table_definition[$def->Field]["data_type"]) ){
 			        		$data_type = $this->getDataType($this->table_definition[$def->Field]);
 			        		
-			        		new dBug($data_types[$data_type["data_type"]]);
 			        		if( str_replace('size',$data_type["size"],$data_types[$data_type["data_type"]]["my_sql_type"]) != $def->Type ){
+				        		if( !isSet($this->table_alterations) ){ $this->table_alterations = array(); }
 				        		$sql = "ALTER TABLE $this->table MODIFY COLUMN ".$def->Field." ".str_replace('size',$data_type["size"],$data_types[$data_type["data_type"]]["sql"]);
 				        		$statement = $this->dbh->prepare($sql);
-				        		$statement->execute();
+				        		$this->table_alterations[] = $statement->execute();
+				        		
 			        		} 
 				        	
 			        	}
@@ -271,10 +273,11 @@
 			        	*********************************************************************************/
 			        	
 		        	} else {
-			        	if( isSet($_REQUEST["enableDrop"]) ){ 
+			        	if( $this->enable_column_removal && isSet($_REQUEST["enableDrop"]) ){ 
+			        		if( !isSet($this->table_alterations) ){ $this->table_alterations = array(); }
     						$sql = "ALTER TABLE $this->table DROP COLUMN $def->Field";
 			        		$statement = $this->dbh->prepare($sql);
-			        		$statement->execute();
+			        		$this->table_alterations[] = $statement->execute();
 			        	}
 		        	}
 	        	}
@@ -286,15 +289,17 @@
         		
         	*********************************************************************************/
         	
-        	forEach($this->table_definition as $key => $def){
-        		$data_type = $this->getDataType($def);
-	        	$sql = "ALTER TABLE $this->table ADD ($key ".str_replace('size',$data_type["size"],$data_types[$data_type["data_type"]]["sql"]).")";
-	        	echo $sql;
-        		$statement = $this->dbh->prepare($sql);
-        		$statement->execute();
+        	if( $this->enable_column_additions ){
+	        	forEach($this->table_definition as $key => $def){
+	        		if( !isSet($this->table_alterations) ){ $this->table_alterations = array(); }
+	        		$data_type = $this->getDataType($def);
+		        	$sql = "ALTER TABLE $this->table ADD ($key ".str_replace('size',$data_type["size"],$data_types[$data_type["data_type"]]["sql"]).")";
+		        	echo $sql;
+	        		$statement = $this->dbh->prepare($sql);
+	        		$this->table_alterations[] = $statement->execute();
+	        	}
         	}
         	
-        	exit();
         	$this->table_definition = $temp_def;
         	
         }
@@ -306,7 +311,7 @@
         ********************************************************************/
         
         public function add($params=array()){
-        	
+        
         	// generate prepared statement
         	$sql = "";
         	$sql_values = "";
@@ -317,12 +322,17 @@
         	
         	   // validate
         	   $data_type = $this->getDataType($def);
-        	   if( isSet($def["required"]) && $def["required"] === TRUE && (!isSet($params[$name]) || $params[$name] === NULL || $params[$name] === "") ){ $this->throwError('500',isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is required.":$name." is required.",$name); }
+        	   if( isSet($def["required"]) && $def["required"] === TRUE && (!isSet($params[$name]) || $params[$name] === NULL || $params[$name] === "") ){ $this->throwError(isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is required.":$name." is required.",'500',$name); }
         	   
         	   if( isSet($params[$name]) ){
         	   
 	        	   if( isSet($def["data_type"]) && !empty($this->data_types[$data_type["data_type"]]["validation_regex"]) && !preg_match($this->data_types[$data_type["data_type"]]["validation_regex"],$params[$name]) ){
-	        	       $this->throwError('500',isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is invalid.":$name." is invalid.",$name);
+	        	       $this->throwError(isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is invalid.":$name." is invalid.",'500',$name);
+	        	   }
+	        	   
+	        	   if( $def["data_type"] == "password" ){ 
+	        	   		$salt = "$2a$12$".$this->route('/core/OUtilities/generateToken/')->token;
+	        	   		$params[$name] = crypt($params[$name],$salt); 
 	        	   }
 	        	   
 	        	   // is slug
@@ -345,9 +355,13 @@
         	$this->reorder(1,$this->order_key,$order_value);
         	
         	if( !isSet($params["parent_id"]) ){ $params["parent_id"] = 0; }
-        	if( isSet($params[$slug_column]) ){ $params["slug"] = $this->getSlug($params[$slug_column],$slug_column); } else { $params["slug"] = ""; }
+        	if( isSet($slug_column) && isSet($params[$slug_column]) ){ $params["slug"] = $this->getSlug($params[$slug_column],$slug_column); } else { $params["slug"] = ""; }
         	$this->sql  = " insert into $this->table ( ".$sql.", slug, order_variable, parent_id, OCDT, OCU ) values ( ".$sql_values.", :slug, 1, :parent_id, NOW(), 0 ) ";
         	$statement = $this->dbh->prepare($this->sql);
+        	
+        	
+        	unset($params["refresh"]);
+        	print_r($params);
         	
         	$this->script = $statement->execute($params);
         	
@@ -376,13 +390,13 @@
 					// validate
 					$data_type = $this->getDataType($def);
 					if( isSet($def["required"]) && $def["required"] === TRUE && (!isSet($params[$name]) || $params[$name] === NULL || $params[$name] === "") ){ 
-							$this->throwError('500',isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is required.":$name." is required.",$name); 
+							$this->throwError(isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is required.":$name." is required.",500,$name); 
 					}
 					
 					if( isSet($params[$name]) ){
 					
 						if( isSet($def["data_type"]) && !empty($this->data_types[$data_type["data_type"]]["validation_regex"]) && !preg_match($this->data_types[$data_type["data_type"]]["validation_regex"],$params[$name]) ){
-							$this->throwError('500',isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is invalid.":$name." is invalid.",$name);
+							$this->throwError(isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is invalid.":$name." is invalid.",500,$name);
 						}
 						
 						// is slug
@@ -402,8 +416,8 @@
         	
         	}
         	
-        	if( empty($this->primary_key_column) ){ $this->throwError('500','Please specify a primary key.','primary_key'); }
-        	if( !isSet( $params[$this->primary_key_column] ) ){ $this->throwError('500','Please specify a value for the primary key.',$this->primary_key_column); }
+        	if( empty($this->primary_key_column) ){ $this->throwError('Please specify a primary key.','primary_key','500'); }
+        	if( !isSet( $params[$this->primary_key_column] ) ){ $this->throwError('Please specify a value for the primary key.','500',$this->primary_key_column); }
         	
         	if( $this->isError() ){ return $this; }
         	
@@ -434,8 +448,8 @@
 				}
         	}
         	
-        	if( empty($this->primary_key_column) ){ $this->throwError('500','Please specify a primary key.','primary_key'); }
-        	if( !isSet( $params[$this->primary_key_column] ) ){ $this->throwError('500','Please specify a value for the primary key.',$this->primary_key_column); }
+        	if( empty($this->primary_key_column) ){ $this->throwError('Please specify a primary key.','500','primary_key'); }
+        	if( !isSet( $params[$this->primary_key_column] ) ){ $this->throwError('Please specify a value for the primary key.','500',$this->primary_key_column); }
         	
         	$this->sql  = " DELETE FROM $this->table WHERE  $this->primary_key_column = :$this->primary_key_column ";
         	$statement = $this->dbh->prepare($this->sql);
@@ -454,24 +468,32 @@
         	
         	$columns = '';
         	forEach($this->table_definition as $name => $def){
-        		if( !empty($columns) ){ $columns .= ' ,'; }
-        		$columns .= " $name ";
+	        		if( !empty($columns) ){ $columns .= ' ,'; }
+	        		$columns .= " $name ";
         	}
         	
         	// create where clause
         	$where = '';
         	forEach($params as $key => $value){
 	        	
-	        	// define ORs within a where clause
-	        	$value = explode('|',$value);
-	        	$or = '(';
-	        	forEach($value as $k => $v){
-	        	    if( $or != '(' ){ $or .= ' OR '; }
-		        	$or .= " $key = :$key"."_".$k;
-		        	unset($params[$key]);
-		        	$params[$key."_".$k] = $v;
+	        	if( $this->table_definition[$key]["data_type"] == "password" ){
+	        		
+	        		$password = $params["ouser_password"];
+	        		$password_key = $key;
+	        		
+	        	} else {
+		        	// define ORs within a where clause
+		        	$value = explode('|',$value);
+		        	$or = '(';
+		        	forEach($value as $k => $v){
+		        	    if( $or != '(' ){ $or .= ' OR '; }
+			        	$or .= " $key = :$key"."_".$k;
+			        	unset($params[$key]);
+			        	$params[$key."_".$k] = $v;
+		        	}
+		        	$or .= ')';
+	        	
 	        	}
-	        	$or .= ')';
 	        	
 	        	// write where clause
 	        	if( !empty($where) ){ $where .= " AND $or"; } else { $where .= " $or ";	 }
@@ -484,6 +506,12 @@
         	$statement->execute($params);
         	$statement->setFetchMode(PDO::FETCH_OBJ);
         	$this->data = $statement->fetchAll();
+        	
+        	if( isSet($password) ){
+	        	for( $i=0;$i<count($this->data);++$i ){ 
+	        		if( $this->data[$i]->$key !== crypt($password,$this->data[$i]->$key) ){ unset($this->data[$i]); } 
+	        	}
+        	}
         	
         }
         
@@ -499,7 +527,7 @@
         
         public function dump($params=array()){
 	        
-	        exec('mysqldump --user='.__DBUserName__.' --password='.__DBPassword__.' --host='.__DBHost__.' '.__DB__.' '.$this->table.' | gzip > '._SELF_.'backups/'.$this->table.'-'.time().'.sql.gz');
+	        exec('mysqldump --user='.__DBUserName__.' --password='.__DBPassword__.' --host='.__DBHost__.' '.__DB__.' '.$this->table.' | gzip > '.__SELF__.'backups/'.$this->table.'-'.time().'.sql.gz');
 	        
         }
         
@@ -563,9 +591,6 @@
 	        
 	        if( __DebugMode__ === FALSE ){ unset($this->sql); }
 	        if( empty($this->table_definition) || __DebugMode__ === FALSE ){ unset($this->table_definition); }
-	        if( empty($this->primary_key_column) ){ unset($this->primary_key_column); }
-	        if( empty($this->error_message) ){ unset($this->error_message); }
-	        if( empty($this->error_message_array) ){ unset($this->error_message_array); }
 	        
         }
 		
