@@ -4,7 +4,7 @@ Obray is lightweight PHP object oriented MVC framework designed to help you writ
 
 ## Installation
 
-## Setup Apache
+### Setup Apache
 
 To install Obray on a typical Apache confiration create a site and use this example to create your configuration file:
 
