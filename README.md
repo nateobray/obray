@@ -25,13 +25,13 @@ Obray allows you to map php objects directly to URIs.  To do this every object i
 			$params = array("a"=>1,"b"=>2);
 		
 			$my_instance = $this->route('/lib/MyClass/firstFunction/',$params);  // instantiate object and call firstFunction and return the object
-			
+
 		}
 	
 	}
 
 
-From within an OObject class you can access any class defined in the "lib" path and any of it's public methods.
+From within an OObject class you can access any path defined as a class path.  In this case the "lib" path and any of it's public methods.
 
 ## ORouter
 
