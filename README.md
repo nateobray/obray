@@ -2,6 +2,46 @@
 
 Obray is lightweight PHP object oriented MVC framework designed to help you write less code and do more quickly.
 
+## Installation
+
+## Setup Apache
+
+To install Obray on a typical Apache confiration create a site and use this example to create your configuration file:
+
+	<VirtualHost *:80>
+        ServerAdmin yoursupportemail@example.com
+        ServerName yourservername.com
+        DocumentRoot /yourpath/yourwebsite/
+        
+        <Directory /yourpath/yourwebiste/>
+                
+                Options Indexes FollowSymLinks MultiViews
+                AllowOverride None
+                #Order allow,deny
+                #allow from all
+
+                DirectoryIndex obray.php index.php
+
+                <IfModule mod_rewrite.c>
+                        RewriteEngine On
+                        RewriteBase /
+                        RewriteCond %{REQUEST_FILENAME} !-f
+                        RewriteCond %{REQUEST_FILENAME} !-d
+                        RewriteRule ^.+$ obray.php [QSA,L]
+                </IfModule>
+
+        </Directory>
+
+    </VirtualHost>
+
+Restart Apache.
+
+### configuration
+
+Next you'll want to modify your settings file to accomodate your server settings.  Here's breif explaination of each:
+
+(coming soon)
+
 ## Introduction
 
 Obray allows you to map PHP objects directly to URIs even from within your application!  To do this every object in Obray extends the OObject class, for example:
@@ -118,7 +158,7 @@ When you query existing data using get the data gets put into $this->data as an 
 	$this->get();	// gets all records in the table and puts them in $this->data[]
 	print_r($this->data);
 	
-You can also use routers extended query string syntax to extract more precise queries:
+You can also use OObjects extended query string syntax to extract more precise queries:
 
 	$this->route('/get/?first_name=John|Johnny');	// get all records with the first_name 'John' OR 'Johnny'
 	print_r($this->data);
