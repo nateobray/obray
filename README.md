@@ -1,4 +1,4 @@
-# obray
+# Obray
 
 Obray is lightweight PHP object oriented MVC framework designed to help you write less code and do more quickly.
 
@@ -6,14 +6,14 @@ Obray is lightweight PHP object oriented MVC framework designed to help you writ
 
 ### Setup Apache
 
-To install Obray on a typical Apache confiration create a site and use this example to create your configuration file:
+To install Obray prototype demo application on a typical Apache configuration create a site and use this example to create your configuration file:
 
 	<VirtualHost *:80>
         ServerAdmin yoursupportemail@example.com
         ServerName yourservername.com
-        DocumentRoot /yourpath/yourwebsite/
+        DocumentRoot /yourpath/obray/prototype
         
-        <Directory /yourpath/yourwebiste/>
+        <Directory /yourpath/obray/prototype >
                 
                 Options Indexes FollowSymLinks MultiViews
                 AllowOverride None
@@ -42,21 +42,21 @@ Next you'll want to modify your settings file to accomodate your server settings
 
 #### Basic Settings
 
-	define('__APP__','myapplication');						// The name of your application
+	define('__APP__','prototype');							// The name of your application
 	define('__SELF__', dirname(__FILE__).'/');              // This should contain the path to your application
-	define('__PATH_TO_CORE__','/www/obray/core/');			// The path to obray's core files
+	define('__PATH_TO_CORE__','/yourpath/obray/core/');		// The path to obray's core files
 	define('__DebugMode__',TRUE);							// Enable or Disable debug mode.  In debug mode things like ?refresh will write tables and rebuild resources
 	
 #### Route Settings	
 
-	This is where you are going to define valid routes in your application.  A route is a shortcut to a path that contains the classes you would like to make available to your application.  In general you should always disable system routes and extend the classes you need.  This will allow you to add or remove functionality from the core that your application needs.
+This is where you are going to define valid routes in your application.  A route is a shortcut to a path that contains the classes you would like to make available to your application.  In general you should always disable system routes and extend the classes you need.  This will allow you to add or remove functionality from the core that your application needs.  For security it's recommended you only place here paths to classes you'd like to give access and not the whole application directory __SELF__.
 
 	define('__ROUTES__',serialize( array( 
 	
 		// Custom Routes
 		"lib" => __SELF__ . "/lib/"
 		
-		// System Routes
+		// System Routes - generally only uncomment these if you are going to debug obray core files
 		// "cmd" => __SELF__,
 		// "core" => __PATH_TO_CORE__
 	) ));
@@ -125,7 +125,7 @@ Obray allows you to map PHP objects directly to URIs even from within your appli
 	}
 
 
-From within an OObject class you can access any path defined as a class path in your settings file.  In this case the "lib" path and any of it's public methods.
+From within an OObject class you can access any path defined as a __ROUTES__ in your settings file.  In this case the "lib" path and any of it's public methods.
 
 ## ORouter
 
