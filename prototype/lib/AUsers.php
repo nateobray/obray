@@ -37,7 +37,7 @@
 			
 			$this->permissions = array(
 				"object"=>"user",
-				"add"=>10,
+				"add"=>"any",
 				"login"=>"any",
 				"get"=>"user",
 				"logout"=>"any"

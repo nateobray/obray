@@ -15,10 +15,8 @@ To install Obray prototype demo application on a typical Apache configuration cr
         
         <Directory /yourpath/obray/prototype >
                 
-                Options Indexes FollowSymLinks MultiViews
+                Options FollowSymLinks MultiViews
                 AllowOverride None
-                #Order allow,deny
-                #allow from all
 
                 DirectoryIndex obray.php index.php
 
@@ -244,4 +242,22 @@ By the base OUsers class there are only two supported statuses "active" and "dis
 
 Permission levels are used to determine if the user has enough permission to access a route.  The permission level value is an integer and the lower the value the more permissions will be granted.  For instance if you specify the permissions for a particular route as the integer 2 any user that has permission level less than or equal to 2 will be granted access.  Any permission level higher than 2 will be restricted.
 
+#Permissions
+
+Every OObject should define a permission array that will define the restrictions placed on the accessing the class from a URL.  Usually this is defined in the constructor like in the AUsers class in the prototype demo application:
+
+	$this->permissions = array(
+		"object"=>"user",
+		"add"=>"any",
+		"login"=>"any",
+		"get"=>"user",
+		"logout"=>"any"
+	);
+
+Here are the possible permissions:
+
+1. any: this resource is fully accessible from within PHP code or from an HTTP request handled by ORouter
+2. user: this resource is restricted to information specific to the current user.  For most queries this means restricting content that is not associated with the user through their ouser_id (this restriction works both from an HTTP request or from PHP code)
+3. any integer: the is explained under the Permissions section under OUsers
+4. undefined: if the key for the object or the function is undefined then the resources is completely unaccessible from an HTTP request with a status code of 404
 

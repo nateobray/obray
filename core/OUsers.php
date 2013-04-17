@@ -49,7 +49,7 @@
 		
 		/********************************************************************************************************************
 		
-			Login
+			Login - creates the ouser session variable
 			
 		********************************************************************************************************************/
 		
@@ -66,10 +66,20 @@
 			
 				// get user based on credentials
 				$this->get(array("ouser_email"=>$params["ouser_email"], "ouser_password" => $params["ouser_password"]));
+				
 				// if the user exists log them in but only if they haven't exceed the max number of failed attempts (set in settings)
-				if( count($this->data) === 1 && $this->data[0]->ouser_failed_attempts < 10 ){
+				if( count($this->data) === 1 && $this->data[0]->ouser_failed_attempts < __MAX_FAILED_LOGIN_ATTEMPTS__ && $this->data[0]->ouser_status != "disabled"){
 					$_SESSION["ouser"] = $this->data[0];
 					$this->update( array("ouser_failed_attempts"=>0) );
+					
+				// if the user has exceeded the allowable login attempts
+				} else if( $this->data[0]->ouser_failed_attempts > __MAX_FAILED_LOGIN_ATTEMPTS__ ){	
+					$this->throwError('This account has been locked.');
+					
+				// if the users has been disabled
+				} else if( $this->data[0]->ouser_status === "disabled" ){
+					$this->throwError('This account has been disabled.');
+					
 				// if the user is not found then increment failed attempts and throw error
 				} else {
 					$this->get(array("ouser_email"=>$params["ouser_email"]));
@@ -79,6 +89,12 @@
 			}
 			
 		}
+		
+		/********************************************************************************************************************
+		
+			Logout - destroys the ouser session variable
+			
+		********************************************************************************************************************/
 		
 		public function logout($params){ unset($_SESSION["ouser"]);	}
 		
