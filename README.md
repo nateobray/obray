@@ -226,7 +226,7 @@ Most of this is self explanitory however there are a few things worth noting des
 
 In general you should not use this class, but create a local version inside your application to add the features you need for your class.  For example, in the prototype application the settings file has a "cmd" route that's set to the lib folder.  A class called AUsers that extends OUsers is placed there. Your extended class should define all the permissions you'd like to have for your class and core objects generally will not have a permissions array assigned (this restricts their access completely except a direct call in PHP code).
 
-##Failed Attempts
+###Failed Attempts
 
 This records the number of failed login attempts.  If the number of failed login attempts exceeds the __MAX_FAILED_LOGIN_ATTEMPTS__ variable in the settings file then the login will fail with an error message of "Your account has been locked.".
 
@@ -234,11 +234,11 @@ This records the number of failed login attempts.  If the number of failed login
 
 This number is set to 0 every time a successful login attempt is made.
 
-##User Statuses
+###User Statuses
 
 By the base OUsers class there are only two supported statuses "active" and "disabled".  When the status is set to active the account will function normally, but if it's set to diabled all login attempts will fail.
 
-##Permission Levels
+###Permission Levels
 
 Permission levels are used to determine if the user has enough permission to access a route.  The permission level value is an integer and the lower the value the more permissions will be granted.  For instance if you specify the permissions for a particular route as the integer 2 any user that has permission level less than or equal to 2 will be granted access.  Any permission level higher than 2 will be restricted.
 
