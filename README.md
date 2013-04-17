@@ -44,12 +44,12 @@ Next you'll want to modify your settings file to accomodate your server settings
 
 	define('__APP__','prototype');							// The name of your application
 	define('__SELF__', dirname(__FILE__).'/');              // This should contain the path to your application
-	define('__PATH_TO_CORE__','/yourpath/obray/core/');		// The path to obray's core files
+	define('__PATH_TO_CORE__','/yourpath/obray/core/');		// The path to obray's core files - you'll want to change this to the location you put it
 	define('__DebugMode__',TRUE);							// Enable or Disable debug mode.  In debug mode things like ?refresh will write tables and rebuild resources
 	
 #### Route Settings	
 
-This is where you are going to define valid routes in your application.  A route is a shortcut to a path that contains the classes you would like to make available to your application.  In general you should always disable system routes and extend the classes you need.  This will allow you to add or remove functionality from the core that your application needs.  For security it's recommended you only place here paths to classes you'd like to give access and not the whole application directory __SELF__.
+This is where you are going to define valid routes in your application.  A route is a shortcut to a path that contains the classes you would like to make available to your application.  In general you should always disable system routes and extend the classes you need.  This will allow you to add or remove functionality from the core that your application needs.  NOTE: Your shortcut cannot be the same as an actual directory name in your application, it relies on the path to not exist to be redirected through ORouter (see apache config above).
 
 	define('__ROUTES__',serialize( array( 
 	
@@ -69,7 +69,7 @@ Place your basic database settings here
 	define('__DBPort__','3306');							// database server port
 	define('__DBUserName__','yourusername');				// database username
 	define('__DBPassword__','yourpassword');				// database password
-	define('__DB__','dbname');								// database name
+	define('__DB__','prototype');							// database name
 	define('__DBEngine__','MyISAM');						// database engine
 	define('__DBCharSet__','utf8');							// database characterset (default: utf8)
 	
@@ -207,5 +207,41 @@ You can also use OObjects extended query string syntax to extract more precise q
 	$this->route('/get/?first_name=John|Johnny');	// get all records with the first_name 'John' OR 'Johnny'
 	print_r($this->data);
 	
+#OUsers
+
+To help manage permissions a user management class has been built into the core.  This helps restrict access to certain classes, provides an authentication method, and improves overall security of the framework.
+
+The ousers table definition looks like the following:
+
+	$this->table_definition = array(
+		"ouser_id" => 				array("primary_key" => TRUE ),
+		"ouser_first_name" => 		array("data_type"=>"varchar(128)",		"required"=>FALSE,	"label"=>"First Name",		"error_message"=>"Please enter the user's first name"),
+		"ouser_last_name" => 		array("data_type"=>"varchar(128",		"required"=>FALSE,	"label"=>"Last Name",		"error_message"=>"Please enter the user's last name"),
+		"ouser_email" => 			array("data_type"=>"varchar(128)",		"required"=>TRUE,	"label"=>"Email Address",	"error_message"=>"Please enter the user's email address"),
+		"ouser_permission_level" =>	array("data_type"=>"integer",			"required"=>FALSE,	"label"=>"Permission Level","error_message"=>"Please specify the user's permission level"),
+		"ouser_status" =>			array("data_type"=>"varchar(20)",		"required"=>TRUE,	"label"=>"Status",			"error_message"=>"Please specify the user's status"),
+		"ouser_password" =>			array("data_type"=>"password",			"required"=>TRUE,	"label"=>"Password",		"error_message"=>"Please specify the user's password"),
+		"ouser_failed_attempts" =>	array("data_type"=>"integer",			"required"=>FALSE,	"label"=>"Failed Logins",	"error_message"=>"Your account has been locked.")
+	);
+
+Most of this is self explanitory however there are a few things worth noting described by the following sections.
+
+In general you should not use this class, but create a local version inside your application to add the features you need for your class.  For example, in the prototype application the settings file has a "cmd" route that's set to the lib folder.  A class called AUsers that extends OUsers is placed there. Your extended class should define all the permissions you'd like to have for your class and core objects generally will not have a permissions array assigned (this restricts their access completely except a direct call in PHP code).
+
+##Failed Attempts
+
+This records the number of failed login attempts.  If the number of failed login attempts exceeds the __MAX_FAILED_LOGIN_ATTEMPTS__ variable in the settings file then the login will fail with an error message of "Your account has been locked.".
+
+	define('__MAX_FAILED_LOGIN_ATTEMPTS__',10);				// The maximium allowed failed login attempts before an account is locked
+
+This number is set to 0 every time a successful login attempt is made.
+
+##User Statuses
+
+By the base OUsers class there are only two supported statuses "active" and "disabled".  When the status is set to active the account will function normally, but if it's set to diabled all login attempts will fail.
+
+##Permission Levels
+
+Permission levels are used to determine if the user has enough permission to access a route.  The permission level value is an integer and the lower the value the more permissions will be granted.  For instance if you specify the permissions for a particular route as the integer 2 any user that has permission level less than or equal to 2 will be granted access.  Any permission level higher than 2 will be restricted.
 
 

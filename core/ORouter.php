@@ -47,7 +47,7 @@
 		
 		public function route($path,$params=array(),$direct=FALSE){
 			
-			$obj = parent::route($path,$params,FALSE);												// Call the parent class default route function
+			$obj = parent::route($path,$params,$direct);												// Call the parent class default route function
 			$obj->cleanUp();
 			
 			/*****************************************************************************************

@@ -24,18 +24,11 @@
 	
 	/********************************************************************************************************************
 		
-		WDictionary:	This is our controller object for our Dictionary application.
+		OUsers:	User/Permission Manager
 		
 	********************************************************************************************************************/
 	
 	Class OUsers extends ODBO{
-	   
-		private $permissions = array(
-			"object"=>"any",
-			"add"=>"any",
-			"login"=>"any",
-			"get"=>"any"
-		);
 	   
 		public function __construct(){
 		   
@@ -48,35 +41,46 @@
 				"ouser_email" => 			array("data_type"=>"varchar(128)",		"required"=>TRUE,	"label"=>"Email Address",	"error_message"=>"Please enter the user's email address"),
 				"ouser_permission_level" =>	array("data_type"=>"integer",			"required"=>FALSE,	"label"=>"Permission Level","error_message"=>"Please specify the user's permission level"),
 				"ouser_status" =>			array("data_type"=>"varchar(20)",		"required"=>TRUE,	"label"=>"Status",			"error_message"=>"Please specify the user's status"),
-				"ouser_password" =>			array("data_type"=>"password",			"required"=>TRUE,	"label"=>"Password",		"error_message"=>"Please specify the user's password")
+				"ouser_password" =>			array("data_type"=>"password",			"required"=>TRUE,	"label"=>"Password",		"error_message"=>"Please specify the user's password"),
+				"ouser_failed_attempts" =>	array("data_type"=>"integer",			"required"=>FALSE,	"label"=>"Failed Logins",	"error_message"=>"Your account has been locked.")
 			);
 			
-			parent::__construct();
-		   
 		}
 		
-		public function login($params){
+		/********************************************************************************************************************
 		
+			Login
+			
+		********************************************************************************************************************/
+		
+		public function login($params){
+			
+			// Validate the required parameters
+			
 			if( !isSet( $params["ouser_email"] ) ){ $this->throwError("Email is required",500,"ouser_email"); }
 			if( !isSet( $params["ouser_password"] ) ){ $this->throwError("Password is required",500,"ouser_password"); }
-		
+			
+			// if no error attempt to log the user in
+			
 			if( !$this->isError() ){
-				$this->data = $this->route('/core/OUsers/get/?ouser_email='.$params["ouser_email"].'&ouser_password='.$params["ouser_password"])->data;
-				if( count($this->data) === 1 ){
+			
+				// get user based on credentials
+				$this->get(array("ouser_email"=>$params["ouser_email"], "ouser_password" => $params["ouser_password"]));
+				// if the user exists log them in but only if they haven't exceed the max number of failed attempts (set in settings)
+				if( count($this->data) === 1 && $this->data[0]->ouser_failed_attempts < 10 ){
 					$_SESSION["ouser"] = $this->data[0];
+					$this->update( array("ouser_failed_attempts"=>0) );
+				// if the user is not found then increment failed attempts and throw error
 				} else {
+					$this->get(array("ouser_email"=>$params["ouser_email"]));
+					if( count($this->data) === 1 ){ $this->update( array("ouser_failed_attempts"=>($this->data[0]->ouser_failed_attempts+1)) ); }
 					$this->throwError('Invalid login, make sure you have entered a valid email and password.');
 				}
 			}
-		
 			
 		}
 		
-		public function logout($params){
-			
-		}
-		
-		public function hasPermission($object){ if( isSet($this->permissions[$object]) && $this->permissions[$object] === 'any'){ return TRUE; } else { return FALSE; }	}
+		public function logout($params){ unset($_SESSION["ouser"]);	}
 		
 	}
 	

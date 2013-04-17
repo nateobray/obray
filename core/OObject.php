@@ -44,7 +44,7 @@
 		private $status_code = 200;																	// status code - used to translate to HTTP 1.1 status codes
 		private $content_type = 'application/json';													// stores the content type of this class or how it should be represented externally
 		private $path = '';																			// the path of this object
-		private $permissions = array();																// stores permissions of a particular object
+		//private $permissions;																		// stores permissions of a particular object
 		
 		// public data members
 		public $object = '';                                                                        // stores the name of the class
@@ -64,77 +64,135 @@
 		
 			ROUTE FUNCTION
 			
-				
-		
 		***********************************************************************/
 		
 		public function route( $path , $params = array(), $direct = TRUE ) {
 			
-			$cmd = $path;                                                                           // store the original path
-			
-			/***********************************************
-				
-				Handle Internal Routes
-				
-				    $new_obj = $obj->route('/cmd/widgets/WClass/myFunction/?myQueryString',$params);   // call function in new object (NOTE: does not modify existing object but will create a new one, also $obj may be $this)
-				    $new_obj->route('myFunction?myQueryString',$params);                               // call function from existing object (NOTE: modifies object potentially)
-				    $new_obj->myFunction($params);                                                     // So, this doesn't use router, but wanted to show all the available conventions
-				
-			***********************************************/
-			
+			$cmd = $path;                                                                           
+						
 			if( !preg_match('(http[s]?://)',$path) ){
 			    
 				$parsed = $this->parsePath($path);
-				$path_array = $parsed["path_array"];
-				$path = $parsed["path"];
-				$base_path = $parsed["base_path"];
-				$params = array_merge($params,$parsed["params"]);
-								
-				
+				$path_array = $parsed["path_array"]; $path = $parsed["path"]; $base_path = $parsed["base_path"]; $params = array_merge($params,$parsed["params"]);
 				
 				if( !empty($base_path) ){
 				
 					while(count($path_array)>0){																	// loop through path until we find an valid object
-						$obj = array_pop($path_array);																// set object we are going to attempt to find
-						$obj_path = $base_path . implode('/',$path_array).'/';										// setup path to the object we want to find
-						$this->path = $obj_path . $obj . '.php';													// the path to the object
+						$obj_name = array_pop($path_array);
+						$this->path = $base_path . implode('/',$path_array).'/'.$obj_name.'.php';													// the path to the object
 						if (file_exists( $this->path ) ) {															// test if object exists (object must be in folder and php file bearing its name
 							require_once $this->path;																// if found require_once the file
-							if (!class_exists( $obj )) {															// see if we can find the object class in the file
-								$this->throwError("Could not find object: $obj",404,"notfound");        // if we can't find the object class throw an error
-								return $this;                                                            // return object
+							if (!class_exists( $obj_name )) {															// see if we can find the object class in the file
+								$this->throwError("Could not find object: $obj_name",404,"notfound"); return $this;        // if we can't find the object class throw an error
 							} else {                                                                    // if we can find the object start the factory
 								try{                                                                    // handle errors and return if necessary
-	    				    		$obj = new $obj();								                    // dynamically create the specified obj
-	    				    		$obj->setObject(get_class($obj));                                   // set the object name
-	    				    		$obj->setContentType($obj->content_type);                          	// this allows an object to pick up on another objects content type.  This way your objects JSON won't pring in OView
 	    				    		
-	    				    		if( !$obj->hasPermission("object") ){ $obj->throwError("You cannot access this resource.",403,"forbidden"); return $obj; }
+	    				    		/*******************************************************************************
+	    				    			
+	    				    			CREAT OBJECT
+	    				    			
+	    				    				1.  Create new object
+	    				    				2.	Set the object property
+	    				    				3.	Set the object content type (json|none)
+	    				    			
+	    				    		*******************************************************************************/
 	    				    		
-	    				    		if( method_exists($obj,'setDatabaseConnection') ){
-	    				    		  $obj->setDatabaseConnection(getDatabaseConnection());
+	    				    		$obj = new $obj_name();
+	    				    		$obj->setObject(get_class($obj));
+	    				    		$obj->setContentType($obj->content_type);
+	    				    		
+	    				    		/*******************************************************************************
+	    				    			
+	    				    			CHECK PERMISSIONS
+	    				    			
+	    				    				1.  Make sure permission exist to access this resource
+	    				    			
+	    				    		*******************************************************************************/
+	    				    		
+	    				    		if( !$direct ){
+	    				    			
+		    				    		$perms = $obj->getPermissions();
+		    				    		
+		    				    		if( !isSet($perms["object"])  ){ 
+			    				    		$obj->throwError("You cannot access this resource.",403,"Forbidden"); 
+		    				    		} else if( ( $perms["object"] === "user" && !isSet($_SESSION["ouser"]) ) || ( is_int($perms["object"]) && !isSet($_SESSION["ouser"]) ) ){
+		    				    		
+			    				    		if( isSet($_SERVER["PHP_AUTH_USER"]) && isSet($_SERVER["PHP_AUTH_PW"]) ){
+				    				    		$login = $obj->route('/cmd/AUsers/login/',array("ouser_email"=>$_SERVER["PHP_AUTH_USER"],"ouser_password"=>$_SERVER["PHP_AUTH_PW"]),TRUE);
+				    				    		
+				    				    		if( !isSet($_SESSION["ouser"]) ){
+					    				    		$obj->throwError("You cannot access this resource.",401,"Unauthorized");	
+				    				    		}
+			    				    		} else {
+				    				    		$obj->throwError("You cannot access this resource.",401,"Unauthorized");	
+			    				    		}
+			    				    		
+		    				    		} else if( is_int($perms["object"]) && isSet($_SESSION["ouser"]) && $_SESSION["ouser"]->ouser_permission_level > $perms["object"] ){
+			    				    		$obj->throwError("You cannot access this resource.",403,"Forbidden");	
+		    				    		}
+		    				    		
 	    				    		}
-	    					        $obj->route($path,$params);						                    // call the objects route function to call the specified function
+	    				    		
+	    				    		/*******************************************************************************
+	    				    			SETUP DATABSE CONNECTION
+	    				    		*******************************************************************************/
+	    				    		
+	    				    		if( method_exists($obj,'setDatabaseConnection') ){ $obj->setDatabaseConnection(getDatabaseConnection()); }
+	    					        
+	    					        /*******************************************************************************
+	    				    			ROUTE REMAINING PATH - function calls
+	    				    		*******************************************************************************/
+	    					        
+	    					        $obj->route($path,$params,$direct);
+	    					        
 						        } catch (Exception $e){                                                 // catch to handle exception
 	    					        $this->throwError($e->getMessage());				                // set and return error message and status
 						        } 
-						        return $obj;									                        // return the object (this allows chaining)
+						        return $obj;								                        	// return the object (this allows chaining)
 							}
 							break;                                                                      // if we find an object then we are done with this loop as we only want to find one per path
 						} else {
-							$path = '/'.$obj . $path;                                                   // set unused $obj from the $path_array to the $path to later be used to call a function in an object
+							$path = '/'.$obj_name . $path;                                                   // set unused $obj from the $path_array to the $path to later be used to call a function in an object
 						}
 					}
 				
 				} else if( count($path_array) == 1 ) {
 					
-					
-					
 					$path = $path_array[0];
 					if( method_exists($this,$path) ){                                               // test if method exists in this object and if so attempt to call it
 					   try{
-							if( !$this->hasPermission($path) ){ $this->throwError("You cannot access this resource.",403,"forbidden"); return $this; }
-							$this->$path($params);                                                  // call method in $this
+							
+							if( !$direct ){
+	    				    			
+    				    		$perms = $this->getPermissions();
+    				    		
+    				    		if( !isSet($perms[$path])  ){ 
+	    				    		$obj->throwError("You cannot access this resource.",403,"Forbidden"); 
+    				    		} else if( ( $perms[$path] === "user" && !isSet($_SESSION["ouser"]) ) || ( is_int($perms[$path]) && !isSet($_SESSION["ouser"]) ) ){
+    				    		
+	    				    		if( isSet($_SERVER["PHP_AUTH_USER"]) && isSet($_SERVER["PHP_AUTH_PW"]) ){
+		    				    		$login = $obj->route('/cmd/AUsers/login/',array("ouser_email"=>$_SERVER["PHP_AUTH_USER"],"ouser_password"=>$_SERVER["PHP_AUTH_PW"]),TRUE);
+		    				    		
+		    				    		if( !isSet($_SESSION["ouser"]) ){
+			    				    		$this->throwError("You cannot access this resource.",401,"Unauthorized");	
+		    				    		}
+	    				    		} else {
+		    				    		$this->throwError("You cannot access this resource.",401,"Unauthorized");	
+	    				    		}
+	    				    		
+    				    		} else if( is_int($perms[$path]) && isSet($_SESSION["ouser"]) && $_SESSION["ouser"]->ouser_permission_level > $perms[$path] ){
+	    				    		$this->throwError("You cannot access this resource.",403,"Forbidden");	
+    				    		}
+    				    		
+    				    		
+    				    		
+				    		}
+				    		
+				    		if( $perms[$path] === "user" ){ $params["ouser_id"] = $_SESSION["ouser"]->ouser_id; }
+							
+							if( !$this->isError() ){
+								$this->$path($params);                                                  // call method in $this
+							}
 						} catch (Exception $e){                                                     // handle resulting errors
     					    $this->throwError($e->getMessage());                      				// throw 500 error if an error occurs and apply the message to this object
 					    }
@@ -166,6 +224,12 @@
 			
 		}
 		
+		/***********************************************************************
+		
+			PARSE PATH
+			
+		***********************************************************************/
+		
 		public function parsePath($path){
 			
 			
@@ -180,6 +244,16 @@
 			if( !empty($path_array) && isSet($routes[$path_array[0]]) ){ $base_path = $routes[array_shift($path_array)]; } else { $base_path = ""; }
 			
 			return array("path_array"=>$path_array,"path"=>$path,"base_path"=>$base_path,"params"=>$params);
+			
+		}
+		
+		/***********************************************************************
+		
+			HAS PERMISSION
+			
+		***********************************************************************/
+		
+		public function hasPermission($object){ 
 			
 		}
 		
@@ -204,7 +278,9 @@
 		public function setCustomRouter($router){ $this->custom_router = $router; }
 		public function cleanUp(){}
 		
-		public function hasPermission($object){ if( isSet($this->permissions[$object]) && $this->permissions[$object] === 'any'){ return TRUE; } else { return FALSE; }	}
+		public function getPermissions(){ return $this->permissions; }
+		
+		
 		
 		
 		

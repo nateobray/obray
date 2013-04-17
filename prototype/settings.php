@@ -17,9 +17,9 @@ define('__DebugMode__',TRUE);							// Enable Debug Mode
 define('__ROUTES__',serialize( array( 
 	
 	// Custom Routes
-	
+	"cmd" => __SELF__."lib/",
 	// System Routes
-	"cmd" => __SELF__,
+	// "cmd" => __SELF__,
 	"core" => __PATH_TO_CORE__
 ) ));
 
@@ -46,5 +46,8 @@ define ("__DATATYPES__", serialize (array (
     "password"  =>  array("sql"=>" varchar(255) ",							"my_sql_type"=>"varchar(255)",		"validation_regex"=>"")
 )));
 
+/******************************************************
+    User Settings
+******************************************************/
 
-
+define('__MAX_FAILED_LOGIN_ATTEMPTS__',10);				// The maximium allowed failed login attempts before an account is locked

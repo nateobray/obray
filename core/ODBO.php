@@ -359,9 +359,7 @@
         	$this->sql  = " insert into $this->table ( ".$sql.", slug, order_variable, parent_id, OCDT, OCU ) values ( ".$sql_values.", :slug, 1, :parent_id, NOW(), 0 ) ";
         	$statement = $this->dbh->prepare($this->sql);
         	
-        	
         	unset($params["refresh"]);
-        	print_r($params);
         	
         	$this->script = $statement->execute($params);
         	
@@ -381,54 +379,63 @@
         	$data = array();
         	$this->data_types = unserialize(__DATATYPES__);
         	
-        	forEach($this->table_definition as $name => $def){
-        		
-				if( array_key_exists("primary_key",$def) && $def["primary_key"] === TRUE  ){                           // write SQL for key column if it exists
-						$this->primary_key_column = $name;                                                            // set the key column variable
-				} else {	
-				
-					// validate
-					$data_type = $this->getDataType($def);
-					if( isSet($def["required"]) && $def["required"] === TRUE && (!isSet($params[$name]) || $params[$name] === NULL || $params[$name] === "") ){ 
-							$this->throwError(isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is required.":$name." is required.",500,$name); 
-					}
+        	
+        	
+        	forEach($this->data as $i => $row){
+        	
+	        	forEach($this->table_definition as $name => $def){
+	        		
+					if( array_key_exists("primary_key",$def) && $def["primary_key"] === TRUE  ){
+							$this->primary_key_column = $name;
+							$params[$name] = $row->$name;
+					} else {	
 					
-					if( isSet($params[$name]) ){
-					
-						if( isSet($def["data_type"]) && !empty($this->data_types[$data_type["data_type"]]["validation_regex"]) && !preg_match($this->data_types[$data_type["data_type"]]["validation_regex"],$params[$name]) ){
-							$this->throwError(isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is invalid.":$name." is invalid.",500,$name);
-						}
-						
-						// is slug
-						if( isSet($def["slug"]) && $def["slug"] === TRUE ){ $slug_column = $name; }
-						
-						// is order_key
-						if( isSet($def["order_key"]) && $def["order_key"] == TRUE ){ $this->order_key = $name; $order_value = $params["order_key"]; } else { $this->order_key = "parent_id"; $order_value = isSet($params["parent_id"])?$params["parent_id"]:0; }
-						
 						if( isSet($params[$name]) ){
-							if( !empty($sql) ){ $sql .= ","; $sql_values .= ","; }
-							$sql .= $name . " = :$name ";
+							// validate
+							$data_type = $this->getDataType($def);
+							if( isSet($def["required"]) && $def["required"] === TRUE && (!isSet($params[$name]) || $params[$name] === NULL || $params[$name] === "") ){ 
+									$this->throwError(isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is required.":$name." is required.",500,$name); 
+							}
+							
+							if( isSet($params[$name]) ){
+							
+								if( isSet($def["data_type"]) && !empty($this->data_types[$data_type["data_type"]]["validation_regex"]) && !preg_match($this->data_types[$data_type["data_type"]]["validation_regex"],$params[$name]) ){
+									$this->throwError(isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is invalid.":$name." is invalid.",500,$name);
+								}
+								
+								// is slug
+								if( isSet($def["slug"]) && $def["slug"] === TRUE ){ $slug_column = $name; }
+								
+								// is order_key
+								if( isSet($def["order_key"]) && $def["order_key"] == TRUE ){ $this->order_key = $name; $order_value = $params["order_key"]; } else { $this->order_key = "parent_id"; $order_value = isSet($params["parent_id"])?$params["parent_id"]:0; }
+								
+								if( isSet($params[$name]) ){
+									if( !empty($sql) ){ $sql .= ","; $sql_values .= ","; }
+									$sql .= $name . " = :$name ";
+								}
+							}
 						}
-					
 					}
-				
-				}
+	        	}
+	        	
+	        	
+	        	if( empty($this->primary_key_column) ){ $this->throwError('Please specify a primary key.','primary_key','500'); }
+	        	if( !isSet( $params[$this->primary_key_column] ) ){ $this->throwError('Please specify a value for the primary key.','500',$this->primary_key_column); }
+	        	
+	        	if( $this->isError() ){ return $this; }
+	        	
+	        	$this->reorder(1,$this->order_key,$order_value);
+	        	
+	        	if( isSet($params["parent_id"]) ){ $sql .= " ,parent_id = :parent_id"; }
+	        	if( isSet($slug_column) && isSet($params[$slug_column]) ){ $params["slug"] = $this->getSlug($params[$slug_column],$slug_column); $sql .= " ,slug = :slug"; }
+	        	$this->sql  = " UPDATE $this->table SET $sql WHERE $this->primary_key_column = :$this->primary_key_column ";
+	        	$statement = $this->dbh->prepare($this->sql);
+	        	
+	        	$this->script = $statement->execute($params);
         	
         	}
         	
-        	if( empty($this->primary_key_column) ){ $this->throwError('Please specify a primary key.','primary_key','500'); }
-        	if( !isSet( $params[$this->primary_key_column] ) ){ $this->throwError('Please specify a value for the primary key.','500',$this->primary_key_column); }
-        	
-        	if( $this->isError() ){ return $this; }
-        	
-        	$this->reorder(1,$this->order_key,$order_value);
-        	
-        	if( isSet($params["parent_id"]) ){ $sql .= " ,parent_id = :parent_id"; }
-        	if( isSet($params[$slug_column]) ){ $params["slug"] = $this->getSlug($params[$slug_column],$slug_column); $sql .= " ,slug = :slug"; }
-        	$this->sql  = " UPDATE $this->table SET $sql WHERE $this->primary_key_column = :$this->primary_key_column ";
-        	$statement = $this->dbh->prepare($this->sql);
-        	
-        	$this->script = $statement->execute($params);
+        	$this->params = $params;
         	
         }
         
@@ -476,7 +483,7 @@
         	$where = '';
         	forEach($params as $key => $value){
 	        	
-	        	if( $this->table_definition[$key]["data_type"] == "password" ){
+	        	if( isSet($this->table_definition[$key]["data_type"]) && $this->table_definition[$key]["data_type"] == "password" ){
 	        		
 	        		$password = $params["ouser_password"];
 	        		$password_key = $key;
