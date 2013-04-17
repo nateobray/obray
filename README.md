@@ -205,7 +205,7 @@ You can also use OObjects extended query string syntax to extract more precise q
 	$this->route('/get/?first_name=John|Johnny');	// get all records with the first_name 'John' OR 'Johnny'
 	print_r($this->data);
 	
-#OUsers
+##OUsers
 
 To help manage permissions a user management class has been built into the core.  This helps restrict access to certain classes, provides an authentication method, and improves overall security of the framework.
 
@@ -242,7 +242,7 @@ By the base OUsers class there are only two supported statuses "active" and "dis
 
 Permission levels are used to determine if the user has enough permission to access a route.  The permission level value is an integer and the lower the value the more permissions will be granted.  For instance if you specify the permissions for a particular route as the integer 2 any user that has permission level less than or equal to 2 will be granted access.  Any permission level higher than 2 will be restricted.
 
-#Permissions
+##Permissions
 
 Every OObject should define a permission array that will define the restrictions placed on the accessing the class from a URL.  Usually this is defined in the constructor like in the AUsers class in the prototype demo application:
 
