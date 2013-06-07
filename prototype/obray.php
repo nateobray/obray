@@ -10,7 +10,7 @@
 	require_once '/www/obray/core/ORouter.php';                // include ORouter
 	//include "/www/obray/lib/OPages/OPages.php";
 	$router = new ORouter();                                   // instatiate ORouter
-	
+	$router->setMissingPathHandler("OPages","/www/obray/cms/OPages.php");
 	//$router->setCustomRouter(new OPages);
 	$router->route($_SERVER["REQUEST_URI"]);                   // call ORouter's "route" function
 			

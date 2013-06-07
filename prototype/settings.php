@@ -18,6 +18,7 @@ define('__ROUTES__',serialize( array(
 	
 	// Custom Routes
 	"cmd" => __SELF__."lib/",
+	"cms" => "/www/obray/cms/",
 	// System Routes
 	// "cmd" => __SELF__,
 	"core" => __PATH_TO_CORE__

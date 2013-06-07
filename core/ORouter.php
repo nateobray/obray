@@ -23,11 +23,11 @@
 	
 	require_once 'settings.php';										                  // see if a setting file exists for a given application (looks at the base path where your obray.php file exists)
 	
-	require_once 'dbug.php';                                                                        // easy readout function (i.e. new dBug($yourvariable);
+	require_once 'dbug.php';                                                              // easy readout function (i.e. new dBug($yourvariable);
 	require_once 'functions.php';
-	require_once 'OObject.php';                                                                     // the base object for all obray objects (basically everything will extend this or a class that has already extended it)
-	require_once 'OView.php';                                                                       // object that extends OObject but is specifically for an HTML view
-	require_once 'ODBO.php';                                                                        // object that extends OObject but includes database functionality and table definition support
+	require_once 'OObject.php';                                                           // the base object for all obray objects (basically everything will extend this or a class that has already extended it)
+	require_once 'OView.php';                                                             // object that extends OObject but is specifically for an HTML view
+	require_once 'ODBO.php';                                                              // object that extends OObject but includes database functionality and table definition support
 	
 	if (!class_exists( 'OObject' )) { die(); }
 	
@@ -47,8 +47,9 @@
 		
 		public function route($path,$params=array(),$direct=FALSE){
 			
+			$start_time = microtime(TRUE);
+			
 			$obj = parent::route($path,$params,$direct);												// Call the parent class default route function
-			$obj->cleanUp();
 			
 			/*****************************************************************************************
 				
@@ -116,31 +117,37 @@
 			 
 			);
 			
-			if( $obj->getStatusCode() == 401 ){	header('WWW-Authenticate: Basic realm="'.__APP__.'"');
-			}
+			if( $obj->getStatusCode() == 401 ){	header('WWW-Authenticate: Basic realm="'.__APP__.'"');}
+			$content_type = $obj->getContentType();
 			
 			if(!headers_sent()){ header("HTTP/1.1 ".$obj->getStatusCode()." " . $status_codes[$obj->getStatusCode()] );}    // set HTTP Header
-			
+			if(!headers_sent()){ header("Content-Type: " . $content_type ); }                                      			// set Content-Type
 			/*****************************************************************************************
 				
 				2.	Setting the content-type
 				
 			*****************************************************************************************/
 			
-			switch($obj->getContentType()){                                                          // handle OObject content types
+			$obj->cleanUp();
+			
+			switch($content_type){  		                                                        // handle OObject content types
     			
     			 case 'application/json':                                                            // Handle JSON (default)
     			 
-    			     echo json_encode($obj,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK);
-    			     break;
+					$obj->runtime = (microtime(TRUE) - $start_time)*1000;
+					echo json_encode($obj,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK);
+					break;
     			 
     			 case 'text/html':                                                                   // Handle HTML
-    			 
-    			     break;
+    			 	
+    			 	$obj->runtime = (microtime(TRUE) - $start_time)*1000;
+    			 	if(!headers_sent()){ header("Server-Runtime: " . $obj->runtime . "ms" ); }    			// set header runtime
+    			 	echo $obj->html;
+					break;
     			     
     			 case 'application/xml':                                                             // Handle XML
     			 
-    			     break;
+    			    break;
     			
 			}
 			
@@ -150,7 +157,7 @@
 				
 			*****************************************************************************************/
 			
-			if(!headers_sent()){ header("Content-Type: " . $obj->getContentType() ); }                                      // set Content-Type
+			
 			
 			return $obj;
 			

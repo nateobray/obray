@@ -1,0 +1,252 @@
+.opart-empty, .omedia-empty{
+	margin: 10px;
+	border: 3px dashed #efefef;
+	border-radius: 10px;
+	color: #ccc;
+	font-size:52px;
+	text-align:center;
+	padding: 20px;
+}
+/*
+.opart-empty:hover{
+	color: blue;
+	border-color: blue;
+	cursor: pointer;
+}
+*/
+.oarea{
+	position: relative;
+}
+
+
+.oedit-btn{
+	
+	position: fixed;
+	top: 3px;
+	left: 3px;
+	
+}
+
+.opart{
+	position: relative;
+}
+
+.oarea-add-btn, .opart-edit-btn, .opart-cog-btn{
+	margin: 3px;
+	position: absolute;
+	right: 0px;
+	top: 0px;
+}
+
+.opart-cog-btn{
+	right: 0px;
+}
+
+.opart-edit-btn{
+	right: 42px;
+}
+
+.oarea-add-btn{ bottom:0px; top: auto; }
+
+
+#OWidgets-modal{
+	width: 650px;
+}
+
+#OWidgets-modal img{
+	border: 1px solid #efefef;
+	margin-left: -1px;
+}
+
+#OWidgets-modal .thumbnail{
+	height: 275px;
+	
+}
+
+#OWidgets-modal .thumbnail:hover{
+	cursor: pointer;
+	box-shadow: 0px 0px 7px rgba(0, 0, 255, 0.50);
+}
+
+#OEditor-modal, #OEditor-code-modal, #OEditor-html, #OEditor-css{
+	width: 725px;
+	margin-left: -362px;
+}
+
+#OEditor-modal form{
+	margin-bottom: 0px;
+}
+
+#OEditor-modal .btn-group>.btn-text{
+	line-height: 18px;
+}
+
+#wysihtml5-textarea{
+	margin: 0 auto;
+	width: 100%;
+	height: 345px;
+	border: 0px;
+	box-shadow: 0px;
+	-webkit-box-shadow: inset 0 0px 0px rgba(0,0,0,0.075);
+	-moz-box-shadow: inset 0 0px 0px rgba(0,0,0,0.075);
+}
+
+/**
+#wysihtml5-textarea{
+	width: 100%;
+	height: 300px;
+	border: 1px;
+	
+}
+**/
+.btn-icon{
+	font-size: 17px !important;
+}
+
+
+
+#OEditor-code, #OEditor-code-OEditor-html, #OEditor-code-OEditor-css{
+	margin-top: -15px;
+	margin-left: -15px;
+	margin-bottom: -15px;
+	height: 415px;
+	width: 725px;
+}
+
+.wysiwyg-text-align-right{ text-align: right; }
+.wysiwyg-text-align-center{ text-align: center; }
+.wysiwyg-text-align-left{ text-align: left; }
+
+/*!
+ * jQuery UI Resizable 1.10.2
+ * http://jqueryui.com
+ *
+ * Copyright 2013 jQuery Foundation and other contributors
+ * Released under the MIT license.
+ * http://jquery.org/license
+ *
+ * http://docs.jquery.com/UI/Resizable#theming
+ */
+.ui-resizable {
+	position: relative;
+}
+.ui-resizable-handle {
+	position: absolute;
+	font-size: 0.1px;
+	display: block;
+}
+.ui-resizable-disabled .ui-resizable-handle,
+.ui-resizable-autohide .ui-resizable-handle {
+	display: none;
+}
+.ui-resizable-n {
+	cursor: n-resize;
+	height: 7px;
+	width: 100%;
+	top: -5px;
+	left: 0;
+}
+.ui-resizable-s {
+	cursor: s-resize;
+	height: 7px;
+	width: 100%;
+	bottom: -5px;
+	left: 0;
+}
+.ui-resizable-e {
+	cursor: e-resize;
+	width: 7px;
+	right: -5px;
+	top: 0;
+	height: 100%;
+}
+.ui-resizable-w {
+	cursor: w-resize;
+	width: 7px;
+	left: -5px;
+	top: 0;
+	height: 100%;
+}
+.ui-resizable-se {
+	cursor: se-resize;
+	width: 12px;
+	height: 12px;
+	right: 1px;
+	bottom: 1px;
+}
+.ui-resizable-sw {
+	cursor: sw-resize;
+	width: 9px;
+	height: 9px;
+	left: -5px;
+	bottom: -5px;
+}
+.ui-resizable-nw {
+	cursor: nw-resize;
+	width: 9px;
+	height: 9px;
+	left: -5px;
+	top: -5px;
+}
+.ui-resizable-ne {
+	cursor: ne-resize;
+	width: 9px;
+	height: 9px;
+	right: -5px;
+	top: -5px;
+}
+
+
+
+
+/* OMEDIA */
+.omedia{
+	position:relative;
+}
+
+.omedia-cog-btn{
+	position: absolute;
+	top: 5px;
+	left: 5px;
+}
+
+.file-input{
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	font-size: 14px;
+	opacity: 0;
+}
+
+.controls{
+	position: relative;
+}
+
+.omedia-file-name-container{
+	display: inline-block;
+	padding: 5px 10px;
+}
+
+.control-group.success .omedia-file-name-container{
+	color: #468847;
+}
+
+.oform{
+	padding-top: 10px;
+}
+
+.ace_editor{
+	height: 400px;
+	margin-left: -20px;
+	margin-top: -15px;
+	margin-bottom: -15px;
+	margin-right: -15px;
+}
+
+
+
+
+
+
+
+

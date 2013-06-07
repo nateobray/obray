@@ -1,0 +1,11 @@
+@media (max-width: 767px) { 
+
+	.phone-text-center{	text-align: center;	}
+	
+	
+	
+
+}
+ 
+/* Landscape phones and down */
+@media (max-width: 480px) { ... }
