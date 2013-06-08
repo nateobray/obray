@@ -45,9 +45,9 @@
 			parent::__construct();
 			
 			$this->permissions = array(
-				"object" => "any",
-				"form" => "any",
-				"upload" => "any"
+				"object" => 1,
+				"form" => 1,
+				"upload" => 1
 			);
 			
 			$this->base_url = "/cms/OMedia/";
@@ -176,7 +176,7 @@
 			switch($params["omedia_type"]){
 				
 				case "image":
-					$params["omedia_code"] = '<img class="omedia-'.$params["omedia_ext"].' omedia-image" src="'.$params["omedia_path"].'" width="'.$params["omedia_width"].'" height="'.$params["omedia_height"].'" alt="'.$params["omedia_description"].'" />';
+					$params["omedia_code"] = '<img class="omedia-'.$params["omedia_ext"].' omedia-image" src="/'.$params["omedia_path"].'" width="'.$params["omedia_width"].'" height="'.$params["omedia_height"].'" alt="'.$params["omedia_description"].'" />';
 					break;
 				case "video":
 				

@@ -501,8 +501,10 @@
         ********************************************************************/
         
         public function get($params){
-        
+        	
+        	$original_params = $params;
         	if( !isSet($params["where"]) ){ $params["where"] = array("="=>$params); }
+        	if( isSet($params["with"]) ){ $with = explode('|',$params["with"]); unset($params["with"]); } else { $with = array(); }
         	
         	if( empty($this->dbh) ){ return $this; }
         	$where = "";
@@ -528,9 +530,27 @@
         	
         	$this->params = $params;
         	
-        	if( isSet($password) ){
-	        	for( $i=0;$i<count($this->data);++$i ){ 
-	        		if( $this->data[$i]->$key !== crypt($password,$this->data[$i]->$key) ){ unset($this->data[$i]); } 
+        	forEach( $this->data as $i => $row ){
+        		forEach($this->table_definition as $key => $def){
+	        		if( isSet($def['foriegn_objects'])  ){
+		        		forEach($def['foriegn_objects'] as $object => $details){
+		        			if( array_search($object,$with) !== FALSE ){
+		        				//echo $query_string;exit();
+		        				if( isSet($original_params["parent_id"]) ){ unset($original_params["parent_id"]); }
+		        				if( isSet($original_params["slug"]) ){ unset($original_params["slug"]); }
+		        				$query_string = http_build_query($original_params);
+			        			$this->data[$i]->$object = $this->route($details["path"].'?'.$details["column"].'='.$row->$key.'&'.$query_string)->data;
+			        			if( count($this->data[$i]->$object) === 0 ){ unset($this->data[$i]); }
+			        		}
+		        		}
+	        		}
+        		}
+        	}
+        	
+        	if( isSet($components->password) ){
+	        	for( $i=0;$i<count($this->data);++$i ){
+	        		$key = $components->password_key;
+	        		if( strcmp($this->data[$i]->$key,crypt($components->password,$this->data[$i]->$key)) !== 0 ){ unset($this->data[$i]); } 
 	        	}
         	}
         	
@@ -562,7 +582,10 @@
 	        
 	        forEach($this->table_definition as $name => $def){
         		
-        		
+        		if( array_key_exists("primary_key",$def) && $def["primary_key"] === TRUE  ){
+					$this->primary_key_column = $name;
+				}
+			
         		if( isSet($def["innerjoin"]) ){
         			//$join = $this->route($def["innerjoin"]);
         			//$join = $join->getQueryComponents($obj->params);
@@ -597,7 +620,7 @@
 	        	Generate Where
 	        **************************************************************/
         	
-        	if( isSet($obj->params["where"]) ){ $tmp = $this->buildWhereClause($obj->params["where"]); $obj->where .= $tmp->where; $obj->params = $tmp->params; }
+        	if( isSet($obj->params["where"]) ){ $tmp = $this->buildWhereClause($obj->params["where"]); $obj->where .= $tmp->where; $obj->params = $tmp->params; if( isSet($tmp->password) ){ $obj->password = $tmp->password; $obj->password_key = $tmp->password_key; } }
         	        	
         	if( isSet($this->operators) ){ forEach( $this->operators as $operator ){ unset($obj->params[$operator]); } }
 	        return $obj;
@@ -617,21 +640,28 @@
 	        		
 	        		if(array_key_exists($key, $this->table_definition) || $key === 'slug' || $key === 'parent_id'){
 						
-			        	// define ORs within a where clause
-			        	$value = explode('|',$value);
-			        	$or = '(';
-			        	forEach($value as $k => $v){
-			        	    if( $or != '(' ){ $or .= ' OR '; }
-			        	    
-				        	$or .= " ".$this->table.".$key " . $operator . " :$key"."_".count($param_array);
-				        	//unset($params[$key]);
+						
+						if( isSet($this->table_definition[$key]["data_type"]) && $this->table_definition[$key]["data_type"] == "password" ){ $password_key = $key; $password = $v; } else {
+						
+				        	// define ORs within a where clause
+				        	$value = explode('|',$value);
+				        	$or = '(';
+				        	forEach($value as $k => $v){
 				        	
-				        	$param_array[$key."_".count($param_array)] = $v;
-			        	}
-			        	$or .= ' )';
-			        	
-			        	// write where clause
-						if( !empty($where) && isSet($or) ){ $where .= " AND $or"; } else if( isSet($or) ) { $where .= " $or ";	 }
+					        	if( $or != '(' ){ $or .= ' OR '; }
+					        	   
+						        $or .= " ".$this->table.".$key " . $operator . " :$key"."_".count($param_array);
+						        //unset($params[$key]);
+						        	
+						        $param_array[$key."_".count($param_array)] = $v;
+					        	
+				        	}
+				        	$or .= ' )';
+				        	
+				        	// write where clause
+							if( !empty($where) && isSet($or) ){ $where .= " AND $or"; } else if( isSet($or) ) { $where .= " $or ";	 }
+						
+						}
 		        	
 		        	}
 		        	
@@ -640,7 +670,10 @@
 	        	}
 	        }
 	        
+	        
+	        
 	        $obj = new stdClass; $obj->where = $where; $obj->params = $param_array;
+	        if( isSet($password) ){ $obj->password = $password; $obj->password_key = $password_key; }
 	        
 	        return $obj;
 	        
