@@ -12,9 +12,9 @@ To install Obray prototype demo application on a typical Apache configuration cr
         ServerAdmin yoursupportemail@example.com
         ServerName yourservername.com
         DocumentRoot /yourpath/obray/prototype
-        
+
         <Directory /yourpath/obray/prototype >
-                
+
                 Options FollowSymLinks MultiViews
                 AllowOverride None
 
@@ -44,22 +44,22 @@ Next you'll want to modify your settings file to accomodate your server settings
 	define('__SELF__', dirname(__FILE__).'/');              // This should contain the path to your application
 	define('__PATH_TO_CORE__','/yourpath/obray/core/');		// The path to obray's core files - you'll want to change this to the location you put it
 	define('__DebugMode__',TRUE);							// Enable or Disable debug mode.  In debug mode things like ?refresh will write tables and rebuild resources
-	
-#### Route Settings	
+
+#### Route Settings
 
 This is where you are going to define valid routes in your application.  A route is a shortcut to a path that contains the classes you would like to make available to your application.  In general you should always disable system routes and extend the classes you need.  This will allow you to add or remove functionality from the core that your application needs.  NOTE: Your shortcut cannot be the same as an actual directory name in your application, it relies on the path to not exist to be redirected through ORouter (see apache config above).
 
-	define('__ROUTES__',serialize( array( 
-	
+	define('__ROUTES__',serialize( array(
+
 		// Custom Routes
 		"lib" => __SELF__ . "/lib/"
-		
+
 		// System Routes - generally only uncomment these if you are going to debug obray core files
 		// "cmd" => __SELF__,
 		// "core" => __PATH_TO_CORE__
 	) ));
 
-#### Database settings	
+#### Database settings
 
 Place your basic database settings here
 
@@ -70,7 +70,7 @@ Place your basic database settings here
 	define('__DB__','prototype');							// database name
 	define('__DBEngine__','MyISAM');						// database engine
 	define('__DBCharSet__','utf8');							// database characterset (default: utf8)
-	
+
 Below are the definitions of the basic datatypes available when creating a table definition in and ODBO class.  You can add more below, remove ones you don't need, or make changes you do need.
 
 	define ("__DATATYPES__", serialize (array (
@@ -88,38 +88,38 @@ Below are the definitions of the basic datatypes available when creating a table
 
 Obray allows you to map PHP objects directly to URIs even from within your application!  To do this every object in Obray extends the OObject class, for example:
 
-	
+
 	Class MyClass1 extends OObject{
-		
+
 		public permissions = array(
 			"firstFunction" => "any"
 		);
-	
+
 		public function firstFunction($params){
-			
+
 			$this->result = $params["a"] + $params["b"];
-			
+
 		}
-		
+
 	}
 
 	Class MyClass2 extends OObject{
-	
+
 		public function secondFunction(){
-		
+
 			$params = array("a"=>1,"b"=>1);
 			$my_instance_1 = $this->route('/lib/MyClass1/firstFunction/',$params);  // instantiate instance of MyClass1 and call firstFunction and return the object
 			$this->result_1 = $my_instance_1->result;
-			
+
 			$params = array("a"=>1,"b"=>2);
 			$my_instance_2 = $this->route('/lib/MyClass1/');						// just initiate an instance of MyClass1
 			$my_instance_2->route('/firstFunction/',$params);						// call the firstFunction function through route
 			$my_instance_2->firstFunction($params);									// call the firstFunction function direction from the object
-			
+
 			$this->result_2 = $my_instance_2->result;
-			
+
 		}
-	
+
 	}
 
 
@@ -152,7 +152,7 @@ ODBO (Obray Database Object) is a database abstraction layer that will allow you
 This looks like the following:
 
 	Class MyDBClass extends ODBO{
-	
+
 		private $table_name = "contacts";
 		private $table_definition = array(
 			"id" => array( "primary_key"=>TRUE ),
@@ -161,7 +161,7 @@ This looks like the following:
 			"email_address" => 	array( "data_type"=>"varchar(100)",	"required"=>TRUE ),
 			"home_phone" => 	array( "data_type"=>"varchar(100)",	"required"=>FALSE )
 		);
-	
+
 	}
 
 Once you've defined you table_definition you can now call the available public methods:
@@ -169,11 +169,11 @@ Once you've defined you table_definition you can now call the available public m
 	$obj = $this->route('/lib/MyDBClass/add/?first_name=John&last_name=Smith&email=johnsmith@example.com');	// add John to the database
 	$obj->update(array( "first_name"=>"Johnny" ));															// update his name to Johnny
 	$obj->delete();																							// delete Johnny
-	
+
 You can also overwrite methods to enhance the default functionality while still maintaining everything existing:
 
 	Class MyDBClass extends ODBO{
-	
+
 		private $table_name = "contacts";
 		private $table_definition = array(
 			"id" => array( "primary_key"=>TRUE ),
@@ -182,29 +182,29 @@ You can also overwrite methods to enhance the default functionality while still 
 			"email_address" => 	array( "data_type"=>"varchar(100)",	"required"=>TRUE ),
 			"home_phone" => 	array( "data_type"=>"varchar(100)",	"required"=>FALSE )
 		);
-		
+
 		public function add($params){
-			
+
 			// do some pre-database processing here
-			
+
 			parent::add($params);
-			
+
 			// do some post-database processing here
-			
+
 		}
-	
+
 	}
-	
+
 When you query existing data using get the data gets put into $this->data as an array:
 
 	$this->get();	// gets all records in the table and puts them in $this->data[]
 	print_r($this->data);
-	
+
 You can also use OObjects extended query string syntax to extract more precise queries:
 
 	$this->route('/get/?first_name=John|Johnny');	// get all records with the first_name 'John' OR 'Johnny'
 	print_r($this->data);
-	
+
 ##OUsers
 
 To help manage permissions a user management class has been built into the core.  This helps restrict access to certain classes, provides an authentication method, and improves overall security of the framework.
@@ -260,4 +260,3 @@ Here are the possible permissions:
 2. user: this resource is restricted to information specific to the current user.  For most queries this means restricting content that is not associated with the user through their ouser_id (this restriction works both from an HTTP request or from PHP code)
 3. any integer: the is explained under the Permissions section under OUsers
 4. undefined: if the key for the object or the function is undefined then the resources is completely unaccessible from an HTTP request with a status code of 404
-

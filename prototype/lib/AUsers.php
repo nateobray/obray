@@ -1,7 +1,7 @@
 <?php
-	
+
     /***********************************************************************
-	
+
     Obray - Super lightweight framework.  Write a little, do a lot, fast.
     Copyright (C) 2013  Nathan A Obray
 
@@ -17,24 +17,24 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
+
     ***********************************************************************/
-	
+
 	if (!class_exists( 'OObject' )) { die(); }
-	
+
 	/********************************************************************************************************************
-		
+
 		AUsers:	Application scoper user manager
-		
+
 	********************************************************************************************************************/
 	include __PATH_TO_CORE__ . "OUsers.php";
-	
+
 	Class AUsers extends OUsers{
-		
+
 		public function __construct(){
-		
+
 			parent::__construct();
-			
+
 			$this->permissions = array(
 				"object"=>"user",
 				"add"=>"any",
@@ -42,11 +42,8 @@
 				"get"=>"user",
 				"logout"=>"any"
 			);
-			
+
 		}
-		
-		
-		
+
 	}
-	
-	
+?>

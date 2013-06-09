@@ -1,7 +1,7 @@
 <?php
 
 /***********************************************************************
-	
+
 	Obray - Super lightweight framework.  Write a little, do a lot, fast.
     Copyright (C) 2013  Nathan A Obray
 
@@ -17,27 +17,27 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
+
     ***********************************************************************/
-    
+
 	if (!class_exists( 'OObject' )) { die(); }
-	
+
 	require_once("OCMS.php");
-	
+
 	Class OWidgets extends OObject {
-		
+
 		public function __construct(){
-			
+
 			$this->permissions = array(
 				"object" => "any",
 				"out" => "any",
 				"get" => "any"
 			);
-			
+
 		}
-		
-		public function get(){ 
-			$this->data = $this->sdir("widgets"); 
+
+		public function get(){
+			$this->data = $this->sdir("widgets");
 			forEach($this->data as $i => $widget){
 				$this->data[$i] = new stdClass();
 				if( is_file(__SELF__.'widgets/'.$widget.'/config.js') ){
@@ -50,33 +50,31 @@
 				}
 			}
 		}
-		
+
 		public function out($params){
-			
+
 			$this->get($params);
-			ob_start(); 
+			ob_start();
 			include "views/vwidgets.php";
 			$this->html = ob_get_clean();
 
-			
+
 			$this->setContentType("text/html");
-			
+
 		}
-		
-		private function sdir( $path='.', $mask='*', $nocache=1 ){ 
-    		$sdir = array(); static $dir = array(); // cache result in memory 
-		    if ( !isset($dir[$path]) || $nocache) { 
-		        $dir[$path] = scandir($path); 
-		    } 
-		    foreach ($dir[$path] as $i=>$entry) { 
-		        if ($entry!='.' && $entry!='..' && fnmatch($mask, $entry) ) { 
-		            $sdir[] = $entry; 
-		        } 
-		    } 
-		    return ($sdir); 
+
+		private function sdir( $path='.', $mask='*', $nocache=1 ){
+    		$sdir = array(); static $dir = array(); // cache result in memory
+		    if ( !isset($dir[$path]) || $nocache) {
+		        $dir[$path] = scandir($path);
+		    }
+		    foreach ($dir[$path] as $i=>$entry) {
+		        if ($entry!='.' && $entry!='..' && fnmatch($mask, $entry) ) {
+		            $sdir[] = $entry;
+		        }
+		    }
+		    return ($sdir);
 		}
-		
+
 	}
-	
-	?>
-	
+?>

@@ -1,7 +1,7 @@
 <?php
-	
+
     /***********************************************************************
-	
+
     Obray - Super lightweight framework.  Write a little, do a lot, fast.
     Copyright (C) 2013  Nathan A Obray
 
@@ -17,34 +17,33 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
+
     ***********************************************************************/
-	
+
 	if (!class_exists( 'OObject' )) { die(); }
-	
+
 	/********************************************************************************************************************
-		
+
 		WDictionary:	This is our controller object for our Dictionary application.
-		
+
 	********************************************************************************************************************/
-	
+
 	Class MDictionary extends ODBO{
-	   
+
 	   public function __construct(){
-    	   
+
     	   $this->table = "wdictionary";
-    	   
+
     	   $this->table_definition = array(
     	       "wdictionary_id" => 			array("primary_key" => TRUE ),
     	       "wdictionary_word" => 		array("data_type"=>"varchar(255)",		"required"=>TRUE,	"label"=>"Word",		"error_message"=>"Please specify the word you are defining.",   		"slug"=>TRUE),
     	       "wdictionary_definition" => 	array("data_type"=>"text",				"required"=>TRUE,	"label"=>"Definition"),
     	       "wdictionary_score" => 		array("data_type"=>"integer")
     	   );
-    	   
+
     	   parent::__construct();
-    	   
+
 	   }
-		
+
 	}
-	
-	
+?>

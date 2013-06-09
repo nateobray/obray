@@ -1,7 +1,7 @@
 <?php
-	
+
     /***********************************************************************
-	
+
     Obray - Super lightweight framework.  Write a little, do a lot, fast.
     Copyright (C) 2013  Nathan A Obray
 
@@ -17,31 +17,29 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
+
     ***********************************************************************/
-	
+
 	if (!class_exists( 'OObject' )) { die(); }
-	
+
 	/********************************************************************************************************************
-		
+
 		OView:	The purpose of OView is to set the content type to text/html and prepare for delivery.  Objects
 		        that inherit form here when called with expect to output HTML content.
-		
+
 	********************************************************************************************************************/
-	
+
 	Class VDictionary extends OView{
-	   
+
 	   public function output($params){
-    	   
+
     	   include "includes/inc_vdictionary.php";
-    	   
+
 	   }
-	   
+
 	   public function add(){
     	   $this->content_type = "application/json";
 	   }
-	   
-	   
+
 	}
-	
-	
+?>

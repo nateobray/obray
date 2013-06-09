@@ -1,4 +1,3 @@
-
 <?php
 
 /******************************************************
@@ -14,8 +13,8 @@ define('__DebugMode__',TRUE);							// Enable Debug Mode
     DEFINE AVAILABLE ROUTES
 ******************************************************/
 
-define('__ROUTES__',serialize( array( 
-	
+define('__ROUTES__',serialize( array(
+
 	// Custom Routes
 	"cmd" => __SELF__."lib/",
 	"cms" => "/www/obray/cms/",
@@ -52,3 +51,4 @@ define ("__DATATYPES__", serialize (array (
 ******************************************************/
 
 define('__MAX_FAILED_LOGIN_ATTEMPTS__',10);				// The maximium allowed failed login attempts before an account is locked
+?>

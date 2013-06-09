@@ -1,7 +1,7 @@
 <?php
 
 /***********************************************************************
-	
+
 	Obray - Super lightweight framework.  Write a little, do a lot, fast.
     Copyright (C) 2013  Nathan A Obray
 
@@ -17,13 +17,13 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
+
     ***********************************************************************/
-    
+
 	if (!class_exists( 'OObject' )) { die(); }
-	
+
 	Class OPages extends ODBO {
-		
+
 		public $table = "opages";
 		public $table_definition = array(
 			"opage_id" => 				array( "primary_key" => TRUE ),
@@ -38,41 +38,39 @@
 			"opage_layout" => 			array( "label" => "Page Layout",		"required" => FALSE,"data_type" => "varchar(75)",	"default"=>"default"),
 			"opage_deletable" => 		array( "label" => "Page Deleteable",	"required" => FALSE,"data_type" => "boolean")
 		);
-		
+
 		public function route($path,$params=array()){
-			
+
 			$path_old = $path;
-			
+
 			if( strstr($path,'/cmd/') != FALSE ){ return parent::route($path_old,$params); }
-			
-			
+
+
 			$parsed = $this->parsePath($path);
 			$path_array = $parsed["path_array"];
 			$path = $parsed["path"];
-			
-			
-			
-			
+
+
+
+
 			// get root page
 			$this->root = $this->route('/cmd/lib/opages/get/?parent_id=0');
-			
+
 			forEach($path_array as $page){
-				
-				//$opage = $this->get(array("slug"=>$page,"parent_id"=>$this->root->data[0]->opage_id));	
+
+				//$opage = $this->get(array("slug"=>$page,"parent_id"=>$this->root->data[0]->opage_id));
 			}
-			
-			
-			
-			
+
+
+
+
 			return $this;
-			
+
 		}
-		
+
 		public function routePage(){
-			
+
 		}
-		
+
 	}
-	
-	?>
-	
+?>

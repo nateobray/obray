@@ -1,7 +1,7 @@
 <?php
-	
+
     /***********************************************************************
-	
+
     Obray - Super lightweight framework.  Write a little, do a lot, fast.
     Copyright (C) 2013  Nathan A Obray
 
@@ -17,33 +17,32 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
+
     ***********************************************************************/
-	
+
 	if (!class_exists( 'OObject' )) { die(); }
-	
+
 	/********************************************************************************************************************
-		
+
 		OView:	The purpose of OView is to set the content type to text/html and prepare for delivery.  Objects
 		        that inherit form here when called with expect to output HTML content.
-		
+
 	********************************************************************************************************************/
-	
+
 	Class OView extends OObject{
-	   
+
 	    public $content_type = 'text/html';
 	    public $delegate = '';
-	    
+
 	    public function __construct(){
     	    parent::__construct();
     	    header('Content-Type: text/html');
 	    }
-	    
+
 	    public function setDelegate($params){
     	    $this->delegate = $params["delegate"];
 	    }
-		
-		
+
+
 	}
-	
-	
+?>
