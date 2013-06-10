@@ -641,7 +641,7 @@
 	        		if(array_key_exists($key, $this->table_definition) || $key === 'slug' || $key === 'parent_id'){
 
 
-						if( isSet($this->table_definition[$key]["data_type"]) && $this->table_definition[$key]["data_type"] == "password" ){ $password_key = $key; $password = $v; } else {
+						if( isSet($this->table_definition[$key]["data_type"]) && $this->table_definition[$key]["data_type"] == "password" ){ $password_key = $key; $password = $value; } else {
 
 				        	// define ORs within a where clause
 				        	$value = explode('|',$value);
