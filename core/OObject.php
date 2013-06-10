@@ -194,7 +194,7 @@
 
 
 			   try{
-					$params["="] = array_merge($this->checkPermissions($path,$direct),$params["="]);
+					$params = array_merge($this->checkPermissions($path,$direct),$params["="]);
 					forEach( $this->operators as $operator  ){ if( empty($params[$operator]) ){ unset($params[$operator]); } }
 					if( !$this->isError() ){ $this->$path($params); }
 
@@ -231,7 +231,7 @@
 	    		} else if( ( $perms[$object_name] === "user" && !isSet($_SESSION["ouser"]) ) || ( is_int($perms[$object_name]) && !isSet($_SESSION["ouser"]) ) ){
 
 		    		if( isSet($_SERVER["PHP_AUTH_USER"]) && isSet($_SERVER["PHP_AUTH_PW"]) ){
-			    		$login = $this->route('/cmd/AUsers/login/',array("ouser_email"=>$_SERVER["PHP_AUTH_USER"],"ouser_password"=>$_SERVER["PHP_AUTH_PW"]),TRUE);
+			    		$login = $this->route('/core/OUsers/login/',array("ouser_email"=>$_SERVER["PHP_AUTH_USER"],"ouser_password"=>$_SERVER["PHP_AUTH_PW"]),TRUE);
 			    		if( !isSet($_SESSION["ouser"]) ){ $this->throwError("You cannot access this resource.",401,"Unauthorized");	}
 		    		} else { $this->throwError("You cannot access this resource.",401,"Unauthorized"); }
 
