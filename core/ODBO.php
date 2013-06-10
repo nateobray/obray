@@ -509,7 +509,13 @@
         public function get($params){
 
         	$original_params = $params;
-        	if( !isSet($params["where"]) ){ $params["where"] = array("="=>$params); }
+        	if( !isSet($params["where"]) ){ 
+        		if( isSet($params["="]) ){
+        			$params["where"] = $params; 
+        		} else {
+	        		$params["where"] = array("="=>$params); 
+        		}
+        	}
         	if( isSet($params["with"]) ){ $with = explode('|',$params["with"]); unset($params["with"]); } else { $with = array(); }
 
         	if( empty($this->dbh) ){ return $this; }

@@ -200,7 +200,7 @@
 
 
 			   try{
-					$params = array_merge($this->checkPermissions($path,$direct),$params["="]);
+					$params["="] = array_merge($this->checkPermissions($path,$direct),$params["="]);
 					forEach( $this->operators as $operator  ){ if( empty($params[$operator]) ){ unset($params[$operator]); } }
 					if( !$this->isError() ){ $this->$path($params); }
 
