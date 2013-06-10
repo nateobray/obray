@@ -44,9 +44,8 @@ define('__DebugMode__',TRUE);							// Enable Debug Mode
 define('__ROUTES__',serialize( array( 
 	
 	// Custom Routes - put your custom routes here
-	
+	"d" => __SELF__ . "demo/",
 	// System Routes
-	// "cmd" => __SELF__,
 	"core" => __PATH_TO_CORE__
 ) ));
 
