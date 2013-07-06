@@ -3,19 +3,19 @@
 	/*****************************************************************************
 
 	The MIT License (MIT)
-	
+
 	Copyright (c) 2013 Nathan A Obray <nathanobray@gmail.com>
-	
+
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
 	in the Software without restriction, including without limitation the rights
 	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 	copies of the Software, and to permit persons to whom the Software is
 	furnished to do so, subject to the following conditions:
-	
+
 	The above copyright notice and this permission notice shall be included in
 	all copies or substantial portions of the Software.
-	
+
 	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -23,10 +23,10 @@
 	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 	THE SOFTWARE.
-	
+
 	*****************************************************************************/
 
-	if (!class_exists( 'OObject' )) { die(); }
+	if (!class_exists( "OObject" )) { die(); }
 
 	/********************************************************************************************************************
 
@@ -41,13 +41,13 @@
 		private $starttime;																			// records the start time (time the object was created).  Cane be used for performance tuning
 		private $is_error = FALSE;																	// error bit
 		private $status_code = 200;																	// status code - used to translate to HTTP 1.1 status codes
-		private $content_type = 'application/json';													// stores the content type of this class or how it should be represented externally
-		private $path = '';																			// the path of this object
+		private $content_type = "application/json";													// stores the content type of this class or how it should be represented externally
+		private $path = "";																			// the path of this object
 		private $missing_path_handler;																//
 		private $missing_path_handler_path;															//
 
 		// public data members
-		public $object = '';                                                                        // stores the name of the class
+		public $object = "";                                                                        // stores the name of the class
 
 		/***********************************************************************
 
@@ -75,7 +75,7 @@
 
     		if( isSet($components["query"]) ){ $tmp = $this->getExpressions($components["query"]); if( isSet($tmp["="]) ){ $params = array_merge($tmp["="],$params); }  }
 
-			$path_array = preg_split('[/]',$components["path"],NULL,PREG_SPLIT_NO_EMPTY);
+			$path_array = preg_split("[/]",$components["path"],NULL,PREG_SPLIT_NO_EMPTY);
 			$base_path = $this->getBasePath($path_array);
 
     		/*********************************
@@ -111,7 +111,7 @@
 
 			$tmp;
 			$expressions = array();
-			while( preg_match('/\((.+)\)/',$expression,$tmp) === 1 ){
+			while( preg_match("/\((.+)\)/",$expression,$tmp) === 1 ){
 				$expression = str_replace($tmp[0],"exp".count($expressions),$expression);
 				$expressions["exp".count($expressions)] = $this->getExpressions($tmp[1]);
 			}
@@ -123,10 +123,10 @@
 
 		private function parseExpression($expression){
 			$params = array();
-			$pairs = preg_split('[&]',$expression,NULL,PREG_SPLIT_NO_EMPTY);
+			$pairs = preg_split("[&]",$expression,NULL,PREG_SPLIT_NO_EMPTY);
     		forEach($pairs as $index => $pair){
     			$pair = urldecode($pair);
-    			forEach( $this->operators as $operator ){ if( strpos($pair,$operator) !== FALSE ){ $tmp = preg_split('/'.$operator.'/',$pair,NULL,PREG_SPLIT_NO_EMPTY); if( !empty($tmp) ){ $params[$operator][$tmp[0]] = $tmp[1]; } break; }	 }
+    			forEach( $this->operators as $operator ){ if( strpos($pair,$operator) !== FALSE ){ $tmp = preg_split("/".$operator."/",$pair,NULL,PREG_SPLIT_NO_EMPTY); if( !empty($tmp) ){ $params[$operator][$tmp[0]] = $tmp[1]; } break; }	 }
     		}
     		return $params;
 		}
@@ -138,12 +138,12 @@
 		***********************************************************************/
 
 		private function createObject($path_array,$path,$base_path,&$params,$direct){
-			//echo $path .'<br/>';
+			//echo $path ."<br/>";
 			$path = "";
 			while(count($path_array)>0){
 				$obj_name = array_pop($path_array);
 
-				$this->path = $base_path . implode('/',$path_array).'/'.$obj_name.'.php';
+				$this->path = $base_path . implode("/",$path_array)."/".$obj_name.".php";
 
 				if (file_exists( $this->path ) ) {
 					require_once $this->path;
@@ -160,7 +160,7 @@
 				    		$params["="] = array_merge($obj->checkPermissions("object",$direct),$params["="]);
 
 				    		//	SETUP DATABSE CONNECTION
-				    		if( method_exists($obj,'setDatabaseConnection') ){ $obj->setDatabaseConnection(getDatabaseConnection()); }
+				    		if( method_exists($obj,"setDatabaseConnection") ){ $obj->setDatabaseConnection(getDatabaseConnection()); }
 
 				    		//	ROUTE REMAINING PATH - function calls
 					        $obj->route($path,$params,$direct);
@@ -171,7 +171,7 @@
 					}
 					break;
 				} else {
-					$path = '/'.$obj_name;
+					$path = "/".$obj_name;
 				}
 
 			}
@@ -233,11 +233,11 @@
 	    		// restrict permissions on undefined keys
 	    		if( !isSet($perms[$object_name])  ){
 		    		$this->throwError("You cannot access this resource.",403,"Forbidden");
-	    		// restrict access to users that are not logged in if that's required
+	    		// restrict access to users that are not logged in if that"s required
 	    		} else if( ( $perms[$object_name] === "user" && !isSet($_SESSION["ouser"]) ) || ( is_int($perms[$object_name]) && !isSet($_SESSION["ouser"]) ) ){
 
 		    		if( isSet($_SERVER["PHP_AUTH_USER"]) && isSet($_SERVER["PHP_AUTH_PW"]) ){
-			    		$login = $this->route('/core/OUsers/login/',array("ouser_email"=>$_SERVER["PHP_AUTH_USER"],"ouser_password"=>$_SERVER["PHP_AUTH_PW"]),TRUE);
+			    		$login = $this->route("/core/OUsers/login/",array("ouser_email"=>$_SERVER["PHP_AUTH_USER"],"ouser_password"=>$_SERVER["PHP_AUTH_PW"]),TRUE);
 			    		if( !isSet($_SESSION["ouser"]) ){ $this->throwError("You cannot access this resource.",401,"Unauthorized");	}
 		    		} else { $this->throwError("You cannot access this resource.",401,"Unauthorized"); }
 
@@ -261,11 +261,11 @@
 
 		public function parsePath($path){
 
-			$path = preg_split('([\][?])',$path);
+			$path = preg_split("([\][?])",$path);
 			if(count($path) > 1){ parse_str($path[1],$params); } else { $params = array(); }
 			$path = $path[0];
 
-			$path_array = preg_split('[/]',$path,NULL,PREG_SPLIT_NO_EMPTY);
+			$path_array = preg_split("[/]",$path,NULL,PREG_SPLIT_NO_EMPTY);
 			$path = "/";
 
 			$routes = unserialize(__ROUTES__);
@@ -287,7 +287,7 @@
 
 		***********************************************************************/
 
-		public function throwError($message,$status_code=500,$type='general'){
+		public function throwError($message,$status_code=500,$type="general"){
 			$this->is_error = TRUE;
     		if( empty($this->errors) ){ $this->errors = []; }
     		$this->errors[$type] = $message;
@@ -304,7 +304,7 @@
 		private function setObject($obj){ $this->object = $obj;}
 		public  function getStatusCode(){ return $this->status_code; }
 		public  function getContentType(){ return $this->content_type; }
-		public  function setContentType($type){ if($this->content_type != 'text/html'){ $this->content_type = $type; } }
+		public  function setContentType($type){ if($this->content_type != "text/html"){ $this->content_type = $type; } }
 		public  function setCustomRouter($router){ $this->custom_router = $router; }
 		public  function getPermissions(){ return $this->permissions; }
 		public  function setMissingPathHandler($handler,$path){ $this->missing_path_handler = $handler; $this->missing_path_handler_path = $path; }
@@ -316,7 +316,7 @@
 		***********************************************************************/
 
 		public function cleanUp(){
-			// remove all object keys not white listed for output - this is so we don't expose unnecessary information
+			// remove all object keys not white listed for output - this is so we don"t expose unnecessary information
 			foreach($this as $key => $value) { if($key != "object" && $key != "errors" && $key != "data" && $key != "runtime" && $key != "html"){ unset($this->$key); } }
 		}
 
@@ -340,7 +340,7 @@
 				$params = array_merge($obj->checkPermissions("object",FALSE),$params);
 
 				//	SETUP DATABSE CONNECTION
-				if( method_exists($obj,'setDatabaseConnection') ){ $obj->setDatabaseConnection(getDatabaseConnection()); }
+				if( method_exists($obj,"setDatabaseConnection") ){ $obj->setDatabaseConnection(getDatabaseConnection()); }
 
 				//	ROUTE REMAINING PATH - function calls
 				$obj->missing($path,$params,FALSE);
