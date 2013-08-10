@@ -45,8 +45,6 @@
 
 		public function generateToken($params){
 			
-			echo "hello";
-			
 			$this->safe = FALSE;
 			$this->token = hash('sha512',base64_encode(openssl_random_pseudo_bytes(128,$this->safe)));
 
