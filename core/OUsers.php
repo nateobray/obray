@@ -54,9 +54,9 @@
 			);
 			
 			$this->permissions = array(
-				"object" => 1,
+				"object" => "any",
 				"add" => 1,
-				"get" => 1,
+				"get" => "any",
 				"update" => 1,
 				"login" => "any",
 				"logout"=> "any"
@@ -90,8 +90,11 @@
 					
 				// if the data is empty (no users is found with the provided credentials)	
 				} else if( empty($this->data) ){
+					
 					$this->get(array("ouser_email"=>$params["ouser_email"]));
+					
 					if( count($this->data) === 1 ){ $this->update( array("ouser_failed_attempts"=>($this->data[0]->ouser_failed_attempts+1)) ); }
+					$this->data = array();
 					$this->throwError('Invalid login, make sure you have entered a valid email and password.');
 
 				// if the user has exceeded the allowable login attempts

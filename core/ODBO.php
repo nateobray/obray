@@ -177,7 +177,6 @@
            	    ADD CREATE AND MODIFY TRACKING FIELDS
 
 					slug 				- used to create a unique identifier the is still "human readable" but reliable for identification (must be unique)
-					order_variable		- used to keep track of ordering
 					parent_id			- used to track the parent_id of the row (useful for creating trees and relationships)
 					OCDT				- tracks the create date of a specific record
 					OCU					- tracks the user that created the record.  If no one is logged in this should be 0
@@ -186,7 +185,7 @@
 
 			*************************************************************************************************************/
 
-			$sql .= ", slug VARCHAR(255), order_variable INT UNSIGNED, parent_id INT UNSIGNED, OCDT DATETIME, OCU INT UNSIGNED, OMDT DATETIME, OMU INT UNSIGNED ";
+			$sql .= ", slug VARCHAR(255), parent_id INT UNSIGNED, OCDT DATETIME, OCU INT UNSIGNED, OMDT DATETIME, OMU INT UNSIGNED ";
 
             /*************************************************************************************************************
 				ASSIGN PRIMARY KEY AND DEFUALT CHARSET (utf8 for multilangual support)
@@ -241,7 +240,7 @@
         	$data = $statement->fetchAll();
 
         	$temp_def = $this->table_definition;
-        	$obray_fields = array(0=>"slug",1=>"order_variable",2=>"parent_id",3=>"OCDT",4=>"OCU",5=>"OMDT",6=>"OMU");
+        	$obray_fields = array(0=>"slug",2=>"parent_id",3=>"OCDT",4=>"OCU",5=>"OMDT",6=>"OMU");
         	forEach( $obray_fields as $of ){ unset($this->table_definition[$of]); }
 
         	$data_types = unserialize(__DATATYPES__);
@@ -378,14 +377,12 @@
 
         	if( $this->isError() ){ $this->throwError(isSet($this->general_error)?$this->general_error:"There was an error on this form, please make sure the below fields were completed correclty: "); return $this; }
 			
-			
-			if( isSet($params["order_variable"]) ){ $order_variable = ":order_variable"; $order = $params["order_variable"]; } else { $order_variable = "1"; $order = 1; }
         	$this->reorder($order,$this->order_key,$order_value);
 
         	if( !isSet($params["parent_id"]) ){ $params["parent_id"] = 0; }
         	
         	if( isSet($slug_column) && isSet($params[$slug_column]) ){ $params["slug"] = $this->getSlug($params[$slug_column],$slug_column); } else { $params["slug"] = ""; }
-        	$this->sql  = " insert into $this->table ( ".$sql.", slug, order_variable, parent_id, OCDT, OCU ) values ( ".$sql_values.", :slug, ".$order_variable.", :parent_id, NOW(), 0 ) ";
+        	$this->sql  = " insert into $this->table ( ".$sql.", slug, parent_id, OCDT, OCU ) values ( ".$sql_values.", :slug, :parent_id, NOW(), 0 ) ";
         	$statement = $this->dbh->prepare($this->sql);
 
         	unset($params["refresh"]);
@@ -555,6 +552,8 @@
 	        **************************************************************************/
 	        
 	        $this->data = $this->r;
+	        
+	        
 	        	
 	        forEach($this->data as $key => $value){
 		        // handle additional function calls
@@ -567,7 +566,6 @@
 					} 
 		        }
 	        }
-	        
 	        
 	        if( isSet($this->password) && isSet($this->password_key) && count($this->data) > 0 ){
 	        	forEach( $this->data as $i => $d ){
@@ -739,8 +737,6 @@
 	        	}
 	        }
 	        
-	        $this->order_by[] = $this->table_alias . '.order_variable ';
-	        
 	        $this->columns_array[] = "parent_id";
 	        $this->columns_array[] = "slug";
 	        
@@ -826,7 +822,7 @@
         	
 	        $where = '';
 	        $param_array = array();
-	        
+	        unset($this->password);
 	        $count = 0;
 	        forEach($params as $key => $value){
 	        	
@@ -971,20 +967,6 @@
 
         }
 
-        /********************************************************************
-
-
-
-        ********************************************************************/
-
-        private function reorder($order,$order_key,$order_value){
-            $params = array("order"=>$order,"order_value"=>$order_value);
-            $sql = " UPDATE $this->table SET order_variable = (order_variable+1) WHERE order_variable >= :order ";
-            if( isSet($order_key) && isSet($order_value) ){ $sql .= " AND $order_key = :order_value"; }
-            $statement = $this->dbh->prepare($sql);
-            $statement->execute($params);
-        }
-        
         public function getFirst(){
 	        
 	        forEach( $this->data as $i => $data ){ $v = &$this->data[$i]; return $v; }
