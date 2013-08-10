@@ -155,7 +155,7 @@
            $data_types = unserialize(__DATATYPES__);
 
            forEach($this->table_definition as $name => $def){
-                if( array_key_exists("store",$def) == FALSE || (array_key_exists("store",$def) == TRUE && $def["store"] == TRUE ) ){
+                if( $name != "OCDT" && $name != "OMDT" && $name != "OCU" && ( array_key_exists("store",$def) == FALSE || (array_key_exists("store",$def) == TRUE && $def["store"] == TRUE ) ) ){
 
                     if( !empty($sql) ){ $sql .= ","; }                                                                     // add comma                                                                               // column name
 					if( isSet($def["data_type"]) ){                                                                        // if no data type is found don't use it
