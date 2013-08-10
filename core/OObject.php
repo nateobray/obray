@@ -253,44 +253,25 @@
 			return array("path_array"=>$path_array,"path"=>$path,"base_path"=>$base_path,"params"=>$params);
 
 		}
+		
+		/***********************************************************************
+
+			GET BASE PATH - returns the path of a specified route
+
+		***********************************************************************/
 
 		private function getBasePath(&$path_array){
 			$routes = unserialize(__ROUTES__);
 			if( !empty($path_array) && isSet($routes[$path_array[0]]) ){ $base_path = $routes[array_shift($path_array)]; } else { $base_path = ""; }
 			return $base_path;
 		}
-
+		
 		/***********************************************************************
 
-			ERROR HANDLING FUNCTIONS
-
-		***********************************************************************/
-
-		public function throwError($message,$status_code=500,$type='general'){
-			$this->is_error = TRUE;
-    		if( empty($this->errors) ){ $this->errors = []; }
-    		$this->errors[$type] = $message;
-    		$this->status_code = $status_code;
-		}
-		public function isError(){ return $this->is_error; }
-
-		/***********************************************************************
-
-			GETTER AND SETTER FUNCTIONS
-
-		***********************************************************************/
-
-		private function setObject($obj){ $this->object = $obj;}
-		public  function getStatusCode(){ return $this->status_code; }
-		public  function getContentType(){ return $this->content_type; }
-		public  function setContentType($type){ if($this->content_type != 'text/html'){ $this->content_type = $type; } }
-		public  function setCustomRouter($router){ $this->custom_router = $router; }
-		public  function getPermissions(){ return $this->permissions; }
-		public  function setMissingPathHandler($handler,$path){ $this->missing_path_handler = $handler; $this->missing_path_handler_path = $path; }
-
-		/***********************************************************************
-
-			CLEANUP FUNCTION
+			CLEANUP FUNCTION - removes parameters form object for output
+			
+				The idea here is to prevent infromation from "leaking"
+				that's not explicitly intended.
 
 		***********************************************************************/
 
@@ -298,6 +279,12 @@
 			// remove all object keys not white listed for output - this is so we don't expose unnecessary information
 			foreach($this as $key => $value) { if($key != "object" && $key != "errors" && $key != "data" && $key != "runtime" && $key != "html" && $key != "success"){ unset($this->$key); } }
 		}
+		
+		/***********************************************************************
+
+			IS OBJECT - Determines if path is an object
+
+		***********************************************************************/
 		
 		public function isObject($path){
 			
@@ -334,7 +321,7 @@
 				if( method_exists($obj,'setDatabaseConnection') ){ $obj->setDatabaseConnection(getDatabaseConnection()); }
 
 				//	ROUTE REMAINING PATH - function calls
-				$obj->missing(rtrim($path,'/').'/',$params,FALSE);
+				$obj->missing('/'.ltrim(rtrim($path,'/'),'/').'/',$params,FALSE);
 
 				return $obj;
 			}
@@ -342,7 +329,33 @@
 			return $this;
 		}
 
+		/***********************************************************************
 
+			ERROR HANDLING FUNCTIONS
+
+		***********************************************************************/
+
+		public function throwError($message,$status_code=500,$type='general'){
+			$this->is_error = TRUE;
+    		if( empty($this->errors) ){ $this->errors = []; }
+    		$this->errors[$type] = $message;
+    		$this->status_code = $status_code;
+		}
+		public function isError(){ return $this->is_error; }
+
+		/***********************************************************************
+
+			GETTER AND SETTER FUNCTIONS
+
+		***********************************************************************/
+
+		private function setObject($obj){ $this->object = $obj;}
+		public  function getStatusCode(){ return $this->status_code; }
+		public  function getContentType(){ return $this->content_type; }
+		public  function setContentType($type){ if($this->content_type != 'text/html'){ $this->content_type = $type; } }
+		public  function setCustomRouter($router){ $this->custom_router = $router; }
+		public  function getPermissions(){ return $this->permissions; }
+		public  function setMissingPathHandler($handler,$path){ $this->missing_path_handler = $handler; $this->missing_path_handler_path = $path; }
 
 	}
 ?>
