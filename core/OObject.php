@@ -86,7 +86,7 @@
 	    		
 				$path_array = preg_split('[/]',$components["path"],NULL,PREG_SPLIT_NO_EMPTY);
 				$base_path = $this->getBasePath($path_array);
-	
+				
 	    		/*********************************
 	    			Create Object
 	    		*********************************/
@@ -334,7 +334,7 @@
 				if( method_exists($obj,'setDatabaseConnection') ){ $obj->setDatabaseConnection(getDatabaseConnection()); }
 
 				//	ROUTE REMAINING PATH - function calls
-				$obj->missing($path,$params,FALSE);
+				$obj->missing(rtrim($path,'/').'/',$params,FALSE);
 
 				return $obj;
 			}
