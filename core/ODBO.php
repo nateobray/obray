@@ -358,7 +358,7 @@
 					}
 
 					if( isSet($def["data_type"]) && $def["data_type"] == "password" ){
-							$salt = "$2a$12$".$this->route('/c/OUtilities/generateToken/')->token;
+							$salt = "$2a$12$".$this->route('/c/OUsers/generateToken/')->token;
 							$params[$name] = crypt($params[$name],$salt);
 					}
 
@@ -377,7 +377,7 @@
 
         	if( $this->isError() ){ $this->throwError(isSet($this->general_error)?$this->general_error:"There was an error on this form, please make sure the below fields were completed correclty: "); return $this; }
 			
-        	$this->reorder($order,$this->order_key,$order_value);
+        	//$this->reorder($order,$this->order_key,$order_value);
 
         	if( !isSet($params["parent_id"]) ){ $params["parent_id"] = 0; }
         	

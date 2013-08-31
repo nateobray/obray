@@ -27,6 +27,40 @@
 	*****************************************************************************/
 
 	if (!class_exists( 'OObject' )) { die(); }
+	
+	/******************************************************
+	    SETUP DB CONNECTION - DO NOT MODIFY
+	******************************************************/
+	
+	function getDatabaseConnection(){
+		
+		global $conn;
+		
+		if( !isSet( $conn ) ){
+			try {
+		        $conn = new PDO('mysql:host='.__DBHost__.';dbname='.__DB__, __DBUserName__,__DBPassword__);
+		        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+		    } catch(PDOException $e) {
+		        echo 'ERROR: ' . $e->getMessage();
+		        exit();
+		    }
+		}
+	    return $conn;
+	
+	}
+	
+	/******************************************************
+	    REMOVE SPECIAL CHARS (cleans a string)
+	******************************************************/
+	
+	function removeSpecialChars($string,$space = '',$amp = ''){
+
+		$string = str_replace(' ',$space,$string);
+		$string = str_replace('&',$amp,$string);
+		$string = preg_replace("/[^a-zA-Z0-9\-_s]/", "", $string);
+		return $string;
+	
+	}
 
 	/********************************************************************************************************************
 
@@ -353,7 +387,6 @@
 		public  function getStatusCode(){ return $this->status_code; }
 		public  function getContentType(){ return $this->content_type; }
 		public  function setContentType($type){ if($this->content_type != 'text/html'){ $this->content_type = $type; } }
-		public  function setCustomRouter($router){ $this->custom_router = $router; }
 		public  function getPermissions(){ return $this->permissions; }
 		public  function setMissingPathHandler($handler,$path){ $this->missing_path_handler = $handler; $this->missing_path_handler_path = $path; }
 

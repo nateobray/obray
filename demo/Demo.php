@@ -35,35 +35,26 @@
 	********************************************************************************************************************/
 
 	Class Demo extends OObject{
-
+	
 		public function __construct(){
-
-			//parent::__construct();
 			
 			$this->permissions = array(
-				"object"=>"any",
-				"out"=>"any",
-				"fn"=>"any"
-			);
-
-		}
-		
-		public function fn(){
-			
-			$this->data = array(
-				"MyDataObject" => array(0=>"1",1=>"2",2=>"3")
-			);
+				'object' => 'any',
+				'fn' => 'any'
+			)
 			
 		}
 		
-		public function out(){
+		// this function adds to data param1 and param2 if passed in otherwise it remains empty
+		
+		public function fn( $params = array() ){
 			
-			$this->setContentType("text/html");
-			$this->route('/fn/');
+			$this->data = array();
+			if( isSet($params['param1']) ){ $this->data['param1'] = $params['param1']; }
+			if( isSet($params['param2']) ){ $this->data['param2'] = $params['param2']; }
 			
 		}
 		
-		
-
 	}
+	
 ?>

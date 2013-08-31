@@ -77,3 +77,6 @@ define ("__DATATYPES__", serialize (array (
 ******************************************************/
 
 define('__MAX_FAILED_LOGIN_ATTEMPTS__',10);				// The maximium allowed failed login attempts before an account is locked
+
+
+

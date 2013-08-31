@@ -56,7 +56,7 @@
 			$this->permissions = array(
 				"object" => "any",
 				"add" => 1,
-				"get" => "any",
+				"get" => 1,
 				"update" => 1,
 				"login" => "any",
 				"logout"=> "any"
@@ -130,6 +130,15 @@
 			}
 
 		}
+		
+		public function generateToken($params){
+			
+			$this->safe = FALSE;
+			$this->token = hash('sha512',base64_encode(openssl_random_pseudo_bytes(128,$this->safe)));
+
+		}
+
+		public function hasPermission($object){ if( isSet($this->permissions[$object]) && $this->permissions[$object] === 'any'){ return TRUE; } else { return FALSE; }	}
 
 	}
 ?>
