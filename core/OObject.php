@@ -330,6 +330,53 @@
 			
 			return FALSE;
 			
+<<<<<<< HEAD
+		}
+
+		/***********************************************************************
+
+			FIND MISSING ROUTE
+
+		***********************************************************************/
+
+		private function findMissingRoute($path,$params){
+			
+			if( isSet($this->missing_path_handler) ){
+				include $this->missing_path_handler_path;
+
+				$obj = new $this->missing_path_handler();
+				$obj->setObject($this->missing_path_handler);
+
+				$obj->setContentType($obj->content_type);
+
+				//	CHECK PERMISSIONS
+				$params = array_merge($obj->checkPermissions("object",FALSE),$params);
+
+				//	SETUP DATABSE CONNECTION
+				if( method_exists($obj,'setDatabaseConnection') ){ $obj->setDatabaseConnection(getDatabaseConnection()); }
+
+				//	ROUTE REMAINING PATH - function calls
+				$obj->missing('/'.ltrim(rtrim($path,'/'),'/').'/',$params,FALSE);
+
+				return $obj;
+			}
+
+			return $this;
+		}
+
+		/***********************************************************************
+
+			ERROR HANDLING FUNCTIONS
+
+		***********************************************************************/
+
+		public function throwError($message,$status_code=500,$type='general'){
+	        $this->is_error = TRUE;
+	        if( empty($this->errors) ){ $this->errors = []; }
+	        $this->errors[$type][] = $message;
+	        $this->status_code = $status_code;
+	    }
+=======
 		}
 
 		/***********************************************************************
@@ -375,6 +422,7 @@
     		$this->errors[$type] = $message;
     		$this->status_code = $status_code;
 		}
+>>>>>>> 90941d7c19eed87e85dd6cf0984667df91e4d26f
 		public function isError(){ return $this->is_error; }
 
 		/***********************************************************************
