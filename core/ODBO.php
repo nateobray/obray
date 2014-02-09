@@ -31,18 +31,8 @@
 	/********************************************************************************************************************
 
 		ODB:	This is the database interface object built specifically for MySQL and MariaDB.  It is also designed to
-		        to aid in quickly generating HTML forms the table definition.  The goal here is easily mange the data
-		        from retrieval to input on a client application all while maintaining flexibility.
-
-
-		Table Definition:
-
-		      DATABASE ATTRIBUTES
-
-		          name:               (sring) - column name (THIS IS THE ARRAY KEY)
-		          data_type:          (integer|float|varchar(length)|boolean|text|timestamp) - column data type
-		          primary_key:        (TRUE|FALSE) - true if the column is a primary key; this will setup the column up
-		                              as an identity column with autoincrement.  Data type must be an integer.
+		        to aid in quickly generating HTML forms from the table definition.  The goal here is easily mange the 
+		        data from retrieval to input on a client application all while maintaining flexibility.
 
 	********************************************************************************************************************/
 
@@ -73,13 +63,13 @@
 				    "datetime"  	=>  array("sql"=>" datetime ",								"my_sql_type"=>"datetime",			"validation_regex"=>""),
 				    "password"  	=>  array("sql"=>" varchar(255) ",							"my_sql_type"=>"varchar(255)",		"validation_regex"=>"")
 				)));
-
+				
             }
-
+			
 	    }
 
 	    public function setDatabaseConnection($dbh){
-
+			
 	       if( !isSet($this->table) || $this->table == '' ){ return; }
 	       $this->dbh = $dbh;
 	       if(isSet($_REQUEST["refresh"]) && __DebugMode__){ $this->scriptTable(array()); $this->alterTable(); }
@@ -148,7 +138,7 @@
 
 			*************************************************************************************************************/
 
-			$sql .= ", slug VARCHAR(255), order_variable INT UNSIGNED, parent_id INT UNSIGNED, OCDT DATETIME, OCU INT UNSIGNED, OMDT DATETIME, OMU INT UNSIGNED ";
+			$sql .= ", OCDT DATETIME, OCU INT UNSIGNED, OMDT DATETIME, OMU INT UNSIGNED ";
 
             /*************************************************************************************************************
 				ASSIGN PRIMARY KEY AND DEFUALT CHARSET (utf8 for multilangual support)
@@ -203,7 +193,7 @@
         	$data = $statement->fetchAll();
 
         	$temp_def = $this->table_definition;
-        	$obray_fields = array(0=>"slug",1=>"order_variable",2=>"parent_id",3=>"OCDT",4=>"OCU",5=>"OMDT",6=>"OMU");
+        	$obray_fields = array(3=>"OCDT",4=>"OCU",5=>"OMDT",6=>"OMU");
         	forEach( $obray_fields as $of ){ unset($this->table_definition[$of]); }
 
         	$data_types = unserialize(__DATATYPES__);
@@ -214,8 +204,7 @@
 
 	        	if( array_search($def->Field,$obray_fields) === FALSE ){
 		        	if( isSet($this->table_definition[$def->Field]) ){
-
-
+						
 			        	/*********************************************************************************
 
 			        		1.	Update field data type if table is different from table definition.
@@ -256,7 +245,7 @@
 
 	        	}
         	}
-
+			
         	/*********************************************************************************
 
         		3.	Add fields if they don't exist in the table but do in the table definition
@@ -282,12 +271,20 @@
 		/********************************************************************
 
             GETTABLEDEFINITION 
-            
-            output
 
         ********************************************************************/
 		
         public function getTableDefinition(){ $this->data = $this->table_definition; }
+        private function getWorkingDef(){
+        	$this->required = array();
+	        forEach($this->table_definition as $key => $def){
+	        	if( isSet($def['required']) && $def['required'] == TRUE ){ $this->required[$key] = TRUE; }
+				if( isSet($def['primary_key']) ){ $this->primary_key_column = $key; }
+				if( isSet($def['parent']) && $def['parent'] == TRUE ){ $this->parent_column = $key; }
+	        	if( isSet($def["slug_key"]) && $def["slug_key"] == TRUE ){ $this->slug_key_column = $key; }
+	        	if( isSet($def["slug_value"]) && $def["slug_value"] == TRUE ){ $this->slug_value_column = $key; }
+	        }
+        }
 
         /********************************************************************
 
@@ -297,64 +294,70 @@
 
         public function add($params=array()){
 			
-			unset($params["refresh"]); unset($params['OMDT']); unset($params['OCDT']);
-			
         	if( empty($this->dbh) ){ return $this; }
+        	
         	// generate prepared statement
         	$sql = "";
         	$sql_values = "";
         	$data = array();
         	$this->data_types = unserialize(__DATATYPES__);
-
-        	forEach($this->table_definition as $name => $def){
-
-        		if( array_key_exists("primary_key",$def) && $def["primary_key"] === TRUE  ){
-					$this->primary_key_column = $name;
-				}
-
-				// validate
-				$data_type = $this->getDataType($def);
-				if( isSet($def["required"]) && $def["required"] === TRUE && (!isSet($params[$name]) || $params[$name] === NULL || $params[$name] === "") ){ $this->throwError(isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is required.":$name." is required.",'500',$name); }
-
-				if( isSet($params[$name]) && $name != 'parent_id' ){
-
-					if( isSet($def["data_type"]) && !empty($this->data_types[$data_type["data_type"]]["validation_regex"]) && !preg_match($this->data_types[$data_type["data_type"]]["validation_regex"],$params[$name]) ){
-					   $this->throwError(isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is invalid.":$name." is invalid.",'500',$name);
+			
+			// get columns fields
+			$this->getWorkingDef();
+			
+			// generate slug if set
+			if( isSet($this->slug_key_column) && isSet($this->slug_value_column) && isSet($params[$this->slug_key_column]) ){ 	
+				if( isSet($this->parent_column) && isSet($params[$this->parent_column]) ){ $parent = $params[$this->parent_column];  } else { $parent = null; }
+				$params[$this->slug_value_column] = $this->getSlug($params[$this->slug_key_column],$this->slug_value_column,$parent);
+			}
+			
+			// write SQL and prepare data
+			forEach( $params as $key => $param ){
+				
+				if( isSet($this->table_definition[$key]) ){ 
+					
+					// add param to data and get data_type
+					$def = $this->table_definition[$key];
+					$data[$key] = $param;
+					$data_type = $this->getDataType($def);
+					
+					// validate data type
+					if( isSet($this->required[$key]) ){ unset($this->required[$key]); }
+					if( isSet($def["data_type"]) && !empty($this->data_types[$data_type["data_type"]]["validation_regex"]) && !preg_match($this->data_types[$data_type["data_type"]]["validation_regex"],$params[$key]) ){
+					   $this->throwError(isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is invalid.":$key." is invalid.",'500',$key);
 					}
-
-					if( isSet($def["data_type"]) && $def["data_type"] == "password" ){
-							$salt = "$2a$12$".$this->route('/c/OUtilities/generateToken/')->token;
-							$params[$name] = crypt($params[$name],$salt);
-					}
-
-					// is slug
-					if( isSet($def["slug"]) && $def["slug"] === TRUE ){ $slug_column = $name; }
-
-					// is order_key
-					if( isSet($def["order_key"]) && $def["order_key"] == TRUE ){ $this->order_key = $name; $order_value = $params["order_key"]; } else { $this->order_key = "parent_id"; $order_value = isSet($params["parent_id"])?$params["parent_id"]:0; }
-
-					if( isSet($params[$name]) ){
+					
+					// generate hashed password using crypt and generate token - will significantly add to the speed of an add (processor intensive)
+					if( isSet($def["data_type"]) && $def["data_type"] == "password" ){ $salt = "$2a$12$".$this->generateToken(); $data[$key] = crypt($params[$key],$salt); }
+					
+					// add param to SQL prepared statement
+					if( isSet($params[$key]) ){
 					   if( !empty($sql) ){ $sql .= ","; $sql_values .= ","; }
-					   $sql .= $name; $sql_values .= ":$name";
+					   $sql .= $key; $sql_values .= ":$key";
 					}
+					
 				}
+				
+			}
+			
+			// throw error if all the required fields are not accounted for
+        	if( !empty($this->required) ){
+	        	forEach($this->required as $key => $value){
+	        		$def = $this->table_definition[$key];
+		        	$this->throwError(isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$key." is required.":$key." is required.",'500',$key);
+	        	}
         	}
-			
+        	
+        	// throw general error
         	if( $this->isError() ){ $this->throwError(isSet($this->general_error)?$this->general_error:"There was an error on this form, please make sure the below fields were completed correclty: "); return $this; }
-			
-			//if( isSet($params["order_variable"]) ){ $order_variable = ":order_variable"; $order = $params["order_variable"]; } else { $order_variable = "1"; $order = 1; }
-        	//$this->reorder($order,$this->order_key,$order_value);
-
-        	if( !isSet($params["parent_id"]) ){ $params["parent_id"] = 0; }
         	
-        	if( isSet($slug_column) && isSet($params[$slug_column]) ){ $params["slug"] = $this->getSlug($params[$slug_column],$slug_column); } else { $params["slug"] = ""; }
         	if( isSet($_SESSION['ouser']) ){ $ocu = $_SESSION['ouser']->ouser_id; } else { $ocu = 0; }
-        	$this->sql  = " insert into $this->table ( ".$sql.", slug, parent_id, OCDT, OCU ) values ( ".$sql_values.", :slug, :parent_id, NOW(), ".$ocu." ) ";
+        	$this->sql  = " insert into $this->table ( ".$sql.", OCDT, OCU ) values ( ".$sql_values.", NOW(), ".$ocu." ) ";
         	$statement = $this->dbh->prepare($this->sql);
-        	$this->script = $statement->execute($params);
+        	$this->script = $statement->execute($data);
         	
-
-			$this->route('/get/?'.$this->primary_key_column.'='.$this->dbh->lastInsertId());
+        	// get inserted row
+			$this->get(array( $this->primary_key_column => $this->dbh->lastInsertId() ) );
 
         }
 
@@ -367,98 +370,66 @@
         public function update($params=array()){
 
         	if( empty($this->dbh) ){ return $this; }
+        	
         	// generate prepared statement
         	$sql = "";
         	$sql_values = "";
         	$data = array();
         	$this->data_types = unserialize(__DATATYPES__);
-
-        	if( !isSet($this->data) ){
-	        	forEach($this->table_definition as $name => $def){
-	        		if( array_key_exists("primary_key",$def) && $def["primary_key"] === TRUE  ){  if(isSet($params[$name])){ $this->get(array($name=>$params[$name])); }  }
-	        		if(isSet( $params[$name] ) && !empty($this->data) ){ $this->data[0]->$name = $params[$name]; }
-	        	}
-        	}
-
-        	forEach( $params as $key => $value ){ if(!array_key_exists($key, $this->table_definition)){ unset($params[$key]); } }
+        	
+        	// get columns fields
+			$this->getWorkingDef();
 			
-        	forEach($this->data as $i => $row){
-
-	        	forEach($this->table_definition as $name => $def){
-
-					if( array_key_exists("primary_key",$def) && $def["primary_key"] === TRUE  ){
-							$this->primary_key_column = $name;
-							$params[$name] = $row->$name;
-					} else {
-
-						if( isSet($params[$name]) ){
-							// validate
-							$data_type = $this->getDataType($def);
-							if( isSet($def["required"]) && $def["required"] === TRUE && (!isSet($params[$name]) || $params[$name] === NULL || $params[$name] === "") ){
-									$this->throwError(isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is required.":$name." is required.",500,$name);
-							}
-
-							if( isSet($params[$name]) ){
-
-								if( isSet($def["data_type"]) && !empty($this->data_types[$data_type["data_type"]]["validation_regex"]) && !preg_match($this->data_types[$data_type["data_type"]]["validation_regex"],$params[$name]) ){
-									$this->throwError(isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is invalid.":$name." is invalid.",500,$name);
-								}
-
-								// is slug
-								if( isSet($def["slug"]) && $def["slug"] === TRUE ){ $slug_column = $name; }
-
-								// is order_key
-								if( isSet($def["order_key"]) && $def["order_key"] == TRUE ){ $this->order_key = $name; $order_value = $params["order_key"]; } else { $this->order_key = "parent_id"; $order_value = isSet($params["parent_id"])?$params["parent_id"]:0; }
-
-								if( isSet($params[$name]) ){
-									if( !empty($sql) ){ $sql .= ","; $sql_values .= ","; }
-									$sql .= $name . " = :$name ";
-								}
-							}
-						}
-					}
-	        	}
-				
-	        	if( empty($this->primary_key_column) ){ $this->throwError('Please specify a primary key.','primary_key','500'); }
-	        	if( !isSet( $params[$this->primary_key_column] ) ){ $this->throwError('Please specify a value for the primary key.','500',$this->primary_key_column); }
-
-	        	if( $this->isError() ){ return $this; }
-
-	        	//$this->reorder(1,$this->order_key,$order_value);
-
-	        	if( isSet($params["parent_id"]) ){ $sql .= " ,parent_id = :parent_id"; }
-	        	if( isSet($slug_column) && isSet($params[$slug_column]) ){ $params["slug"] = $this->getSlug($params[$slug_column],$slug_column); $sql .= " ,slug = :slug"; }
-	        	if( isSet($_SESSION['ouser']) ){ $omu = $_SESSION['ouser']->ouser_id; } else { $omu = 0; }
-	        	$this->sql  = " UPDATE $this->table SET $sql, OMDT = NOW(), OMU = ".$omu." WHERE $this->primary_key_column = :$this->primary_key_column ";
+			// generate slug if set
+			if( isSet($this->slug_key_column) && isSet($this->slug_value_column) && isSet($params[$this->slug_key_column]) ){ 	
+				if( isSet($this->parent_column) && isSet($params[$this->parent_column]) ){ $parent = $params[$this->parent_column];  } else { $parent = null; }
+				$params[$this->slug_value_column] = $this->getSlug($params[$this->slug_key_column],$this->slug_value_column,$parent);
+			}
+			
+			// write SQL and prepare data
+        	forEach( $params as $key => $param ){
 	        	
-	        	$statement = $this->dbh->prepare($this->sql);
-
-	        	$this->script = $statement->execute($params);
-
+	        	if( isSet($this->table_definition[$key]) ){
+	        		$def = $this->table_definition[$key];
+	        		$data[$key] = $param;
+		        	$data_type = $this->getDataType($def);
+		        	
+		        	// validate required
+					if( isSet($def["required"]) && $def["required"] === TRUE && (!isSet($params[$key]) || $params[$key] === NULL || $params[$key] === "") ){
+							$this->throwError(isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is required.":$key." is required.",500,$key);
+					}
+					
+					// validate data type
+					if( isSet($def["data_type"]) && !empty($this->data_types[$data_type["data_type"]]["validation_regex"]) && !preg_match($this->data_types[$data_type["data_type"]]["validation_regex"],$params[$key]) ){
+						$this->throwError(isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is invalid.":$key." is invalid.",500,$key);
+					}
+					
+					// generate hashed password using crypt and generate token - will significantly add to the speed of an add (processor intensive)
+					if( isSet($def["data_type"]) && $def["data_type"] == "password" ){ $salt = "$2a$12$".$this->generateToken(); $data[$key] = crypt($params[$key],$salt); }
+					
+					// write SQL
+					if( !empty($sql) ){ $sql .= ","; $sql_values .= ","; }
+					$sql .= $key . " = :$key ";
+					
+	        	}
         	}
-
-        	$this->params = $params;
-
+        	
+        	// handle errors
+        	if( empty($this->primary_key_column) ){ $this->throwError('Please specify a primary key.','primary_key','500'); }
+        	if( !isSet( $params[$this->primary_key_column] ) ){ $this->throwError('Please specify a value for the primary key.','500',$this->primary_key_column); }
+        	if( $this->isError() ){ return $this; }
+        	
+        	// prepare end execute SQL
+        	if( isSet($_SESSION['ouser']) ){ $omu = $_SESSION['ouser']->ouser_id; } else { $omu = 0; }
+        	$this->sql  = " UPDATE $this->table SET $sql, OMDT = NOW(), OMU = ".$omu." WHERE $this->primary_key_column = :$this->primary_key_column ";
+        	$statement = $this->dbh->prepare($this->sql);
+        	$this->script = $statement->execute($data);
+        	
+        	// get updated row
+        	$this->get(array($this->primary_key_column=>$params[$this->primary_key_column]));
+			
         }
         
-        public function populateSlugs(){
-	        
-	        forEach($this->table_definition as $name => $def){
-	        	if( array_key_exists("primary_key",$def) && $def["primary_key"] === TRUE  ){ $key = $name; }							
-	        	if( isSet($def["slug"]) && $def["slug"] === TRUE ){ $slug_column = $name; }
-	        }
-	        
-	        $this->get();
-	        $data = $this->data; unset($this->data);
-        	forEach( $data as $obj ){
-	        	$slug = $this->getSlug($obj->$slug_column,$slug_column);
-	        	$params = array($key=>$obj->$key,$slug_column=>$obj->$slug_column);
-	        	$this->update($params);
-	        	unset($this->data);
-        	}
-	        
-        }
-
         /********************************************************************
 
             DELETE function
@@ -469,35 +440,24 @@
 			
 			$this->table_alias = 't'.md5(uniqid(rand(), true));
         	if( empty($this->dbh) ){ return $this; }
-        	if( empty($this->primary_key_column) ){
-	        	forEach($this->table_definition as $name => $def){
-					if( array_key_exists("primary_key",$def) && $def["primary_key"] === TRUE  ){                          // write SQL for key column if it exists
-							$this->primary_key_column = $name;                                                            // set the key column variable
-					}
-				}
-        	}
         	
+        	// get columns fields
+			$this->getWorkingDef();
+        	
+        	// build where caluse
         	$this->where = "";
         	$this->params = $this->buildWhereClause($params);
         	$this->where = str_replace($this->table_alias.'.','',$this->where);
-        	/*
-        	forEach( $params as $key => $value ){
-	        	if( array_key_exists($key,$this->table_definition) ){
-	        		if( !empty($this->where) ){ $this->where .= " AND "; }
-		        	$this->where .= " $key = :$key ";
-	        	}
-        	}*/
+        	
+        	// handle errors
+			if( empty( $this->where ) ){ $this->throwError('Please provide a filter for this delete statement',500); }			
+			if( !empty( $this->errors ) ){ return $this; }
 			
-			if( empty( $this->where ) ){ $this->throwError('Please provide a filter for this delete statement',500); }
-			
-			if( empty($this->errors) ){
-			
-	        	$this->sql  = " DELETE FROM $this->table WHERE " . $this->where;
-	        	$statement = $this->dbh->prepare($this->sql);
-	        	$this->script = $statement->execute($this->params);
-	        	
-        	}
-			
+        	$this->sql  = " DELETE FROM $this->table WHERE " . $this->where;
+        	
+        	$statement = $this->dbh->prepare($this->sql);
+        	$this->script = $statement->execute($this->params);
+        	
         }
         
          /********************************************************************
@@ -536,7 +496,7 @@
 	        	2. Write SQL
 	        **************************************************************************/
 	        
-	        $select = ' SELECT ' . $this->table_alias . '.' . $this->columns . ',' . $this->table_alias . '.parent_id';
+	        $select = ' SELECT ' . $this->table_alias . '.' . $this->columns;
 	        $from = ' FROM ' . $this->table . ' as ' .$this->table_alias . ' ' . $this->from;
 	        if( !empty($this->where) ){ $where = ' WHERE ' . $this->where; } else { $where = ''; }
 	        if( !empty($this->order_by) ){ $order_by = ' ORDER BY ' . implode(',',$this->order_by); } else { $order_by = ''; }
@@ -753,15 +713,11 @@
 				        			$this->fns[$w]->path = $obj[1];
 				        			
 			        			}
-			        			
 			        		}
 			        	}
 		        	}
 	        	}
 	        }
-	        
-	        $this->columns_array[] = "parent_id";
-	        $this->columns_array[] = "slug";
 	        
 	        /**************************************************************************
 	        
@@ -848,7 +804,7 @@
 	        $count = 0;
 	        forEach($params as $key => $value){
 	        	
-	    		if(array_key_exists($key, $this->table_definition) || $key === 'slug' || $key === 'parent_id'){
+	    		if(array_key_exists($key, $this->table_definition) ){
 					
 					if( isSet($this->table_definition[$key]["data_type"]) && $this->table_definition[$key]["data_type"] == "password" ){ $this->password_key = $key; $this->password = $value; } else {
 						
@@ -937,13 +893,13 @@
 
 		
         /********************************************************************
-
+			
             DUMP
-
+			
             	What this does:
-
+				
             		1.	This does a mysqldump of the current table
-
+					
         ********************************************************************/
 
         public function dump($params=array()){
@@ -953,9 +909,9 @@
         }
 
         /********************************************************************
-
-
-
+			
+			GETDATATYPE
+			
         ********************************************************************/
 
         private function getDataType($def){
@@ -967,18 +923,19 @@
         }
 
         /********************************************************************
-
-
-
+			
+			GETSLUG
+			
         ********************************************************************/
 
-        private function getSlug($slug,$column){
+        private function getSlug($slug,$column,$parent){
             $count = 1; $i = 0;
             while($count > 0){
                 $new_slug = $slug;
                 if( $i == 0 ){ $appendage = ""; } else { $appendage = " $i"; }
                 $params = array("slug"=>strtolower(removeSpecialChars(str_replace("-".($i-1),'',$new_slug).$appendage,'-','and')));
-                $sql = " SELECT $column FROM $this->table WHERE slug = :slug";
+                if( !empty($parent) && isSet($this->parent_column) ){ $parent_sql = " AND $this->parent_column = :$this->parent_column "; $params[$this->parent_column] = $parent; } else { $parent_sql = ''; }
+                $sql = " SELECT $column FROM $this->table WHERE $this->slug_value_column = :slug $parent_sql ";
                 $statement = $this->dbh->prepare($sql);
                 $statement->execute($params);
                 $count = count($statement->fetchAll());
@@ -987,36 +944,46 @@
             return $params["slug"];
 
         }
-
+        
         /********************************************************************
 
-
+			GETFIRST
+			
+				useful when you want to get the first or only item of a 
+				result set.
 
         ********************************************************************/
 
-        private function reorder($order,$order_key,$order_value){
-            // $params = array("order"=>$order,"order_value"=>$order_value);
-            // $sql = " UPDATE $this->table SET order_variable = (order_variable+1) WHERE order_variable >= :order ";
-            // if( isSet($order_key) && isSet($order_value) ){ $sql .= " AND $order_key = :order_value"; }
-            // $statement = $this->dbh->prepare($sql);
-            // $statement->execute($params);
-        }
-        
         public function getFirst(){
 	        if( !isSet($this->data) || !is_array($this->data) ){ $this->data = array(); }
 	        forEach( $this->data as $i => $data ){ $v = &$this->data[$i]; return $v; }
 	        return reset($this->data);
-	        
         }
+        
+        /********************************************************************
+
+			RUN
+			
+				Used to execute very specific SQL.
+
+        ********************************************************************/
         
         public function run( $sql ){
 	        $statement = $this->dbh->prepare($sql);
             $statement->execute();
-            $statement->setFetchMode(PDO::FETCH_OBJ);									// Fetch results numerically (important for inner joins on the same table)
+            $statement->setFetchMode(PDO::FETCH_OBJ);
             $this->data = [];
 	        while ($row = $statement->fetch()) { $this->data[] = $row; }
 	        return $this;
         }
+        
+        /********************************************************************
+
+			COUNT
+			
+				Very fast way to retrive a count of records in a given table
+
+        ********************************************************************/
         
         public function count( $params=array() ){
 	        $statement = $this->dbh->prepare('SELECT COUNT(*) as count FROM '.$this->table.';');
@@ -1026,6 +993,19 @@
 	        unset($this->data[0]);
 	        return $this;
         }
+        
+         /********************************************************************
+
+			GENERATETOKEN
+			
+				Is used to generate a safe HASH as salt for data_type = password
+
+        ********************************************************************/
+        
+        private function generateToken(){
+			$safe = FALSE;
+			return hash('sha512',base64_encode(openssl_random_pseudo_bytes(128,$safe)));
+		}
         
         
 
