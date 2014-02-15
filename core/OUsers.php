@@ -89,7 +89,7 @@
 					$_SESSION["ouser"] = $this->data[0];
 					$this->update( array("ouser_failed_attempts"=>0,"ouser_last_login"=>date("Y-m-d H:i:s")) );
 					
-				// if the data is empty (no users is found with the provided credentials)	
+				// if the data is empty (no user is found with the provided credentials)	
 				} else if( empty($this->data) ){
 					
 					$this->get(array("ouser_email"=>$params["ouser_email"]));

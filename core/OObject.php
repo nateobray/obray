@@ -79,6 +79,7 @@
 		private $path = '';																			// the path of this object
 		private $missing_path_handler;																// if path is not found by router we can pass it to this handler for another attempt
 		private $missing_path_handler_path;															// the path of the missing handler
+		private $access;
 
 		// public data members
 		public $object = '';                                                                        // stores the name of the class
@@ -100,6 +101,9 @@
 			*********************************/
 			if( isSet($components["host"]) && $direct ){
 				
+				// determine if remote path is to obray APP configure din __REMOTE_HOSTS__ in settings.php
+				if( defined('__REMOTE_HOSTS__') && in_array($components['host'],unserialize(__REMOTE_HOSTS__)) ){ if (strpos($path,'?') !== FALSE){ $path .= '&'; } else{ $path .= '?'; } $path .= 'otoken='.__OTOKEN__; }
+				
 				$ch = curl_init();
 				$timeout = 5;
 				curl_setopt($ch, CURLOPT_URL, $path);
@@ -107,7 +111,7 @@
 				curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
 				$this->data = curl_exec($ch);
 				$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
-				switch($content_type ){ case "application/json": $this->data = json_decode($this->data); break; }
+				switch( $content_type ){ case "application/json": $this->data = json_decode($this->data); break; }
 			
 			} else {
 
@@ -120,6 +124,12 @@
 	    		
 				$path_array = preg_split('[/]',$components["path"],NULL,PREG_SPLIT_NO_EMPTY);
 				$base_path = $this->getBasePath($path_array);
+				
+				/*********************************
+					Validate Remote Application
+				*********************************/
+				
+				$this->validateRemoteApplication($params,$direct);
 				
 	    		/*********************************
 	    			Create Object
@@ -150,6 +160,15 @@
 
 			return $this;
 
+		}
+		
+		private function validateRemoteApplication($params,&$direct){
+			
+			if( isSet($params['otoken']) ){
+				$otoken = $params['otoken']; unset($params['otoken']);
+				if( defined('__OTOKEN__') && $otoken === __OTOKEN__ && __OTOKEN__ != '' ){ $direct = TRUE;  } else { $direct = FALSE; }
+			}
+			
 		}
 		
 		/***********************************************************************

@@ -476,7 +476,6 @@
                 
         public function get($params=array()){
 	        
-	        
 	        /**************************************************************************
 	        	1. Prepare Select Statement (see function)
 	        **************************************************************************/
@@ -998,7 +997,7 @@
 
 			GENERATETOKEN
 			
-				Is used to generate a safe HASH as salt for data_type = password
+				Is used to generate a safe HASH for salt for data_type = password
 
         ********************************************************************/
         
