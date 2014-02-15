@@ -101,10 +101,11 @@
 			*********************************/
 			if( isSet($components["host"]) && $direct ){
 				
-				// determine if remote path is to obray APP configure din __REMOTE_HOSTS__ in settings.php
-				if( defined('__REMOTE_HOSTS__') && in_array($components['host'],unserialize(__REMOTE_HOSTS__)) ){ if (strpos($path,'?') !== FALSE){ $path .= '&'; } else{ $path .= '?'; } $path .= 'otoken='.__OTOKEN__; }
+				
 				
 				$ch = curl_init();
+				// determine if remote path is to obray APP configure din __REMOTE_HOSTS__ in settings.php
+				if( defined('__REMOTE_HOSTS__') && defined('__OTOKEN__') && in_array($components['host'],unserialize(__REMOTE_HOSTS__)) ){ curl_setopt($ch, CURLOPT_HTTPHEADER, array('otoken: '.__OTOKEN__)); }
 				$timeout = 5;
 				curl_setopt($ch, CURLOPT_URL, $path);
 				curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
@@ -129,7 +130,7 @@
 					Validate Remote Application
 				*********************************/
 				
-				$this->validateRemoteApplication($params,$direct);
+				$this->validateRemoteApplication($direct);
 				
 	    		/*********************************
 	    			Create Object
@@ -162,10 +163,11 @@
 
 		}
 		
-		private function validateRemoteApplication($params,&$direct){
-			
-			if( isSet($params['otoken']) ){
-				$otoken = $params['otoken']; unset($params['otoken']);
+		private function validateRemoteApplication(&$direct){
+		
+			$headers = getallheaders();
+			if( isSet($headers['otoken']) ){
+				$otoken = $headers['otoken']; unset($headers['otoken']);
 				if( defined('__OTOKEN__') && $otoken === __OTOKEN__ && __OTOKEN__ != '' ){ $direct = TRUE;  } else { $direct = FALSE; }
 			}
 			
