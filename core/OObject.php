@@ -93,6 +93,7 @@
 		public function route( $path , $params = array(), $direct = TRUE ) {
 			
 			$params = array_merge($params,$_GET,$_POST);
+			$_GET = array(); $_POST = array();
 			$cmd = $path;
 			$components = parse_url($path);
 
