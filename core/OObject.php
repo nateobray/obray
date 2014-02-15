@@ -112,7 +112,14 @@
 				curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
 				$this->data = curl_exec($ch);
 				$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
-				switch( $content_type ){ case "application/json": $this->data = json_decode($this->data); break; }
+				switch( $content_type ){ 
+					case "application/json": 
+						$this->data = json_decode($this->data); 
+						if( isSet($this->data->errors) ){ $this->errors = $this->data->errors; }
+						if( isSet($this->data->html) ){ $this->html = $this->data->html; }
+						if( isSet($this->data->data) ){ $this->data = $this->data->data; }
+					break; 
+				}
 			
 			} else {
 
