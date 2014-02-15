@@ -36,6 +36,9 @@ define('__APP__','obray');
 define('__SELF__', dirname(__FILE__).'/');              // The should contain the path to your application
 define('__PATH_TO_CORE__',dirname(__FILE__).'/core/');	// The path to obray's core files
 define('__DebugMode__',TRUE);							// Enable Debug Mode
+define(__OTOKEN__,''); // OBRAY TOKEN
+//define('__REMOTE_HOSTS__',serialize(array(0=>''));
+
 
 /******************************************************
     DEFINE AVAILABLE ROUTES
