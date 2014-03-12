@@ -92,8 +92,7 @@
 
 		public function route( $path , $params = array(), $direct = TRUE ) {
 			
-			$params = array_merge($params,$_GET,$_POST);
-			$_GET = array(); $_POST = array();
+			if( !$direct ){ $params = array_merge($params,$_GET,$_POST); }
 			$cmd = $path;
 			$components = parse_url($path);
 
@@ -101,8 +100,6 @@
 				handle remote HTTP(S) calls
 			*********************************/
 			if( isSet($components["host"]) && $direct ){
-				
-				
 				
 				$ch = curl_init();
 				// determine if remote path is to obray APP configure din __REMOTE_HOSTS__ in settings.php
