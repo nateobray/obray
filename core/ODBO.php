@@ -365,8 +365,9 @@
         
         	$original_params = $params;
         	
-        	$limit = ''; $order_by = '';
+        	$limit = ''; $order_by = ''; $filter = TRUE;
         	if( isSet($params['start']) && isSet($params['rows']) ){ $limit = ' LIMIT ' . $params['start'] . ',' . $params['rows'] . ''; }
+        	if( isSet($params['filter']) && ($params['filter'] == 'false' || !$filter) ){ $filter = FALSE; unset($params['filter']); }
         	if( isSet($params['order_by']) ){
 	        	$order_by = explode('|',$params['order_by']); $columns = array();
 	        	forEach( $order_by as $i => &$order ){ 
@@ -376,7 +377,7 @@
 						if( count($order) > 1 ){ switch($order[1]){ case 'ASC': case 'asc': $columns[count($columns)-1] .= ' ASC '; break; case 'DESC': case 'desc': $columns[count($columns)-1] .= ' DESC '; break; } }
 	        		}
 	        	}
-	        	if( !empty($order_by) ){ $order_by = ' ORDER BY ' . implode(',',$columns); } else { $order_by = ''; }
+	        	if( !empty($columns) ){ $order_by = ' ORDER BY ' . implode(',',$columns); } else { $order_by = ''; }
         	}
 	        
 	        $withs = array(); $original_withs = array();
@@ -401,39 +402,41 @@
 	        if( isSet($original_params['with']) ){ $original_params['with'] = implode('|',$original_withs); }
 	        $values = array();
 	        $where_str = $this->getWhere($params,$values);
-	        $this->sql = 'SELECT '.implode(',',$columns).',OCDT,OCU,OMDT,OMU FROM '.$this->table .$where_str . $limit . $order_by;
+	        $this->sql = 'SELECT '.implode(',',$columns).',OCDT,OCU,OMDT,OMU FROM '.$this->table .$where_str . $order_by . $limit;
 	        $statement = $this->dbh->prepare($this->sql);
 	        forEach($values as $value){ if( is_integer($value) ){ $statement->bindValue($value['key'], trim($value['value']), PDO::PARAM_INT); } else { $statement->bindValue($value['key'], trim((string)$value['value']), PDO::PARAM_STR); } }
-        	$statement->execute();
+	        $statement->execute();
 	        $statement->setFetchMode(PDO::FETCH_NUM);
 	        $this->data = $statement->fetchAll(PDO::FETCH_OBJ);
 	        
 	        if( !empty($withs) ){
-		    
-		        $ids = array();
-		        forEach( $this->data as $row ){ $ids[] = $row->$primary_key; }
-		        $ids = implode('|',$ids);
-		        
+				
 		        forEach( $withs as &$with ){
+		        	
+		        	$ids_to_index = array();
 		        	if( !is_array($with) ){ break; }
 		        	$with_key = $with[0]; $with_column = $with[2]; $with_name = $with[3]; $with_components = parse_url($with[1]); $sub_params = array();
+		        	forEach( $this->data as $i => $data ){ if( !isSet($ids_to_index[$data->$with_column]) ){ $ids_to_index[$data->$with_column] = array(); } $ids_to_index[$data->$with_column][] = (int)$i; }
+		        	$ids = array();
+		        	if( count($this->data) < 1000 ){ forEach( $this->data as $row ){ $ids[] = $row->$with_column; }  }
+		        	$ids = implode('|',$ids);
+		        	
 		        	if( !empty($with_components['query']) ){ parse_str($with_components['query'],$sub_params); }
-			        $with = $this->route($with_components['path'].'get/?'.$with[0].'='.$ids,array_merge($sub_params,$original_params))->data;
-			        
-			        forEach( $this->data as $i => &$data ){
-			        
-				        $data->$with_name = array();
-				        
-				        forEach( $with as &$w ){
-				        	if( isSet($w->$with_key) && isSet($data->$with_column) && $w->$with_key == $data->$with_column ){
-				        		array_push($data->$with_name,$w);
-					        	unset($w);
+		        	if( !empty($ids) ){ $with[0] = '?'.$with[0].'='.$ids; } else { $with[0] = ''; }
+			        $with = $this->route($with_components['path'].'get/'.$with[0],array_merge($sub_params,$original_params))->data;
+			        forEach( $with as &$w ){   
+			        	if( isSet($ids_to_index[$w->$with_key]) ){
+				        	forEach( $ids_to_index[$w->$with_key] as $index ){ 
+				        		if( !isSet($this->data[$index]->$with_name) ){ $this->data[$index]->$with_name = array(); } 
+				        		array_push($this->data[$index]->$with_name,$w);
 				        	}
-				        }
-				        if( empty($data->$with_name) ){ unset($this->data[$i]); }
+			        	}
 			        }
-			        $this->data = array_values($this->data);
+			        
+			        if($filter){ forEach( $this->data as $i => $data ){ if( empty($data->$with_name) ){ unset($this->data[$i]); } } array_values($this->data); }
+			        
 		        }
+		        
 	        }
 	        	
 	        if( $this->table == 'ousers' ){
@@ -442,6 +445,8 @@
 		        	unset($data->ouser_password);
 	        	}	        	
         	}
+        	
+        	$this->filter = $filter;$this->recordcount = count($this->data);
         	
 	        return $this;
 	        
@@ -499,7 +504,7 @@
 	        if( !empty($where) ){
 		        $where_str = ' WHERE ';
 		        forEach( $where as $key => $value ){
-			        $where_str .= ' ' . $value['join'] . ' ' . $value['key'] . ' ' . $value['operator'] . ' ' . $value['value'] . ' ';
+			        $where_str .= "\n".' ' . $value['join'] . ' ' . $value['key'] . ' ' . $value['operator'] . ' ' . $value['value'] . ' ';
 		        }
 	        }
 	        

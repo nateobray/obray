@@ -342,7 +342,7 @@
 
 		public function cleanUp(){
 			// remove all object keys not white listed for output - this is so we don't expose unnecessary information
-			foreach($this as $key => $value) { if($key != "object" && $key != "errors" && $key != "data" && $key != "runtime" && $key != "html" && $key != "success"){ unset($this->$key); } }
+			foreach($this as $key => $value) { if($key != "object" && $key != "errors" && $key != "data" && $key != "runtime" && $key != "html" && $key != "success" && $key != "recordcount" && $key != "filter"){ unset($this->$key); } }
 		}
 		
 		/***********************************************************************
