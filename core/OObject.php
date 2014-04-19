@@ -400,7 +400,7 @@
 
 		***********************************************************************/
 
-		public function throwError($message,$status_code=500,$type='general'){
+		public function throwError($message,$status_code=400,$type='general'){
 	        $this->is_error = TRUE;
 	        if( empty($this->errors) || !is_array($this->errors) ){ $this->errors = []; }
 	        $this->errors[$type][] = $message;
