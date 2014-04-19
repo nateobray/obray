@@ -7,7 +7,7 @@
 	Copyright (c) 2013 Nathan A Obray <nathanobray@gmail.com>
 	
 	Permission is hereby granted, free of charge, to any person obtaining a copy
-	of this software and associated documentation files (the "Software"), to deal
+	of this software and associated documentation files (the 'Software'), to deal
 	in the Software without restriction, including without limitation the rights
 	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 	copies of the Software, and to permit persons to whom the Software is
@@ -16,7 +16,7 @@
 	The above copyright notice and this permission notice shall be included in
 	all copies or substantial portions of the Software.
 	
-	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -47,21 +47,21 @@
 
 	    public function __construct(){
 
-	       if( !isSet($this->table) ){ $this->table = ""; }
+	       if( !isSet($this->table) ){ $this->table = ''; }
 	       if( !isSet($this->table_definition) ){ $this->table_definition = array(); }
-	       if( !isSet($this->primary_key_column) ){ $this->primary_key_column = ""; }
+	       if( !isSet($this->primary_key_column) ){ $this->primary_key_column = ''; }
 
-	       if( !defined("__DATATYPES__") ){
+	       if( !defined('__DATATYPES__') ){
 
-				define ("__DATATYPES__", serialize (array (
-				    "varchar"   	=>  array("sql"=>" VARCHAR(size) COLLATE utf8_general_ci ",	"my_sql_type"=>"varchar(size)",		"validation_regex"=>""),
-				    "mediumtext"	=>  array("sql"=>" MEDIUMTEXT COLLATE utf8_general_ci ",	"my_sql_type"=>"mediumtext",		"validation_regex"=>""),
-				    "text"      	=>  array("sql"=>" TEXT COLLATE utf8_general_ci ",			"my_sql_type"=>"text",				"validation_regex"=>""),
-				    "integer"   	=>  array("sql"=>" int ",									"my_sql_type"=>"int(11)",			"validation_regex"=>"/^([0-9])*$/"),
-				    "float"     	=>  array("sql"=>" float ",									"my_sql_type"=>"float",				"validation_regex"=>"/[0-9\.]*/"),
-				    "boolean"   	=>  array("sql"=>" boolean ",								"my_sql_type"=>"boolean",			"validation_regex"=>""),
-				    "datetime"  	=>  array("sql"=>" datetime ",								"my_sql_type"=>"datetime",			"validation_regex"=>""),
-				    "password"  	=>  array("sql"=>" varchar(255) ",							"my_sql_type"=>"varchar(255)",		"validation_regex"=>"")
+				define ('__DATATYPES__', serialize (array (
+				    'varchar'   	=>  array('sql'=>' VARCHAR(size) COLLATE utf8_general_ci ',	'my_sql_type'=>'varchar(size)',		'validation_regex'=>''),
+				    'mediumtext'	=>  array('sql'=>' MEDIUMTEXT COLLATE utf8_general_ci ',	'my_sql_type'=>'mediumtext',		'validation_regex'=>''),
+				    'text'      	=>  array('sql'=>' TEXT COLLATE utf8_general_ci ',			'my_sql_type'=>'text',				'validation_regex'=>''),
+				    'integer'   	=>  array('sql'=>' int ',									'my_sql_type'=>'int(11)',			'validation_regex'=>'/^([0-9])*$/'),
+				    'float'     	=>  array('sql'=>' float ',									'my_sql_type'=>'float',				'validation_regex'=>'/[0-9\.]*/'),
+				    'boolean'   	=>  array('sql'=>' boolean ',								'my_sql_type'=>'boolean',			'validation_regex'=>''),
+				    'datetime'  	=>  array('sql'=>' datetime ',								'my_sql_type'=>'datetime',			'validation_regex'=>''),
+				    'password'  	=>  array('sql'=>' varchar(255) ',							'my_sql_type'=>'varchar(255)',		'validation_regex'=>'')
 				)));
 				
             }
@@ -72,7 +72,7 @@
 			
 	       if( !isSet($this->table) || $this->table == '' ){ return; }
 	       $this->dbh = $dbh;
-	       if(isSet($_REQUEST["refresh"]) && __DebugMode__){ $this->scriptTable(array()); $this->alterTable(); }
+	       if(isSet($_REQUEST['refresh']) && __DebugMode__){ $this->scriptTable(); $this->alterTable(); }
 
 	    }
 
@@ -82,7 +82,7 @@
 
             	What this does:
 
-            		1.  Script a table new based on the table definition ($_RQUEST["refresh"] must be set )
+            		1.  Script a table new based on the table definition ($_RQUEST['refresh'] must be set )
 
             	What this doesn't do
 
@@ -90,7 +90,7 @@
 
         *************************************************************************************************************/
 
-        public function scriptTable($params){
+        public function scriptTable($params=array()){
         	
            if( empty($this->dbh) ){ return $this; }
 
@@ -98,37 +98,37 @@
 
 				WRITE SQL FROM TABLE DEFINITION
 
-				Loop through the table definition array	and write the approriate SQL.  If the "store" parameter exists
+				Loop through the table definition array	and write the approriate SQL.  If the 'store' parameter exists
 				in a definition	then skip and move on to the next definition.
 
            **************************************************************************************************************/
 
-           $sql = "";
+           $sql = '';
            $data_types = unserialize(__DATATYPES__);
 
            forEach($this->table_definition as $name => $def){
-                if( array_key_exists("store",$def) == FALSE || (array_key_exists("store",$def) == TRUE && $def["store"] == TRUE ) ){
+                if( array_key_exists('store',$def) == FALSE || (array_key_exists('store',$def) == TRUE && $def['store'] == TRUE ) ){
 
-                    if( !empty($sql) ){ $sql .= ","; }                                                                     // add comma                                                                               // column name
-					if( isSet($def["data_type"]) ){                                                                        // if no data type is found don't use it
+                    if( !empty($sql) ){ $sql .= ','; }                                                                     // add comma                                                                               // column name
+					if( isSet($def['data_type']) ){                                                                        // if no data type is found don't use it
     					$data_type = $this->getDataType($def);
-    					$sql .= $name . str_replace('size',str_replace(')','',$data_type["size"]),$data_types[$data_type["data_type"]]["sql"]);  // generate SQL
+    					$sql .= $name . str_replace('size',str_replace(')','',$data_type['size']),$data_types[$data_type['data_type']]['sql']);  // generate SQL
 					}
 
-					if( array_key_exists("primary_key",$def) && $def["primary_key"] === TRUE  ){                           // write SQL for key column if it exists
+					if( array_key_exists('primary_key',$def) && $def['primary_key'] === TRUE  ){                           // write SQL for key column if it exists
 						$this->primary_key_column = $name;                                                                 // set the key column variable
-						$sql .= $name . " INT UNSIGNED NOT NULL AUTO_INCREMENT ";                                          // write SQL
+						$sql .= $name . ' INT UNSIGNED NOT NULL AUTO_INCREMENT ';                                          // write SQL
 					}
                 }
            }
 
-           $sql = "CREATE TABLE IF NOT EXISTS " . $this->table . " ( " . $sql;                                             // prepend CREATE logic
+           $sql = 'CREATE TABLE IF NOT EXISTS ' . $this->table . ' ( ' . $sql;                                             // prepend CREATE logic
 		   
            /*************************************************************************************************************
 
            	    ADD CREATE AND MODIFY TRACKING FIELDS
 
-					slug 				- used to create a unique identifier the is still "human readable" but reliable for identification (must be unique)
+					slug 				- used to create a unique identifier the is still 'human readable' but reliable for identification (must be unique)
 					order_variable		- used to keep track of ordering
 					parent_id			- used to track the parent_id of the row (useful for creating trees and relationships)
 					OCDT				- tracks the create date of a specific record
@@ -138,21 +138,22 @@
 
 			*************************************************************************************************************/
 
-			$sql .= ", OCDT DATETIME, OCU INT UNSIGNED, OMDT DATETIME, OMU INT UNSIGNED ";
+			$sql .= ', OCDT DATETIME, OCU INT UNSIGNED, OMDT DATETIME, OMU INT UNSIGNED ';
 
             /*************************************************************************************************************
 				ASSIGN PRIMARY KEY AND DEFUALT CHARSET (utf8 for multilangual support)
 			*************************************************************************************************************/
 
-			if( !empty($this->primary_key_column) ){ $sql .= ", PRIMARY KEY (" . $this->primary_key_column . ") ) ENGINE=".__DBEngine__." DEFAULT CHARSET=".__DBCharSet__."; "; }
+			if( !empty($this->primary_key_column) ){ $sql .= ', PRIMARY KEY (' . $this->primary_key_column . ') ) ENGINE='.__DBEngine__.' DEFAULT CHARSET='.__DBCharSet__.'; '; }
 
 			/*************************************************************************************************************
 				RUN SQL
 			*************************************************************************************************************/
+			
 			$this->sql = $sql;
 			$statement = $this->dbh->prepare($sql);
 			$this->script = $statement->execute();
-
+			
         }
 
         /*************************************************************************************************************
@@ -180,12 +181,11 @@
         *************************************************************************************************************/
 
         public function alterTable(){
-
         	if( empty($this->dbh) ){ return $this; }
 
         	$this->dump();
 
-        	$sql = "DESCRIBE $this->table;";
+        	$sql = 'DESCRIBE $this->table;';
         	$statement = $this->dbh->prepare($sql);
         	$statement->execute();
 
@@ -193,14 +193,14 @@
         	$data = $statement->fetchAll();
 
         	$temp_def = $this->table_definition;
-        	$obray_fields = array(3=>"OCDT",4=>"OCU",5=>"OMDT",6=>"OMU");
+        	$obray_fields = array(3=>'OCDT',4=>'OCU',5=>'OMDT',6=>'OMU');
         	forEach( $obray_fields as $of ){ unset($this->table_definition[$of]); }
 
         	$data_types = unserialize(__DATATYPES__);
-
+			
         	forEach($data as $def){
 
-        		if( array_key_exists("store",$def) == FALSE || (array_key_exists("store",$def) == TRUE && $def["store"] == TRUE ) ){
+        		if( array_key_exists('store',$def) == FALSE || (array_key_exists('store',$def) == TRUE && $def['store'] == TRUE ) ){
 
 	        	if( array_search($def->Field,$obray_fields) === FALSE ){
 		        	if( isSet($this->table_definition[$def->Field]) ){
@@ -211,12 +211,12 @@
 
 			        	*********************************************************************************/
 
-			        	if( $this->enable_data_type_changes && isSet($this->table_definition[$def->Field]["data_type"]) ){
+			        	if( $this->enable_data_type_changes && isSet($this->table_definition[$def->Field]['data_type']) ){
 			        		$data_type = $this->getDataType($this->table_definition[$def->Field]);
 
-			        		if( str_replace('size',$data_type["size"],$data_types[$data_type["data_type"]]["my_sql_type"]) != $def->Type ){
+			        		if( str_replace('size',$data_type['size'],$data_types[$data_type['data_type']]['my_sql_type']) != $def->Type ){
 				        		if( !isSet($this->table_alterations) ){ $this->table_alterations = array(); }
-				        		$sql = "ALTER TABLE $this->table MODIFY COLUMN ".$def->Field." ".str_replace('size',$data_type["size"],$data_types[$data_type["data_type"]]["sql"]);
+				        		$sql = 'ALTER TABLE $this->table MODIFY COLUMN '.$def->Field.' '.str_replace('size',$data_type['size'],$data_types[$data_type['data_type']]['sql']);
 				        		$statement = $this->dbh->prepare($sql);
 				        		$this->table_alterations[] = $statement->execute();
 
@@ -234,9 +234,9 @@
 			        	*********************************************************************************/
 
 		        	} else {
-			        	if( $this->enable_column_removal && isSet($_REQUEST["enableDrop"]) ){
+			        	if( $this->enable_column_removal && isSet($_REQUEST['enableDrop']) ){
 			        		if( !isSet($this->table_alterations) ){ $this->table_alterations = array(); }
-    						$sql = "ALTER TABLE $this->table DROP COLUMN $def->Field";
+    						$sql = 'ALTER TABLE $this->table DROP COLUMN $def->Field';
 			        		$statement = $this->dbh->prepare($sql);
 			        		$this->table_alterations[] = $statement->execute();
 			        	}
@@ -251,13 +251,13 @@
         		3.	Add fields if they don't exist in the table but do in the table definition
 
         	*********************************************************************************/
-
+			
         	if( $this->enable_column_additions ){
 	        	forEach($this->table_definition as $key => $def){
-	        		if( array_key_exists("store",$def) == FALSE || (array_key_exists("store",$def) == TRUE && $def["store"] == TRUE ) ){
+	        		if( array_key_exists('store',$def) == FALSE || (array_key_exists('store',$def) == TRUE && $def['store'] == TRUE ) ){
 		        		if( !isSet($this->table_alterations) ){ $this->table_alterations = array(); }
 		        		$data_type = $this->getDataType($def);
-			        	$sql = "ALTER TABLE $this->table ADD ($key ".str_replace('size',$data_type["size"],$data_types[$data_type["data_type"]]["sql"]).")";
+			        	$sql = 'ALTER TABLE $this->table ADD ($key '.str_replace('size',$data_type['size'],$data_types[$data_type['data_type']]['sql']).')';
 		        		$statement = $this->dbh->prepare($sql);
 		        		$this->table_alterations[] = $statement->execute();
 	        		}
@@ -281,8 +281,8 @@
 	        	if( isSet($def['required']) && $def['required'] == TRUE ){ $this->required[$key] = TRUE; }
 				if( isSet($def['primary_key']) ){ $this->primary_key_column = $key; }
 				if( isSet($def['parent']) && $def['parent'] == TRUE ){ $this->parent_column = $key; }
-	        	if( isSet($def["slug_key"]) && $def["slug_key"] == TRUE ){ $this->slug_key_column = $key; }
-	        	if( isSet($def["slug_value"]) && $def["slug_value"] == TRUE ){ $this->slug_value_column = $key; }
+	        	if( isSet($def['slug_key']) && $def['slug_key'] == TRUE ){ $this->slug_key_column = $key; }
+	        	if( isSet($def['slug_value']) && $def['slug_value'] == TRUE ){ $this->slug_value_column = $key; }
 	        }
         }
 
@@ -297,8 +297,8 @@
         	if( empty($this->dbh) ){ return $this; }
         	
         	// generate prepared statement
-        	$sql = "";
-        	$sql_values = "";
+        	$sql = '';
+        	$sql_values = '';
         	$data = array();
         	$this->data_types = unserialize(__DATATYPES__);
 			
@@ -323,17 +323,17 @@
 					
 					// validate data type
 					if( isSet($this->required[$key]) ){ unset($this->required[$key]); }
-					if( isSet($def["data_type"]) && !empty($this->data_types[$data_type["data_type"]]["validation_regex"]) && !preg_match($this->data_types[$data_type["data_type"]]["validation_regex"],$params[$key]) ){
-					   $this->throwError(isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is invalid.":$key." is invalid.",'500',$key);
+					if( isSet($def['data_type']) && !empty($this->data_types[$data_type['data_type']]['validation_regex']) && !preg_match($this->data_types[$data_type['data_type']]['validation_regex'],$params[$key]) ){
+					   $this->throwError(isSet($def['error_message'])?$def['error_message']:isSet($def['label'])?$def['label'].' is invalid.':$key.' is invalid.','500',$key);
 					}
 					
 					// generate hashed password using crypt and generate token - will significantly add to the speed of an add (processor intensive)
-					if( isSet($def["data_type"]) && $def["data_type"] == "password" ){ $salt = "$2a$12$".$this->generateToken(); $data[$key] = crypt($params[$key],$salt); }
+					if( isSet($def['data_type']) && $def['data_type'] == 'password' ){ $salt = '$2a$12$'.$this->generateToken(); $data[$key] = crypt($params[$key],$salt); }
 					
 					// add param to SQL prepared statement
 					if( isSet($params[$key]) ){
-					   if( !empty($sql) ){ $sql .= ","; $sql_values .= ","; }
-					   $sql .= $key; $sql_values .= ":$key";
+					   if( !empty($sql) ){ $sql .= ','; $sql_values .= ','; }
+					   $sql .= $key; $sql_values .= ':$key';
 					}
 					
 				}
@@ -344,15 +344,15 @@
         	if( !empty($this->required) ){
 	        	forEach($this->required as $key => $value){
 	        		$def = $this->table_definition[$key];
-		        	$this->throwError(isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$key." is required.":$key." is required.",'500',$key);
+		        	$this->throwError(isSet($def['error_message'])?$def['error_message']:isSet($def['label'])?$key.' is required.':$key.' is required.','500',$key);
 	        	}
         	}
         	
         	// throw general error
-        	if( $this->isError() ){ $this->throwError(isSet($this->general_error)?$this->general_error:"There was an error on this form, please make sure the below fields were completed correclty: "); return $this; }
+        	if( $this->isError() ){ $this->throwError(isSet($this->general_error)?$this->general_error:'There was an error on this form, please make sure the below fields were completed correclty: '); return $this; }
         	
         	if( isSet($_SESSION['ouser']) ){ $ocu = $_SESSION['ouser']->ouser_id; } else { $ocu = 0; }
-        	$this->sql  = " insert into $this->table ( ".$sql.", OCDT, OCU ) values ( ".$sql_values.", NOW(), ".$ocu." ) ";
+        	$this->sql  = ' insert into $this->table ( '.$sql.', OCDT, OCU ) values ( '.$sql_values.', NOW(), '.$ocu.' ) ';
         	$statement = $this->dbh->prepare($this->sql);
         	$this->script = $statement->execute($data);
         	
@@ -372,8 +372,8 @@
         	if( empty($this->dbh) ){ return $this; }
         	
         	// generate prepared statement
-        	$sql = "";
-        	$sql_values = "";
+        	$sql = '';
+        	$sql_values = '';
         	$data = array();
         	$this->data_types = unserialize(__DATATYPES__);
         	
@@ -395,21 +395,21 @@
 		        	$data_type = $this->getDataType($def);
 		        	
 		        	// validate required
-					if( isSet($def["required"]) && $def["required"] === TRUE && (!isSet($params[$key]) || $params[$key] === NULL || $params[$key] === "") ){
-							$this->throwError(isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is required.":$key." is required.",500,$key);
+					if( isSet($def['required']) && $def['required'] === TRUE && (!isSet($params[$key]) || $params[$key] === NULL || $params[$key] === '') ){
+							$this->throwError(isSet($def['error_message'])?$def['error_message']:isSet($def['label'])?$def['label'].' is required.':$key.' is required.',500,$key);
 					}
 					
 					// validate data type
-					if( isSet($def["data_type"]) && !empty($this->data_types[$data_type["data_type"]]["validation_regex"]) && !preg_match($this->data_types[$data_type["data_type"]]["validation_regex"],$params[$key]) ){
-						$this->throwError(isSet($def["error_message"])?$def["error_message"]:isSet($def['label'])?$def['label']." is invalid.":$key." is invalid.",500,$key);
+					if( isSet($def['data_type']) && !empty($this->data_types[$data_type['data_type']]['validation_regex']) && !preg_match($this->data_types[$data_type['data_type']]['validation_regex'],$params[$key]) ){
+						$this->throwError(isSet($def['error_message'])?$def['error_message']:isSet($def['label'])?$def['label'].' is invalid.':$key.' is invalid.',500,$key);
 					}
 					
 					// generate hashed password using crypt and generate token - will significantly add to the speed of an add (processor intensive)
-					if( isSet($def["data_type"]) && $def["data_type"] == "password" ){ $salt = "$2a$12$".$this->generateToken(); $data[$key] = crypt($params[$key],$salt); }
+					if( isSet($def['data_type']) && $def['data_type'] == 'password' ){ $salt = '$2a$12$'.$this->generateToken(); $data[$key] = crypt($params[$key],$salt); }
 					
 					// write SQL
-					if( !empty($sql) ){ $sql .= ","; $sql_values .= ","; }
-					$sql .= $key . " = :$key ";
+					if( !empty($sql) ){ $sql .= ','; $sql_values .= ','; }
+					$sql .= $key . ' = :$key ';
 					
 	        	}
         	}
@@ -421,7 +421,7 @@
         	
         	// prepare end execute SQL
         	if( isSet($_SESSION['ouser']) ){ $omu = $_SESSION['ouser']->ouser_id; } else { $omu = 0; }
-        	$this->sql  = " UPDATE $this->table SET $sql, OMDT = NOW(), OMU = ".$omu." WHERE $this->primary_key_column = :$this->primary_key_column ";
+        	$this->sql  = ' UPDATE $this->table SET $sql, OMDT = NOW(), OMU = '.$omu.' WHERE $this->primary_key_column = :$this->primary_key_column ';
         	$statement = $this->dbh->prepare($this->sql);
         	$this->script = $statement->execute($data);
         	
@@ -445,7 +445,7 @@
 			$this->getWorkingDef();
         	
         	// build where caluse
-        	$this->where = "";
+        	$this->where = '';
         	$this->params = $this->buildWhereClause($params);
         	$this->where = str_replace($this->table_alias.'.','',$this->where);
         	
@@ -453,7 +453,7 @@
 			if( empty( $this->where ) ){ $this->throwError('Please provide a filter for this delete statement',500); }			
 			if( !empty( $this->errors ) ){ return $this; }
 			
-        	$this->sql  = " DELETE FROM $this->table WHERE " . $this->where;
+        	$this->sql  = ' DELETE FROM $this->table WHERE ' . $this->where;
         	
         	$statement = $this->dbh->prepare($this->sql);
         	$this->script = $statement->execute($this->params);
@@ -497,10 +497,10 @@
 	        
 	        $select = ' SELECT ' . $this->table_alias . '.' . $this->columns;
 	        $from = ' FROM ' . $this->table . ' as ' .$this->table_alias . ' ' . $this->from;
-	        if( !empty($this->where) ){ $where = ' WHERE ' . $this->where; } else { $where = ''; }
+	        if( isSet($params['where']) ){ $params_where = str_replace($this->table,$this->table_alias,$params['where']); } else { $params_where = ''; }
+	        if( !empty($this->where) ){ $where = ' WHERE ' . $params_where . ' ' . $this->where; } else if ( !empty($params_where) ) { $where = ' WHERE ' . $params_where; } else { $where = ' '; }
 	        if( !empty($this->order_by) ){ $order_by = ' ORDER BY ' . implode(',',$this->order_by); } else { $order_by = ''; }
 	        if( !isSet( $limit ) ){ $limit = ''; } //else { $this->params['start'] = (int)$start; $this->params['rows'] = (int)$rows; }
-	        
 	        $this->sql = $select . $from . $where . $order_by . $limit;
 	        
 	        /**************************************************************************
@@ -508,16 +508,12 @@
 	        **************************************************************************/
 			
 			$this->r = array();															// store results
-			//$this->dbh->query("SET NAMES utf8");										// set output to UTF8 (needed for multilangual setup)
-			
 	        $statement = $this->dbh->prepare($this->sql);								// prepare PDO statement with written SQL
 	        if( isSet($start) && isSet($rows) ){
 		        $statement->bindValue(':start', (int)trim($start), PDO::PARAM_INT); 
 		        $statement->bindValue(':rows', (int)trim($rows), PDO::PARAM_INT); 
 	        }
-	        forEach($this->params as $key => $param){
-		    	$statement->bindValue(':'.$key, trim($param), PDO::PARAM_STR); 
-	        }
+	        forEach($this->params as $key => $param){ $statement->bindValue(':'.$key, trim($param), PDO::PARAM_STR); }
         	$statement->execute();														// execute statement
 	        $statement->setFetchMode(PDO::FETCH_NUM);									// Fetch results numerically (important for inner joins on the same table)
 	        $statement->fetchAll(PDO::FETCH_FUNC,array($this, 'getPDORow'));			// Fetch all and use callback getPDORow (see function)
@@ -646,7 +642,7 @@
 	        $this->table_alias = 't'.md5(uniqid(rand(), true));
 	        $with_array = array();
 	        $with_obj = array();
-	        if( isSet($params["with"]) ){ $with = $params["with"]; } else { $with = ''; }
+	        if( isSet($params['with']) ){ $with = $params['with']; } else { $with = ''; }
 	        if( isSet($with) ){ $with_array = explode('|',$with); }
 	        
 	        
@@ -663,11 +659,11 @@
 	        
 	        **************************************************************************/
 	        $this->order_by = array();
-	        if( isSet($params["order_by"]) ){ $order_by_array = explode('|',$params["order_by"]); } else { $order_by_array = array(); }
+	        if( isSet($params['order_by']) ){ $order_by_array = explode('|',$params['order_by']); } else { $order_by_array = array(); }
 	        $orders = array();
 	        forEach( $order_by_array as $pair ){
 		        $tmp = explode(':',$pair);
-		        $orders[$tmp[0]] = isSet($tmp[1])?$tmp[1]:"ASC";
+		        $orders[$tmp[0]] = isSet($tmp[1])?$tmp[1]:'ASC';
 	        }
 	        
 	        //$this->order_by[] = $this->table_alias . '.order_variable ';
@@ -682,7 +678,7 @@
 	        	
 	        	if( empty($key) || $key != $name ){
 	        		
-		        	if( array_key_exists("primary_key",$def) && $def["primary_key"] === TRUE  ){ $this->primary_key_column = $name; } 
+		        	if( array_key_exists('primary_key',$def) && $def['primary_key'] === TRUE  ){ $this->primary_key_column = $name; } 
 		        	
 		        	forEach( $with_array as $i => $w ){
 		        		
@@ -694,13 +690,13 @@
 			        			
 			        			if( $this->isObject($obj[1]) ){
 			        			
-			        				$subparams = $params; unset($subparams["parent_id"]); unset($subparams["slug"]); unset($subparams[$this->primary_key_column]);
+			        				$subparams = $params; unset($subparams['parent_id']); unset($subparams['slug']); unset($subparams[$this->primary_key_column]);
 			        				if( $w === 'parent' ){ $subparams['with'] = str_replace('parent','',$subparams['with']); }
 			        				$with_obj[$w] = new stdClass();
 				        			$with_obj[$w] = $this->route($obj[1]);
 				        			$with_obj[$w]->column = $obj[0];
 				        			$with_obj[$w]->join_column = $name;
-				        			if( isSet($obj[2]) ){ $with_obj[$w]->join_type = $obj[2]; } else { $with_obj[$w]->join_type = ""; }
+				        			if( isSet($obj[2]) ){ $with_obj[$w]->join_type = $obj[2]; } else { $with_obj[$w]->join_type = ''; }
 				        			if( isSet($subparams['where']) ){ unset($subparams['where']); }
 				        			$with_obj[$w]->prepareSelectStatement($subparams,$this->primary_key_column);
 				        		
@@ -765,24 +761,39 @@
 	        
 	        **************************************************************************/
         	
+        	$repeat_count = 0;
         	forEach($params as $key => $value){
         		
 	        	switch(substr($key,-1)){
 	        		
 		        	case '!': case '<': case '>':
 		        		
-		        		$operators[] = substr($key,-1).'=';
-		        		$params[str_replace(substr($key,-1),'',$key)] = $params[$key]; unset($params[$key]); 
+		        		
+		        		if( isSet($params[str_replace(substr($key,-1),'',$key)]) ){ 
+		        			
+		        			if( is_array($params[str_replace(substr($key,-1),'',$key)]) ){
+		        				$operators[str_replace(substr($key,-1),'',$key)] = substr($key,-1).'=';
+			        			$params[str_replace(substr($key,-1),'',$key)][] = $params[$key];
+		        			} else {
+		        				$operators[str_replace(substr($key,-1),'',$key)] = array(0=>$operators[str_replace(substr($key,-1),'',$key)],1=>substr($key,-1).'='); 
+		        				$params[str_replace(substr($key,-1),'',$key)] = array(0=>$params[str_replace(substr($key,-1),'',$key)],1=>$params[$key]);
+		        			}
+		        			
+		        		} else{
+		        			$operators[str_replace(substr($key,-1),'',$key)] = substr($key,-1).'=';
+			        		$params[str_replace(substr($key,-1),'',$key)] = $params[$key]; unset($params[$key]); 
+		        		}
+		        		
 		        		break;
-		        				        		
+		        		
 		        	default:
 		        		
-		        		$operators[] = "=";
+		        		$operators[$key] = '=';
 		        		if( empty($params[$key]) ){ 
 		        			
-		        			$array = explode('>',$key); if( count($array) === 2 ){ $params[$array[0]] = urldecode($array[1]); unset($params[$key]); $operators[count($operators)-1] = "<"; }
-		        			$array = explode('<',$key); if( count($array) === 2 ){ $params[$array[0]] = urldecode($array[1]); unset($params[$key]); $operators[count($operators)-1] = ">"; }
-		        			$array = explode('~',$key); if( count($array) === 2 ){ $params[$array[0]] = urldecode($array[1]); unset($params[$key]); $operators[count($operators)-1] = "LIKE"; }
+		        			$array = explode('>',$key); if( count($array) === 2 ){ $params[$array[0]] = urldecode($array[1]); unset($params[$key]); $operators[$array[0]] = '<'; }
+		        			$array = explode('<',$key); if( count($array) === 2 ){ $params[$array[0]] = urldecode($array[1]); unset($params[$key]); $operators[$array[0]] = '>'; }
+		        			$array = explode('~',$key); if( count($array) === 2 ){ $params[$array[0]] = '%'.urldecode($array[1]).'%'; unset($params[$key]); $operators[$array[0]] = 'LIKE'; }
 		        			
 		        		}
 		        		break;
@@ -801,29 +812,49 @@
 	        $param_array = array();
 	        
 	        $count = 0;
+	        $this->table_definition['OCDT'] = array();
 	        forEach($params as $key => $value){
-	        	
+	        
 	    		if(array_key_exists($key, $this->table_definition) ){
-					
-					if( isSet($this->table_definition[$key]["data_type"]) && $this->table_definition[$key]["data_type"] == "password" ){ $this->password_key = $key; $this->password = $value; } else {
+	    		
+					if( isSet($this->table_definition[$key]['data_type']) && $this->table_definition[$key]['data_type'] == 'password' ){ $this->password_key = $key; $this->password = $value; } else {
 						
-			        	// define ORs within a where clause
-			        	$value = explode('|',$value);
-			        	$or = '(';
-			        	forEach($value as $k => $v){
-			        	
-				        	if( $or != '(' ){ $or .= ' OR '; }
-				        	   
-					        $or .= " ".$this->table_alias.".$key " . $operators[$count] . " :$key"."_".count($param_array);
-					        //unset($params[$key]);
-					        	
-					        $param_array[$key."_".count($param_array)] = $v;
+						if( is_array($value) ){
+			    			
+			    			$or = '(';
+			    			forEach($value as $k => $v){
 				        	
-			        	}
-			        	$or .= ' )';
-			        	
-			        	// write where clause
-						if( !empty($where) && isSet($or) ){ $where .= " AND $or"; } else if( isSet($or) ) { $where .= " $or ";	 }
+					        	if( $or != '(' ){ $or .= ' AND '; }
+					        	   
+						        $or .= ' '.$this->table_alias.'.$key ' . $operators[$key][$k] . ' :$key'.'_'.count($param_array);
+						        	
+						        $param_array[$key.'_'.count($param_array)] = $v;
+					        	
+				        	}
+				        	$or .= ' )';
+				        	
+				        	if( !empty($where) && isSet($or) ){ $where .= ' AND $or'; } else if( isSet($or) ) { $where .= ' $or ';	 }
+			    			
+		    			} else {
+						
+				        	// define ORs within a where clause
+				        	$value = explode('|',$value);
+				        	$or = '(';
+				        	forEach($value as $k => $v){
+				        	
+					        	if( $or != '(' ){ $or .= ' OR '; }
+					        	   
+						        $or .= ' '.$this->table_alias.'.$key ' . $operators[$key] . ' :$key'.'_'.count($param_array);
+						        	
+						        $param_array[$key.'_'.count($param_array)] = $v;
+					        	
+				        	}
+				        	$or .= ' )';
+				        	
+				        	// write where clause
+							if( !empty($where) && isSet($or) ){ $where .= ' AND $or'; } else if( isSet($or) ) { $where .= ' $or ';	 }
+						
+						}
 						
 					}
 					
@@ -832,62 +863,6 @@
         	}
 			if( !isSet($this->where) ){ $this->where = $where; } else { $this->where .= $where; }
 	        return $param_array;
-        }
-        
-        /********************************************************************
-
-            POSTPRECESSRESULTS function
-            	
-            	recursively process the result set building a more
-            	coherent datastructure - there obviously is a speed
-            	penalty to for this, so if you want to avoid this use
-            	raw=true in your request.  useful for large datasets.
-
-        ********************************************************************/
-        
-        public function postProcessResults($with,&$r,&$original=null){
-        	
-        	if( empty($original) ){ $original = &$r; }
-        	
-        	// handle nested data
-	        forEach( $with as $column => $obj ){
-	        	
-	        	if( !property_exists($r,$column) ){ $r->$column = array(); }
-	        	$key_column = $obj->primary_key_column;
-	        	$array = &$r->$column;
-	        	
-	        	$exists = FALSE;
-	        	forEach($array as $object){
-		        	if( $object->$key_column == $r->$key_column){
-			        	$exists = TRUE;
-		        	} 
-	        	}
-	        	
-	        	if( $r->$key_column == null  ){ $exists = TRUE; }
-	        	
-	        	if( !$exists ){
-		        	
-		        	$array[] = new stdClass;
-					
-		        	forEach( $original as $key => $value ){
-			        	if( array_key_exists($key,$obj->table_definition) && $key != $column && $key != $this->primary_key_column ){
-				        	$array[count($array)-1]->$key = $value; unset($original->$key);
-			        	}
-			        }
-		        }
-		        
-		        if( count($array) === 0 ){
-			        forEach( $original as $key => $value ){
-			        	if( array_key_exists($key,$obj->table_definition) && $key != $column ){
-				        	unset($original->$key);
-			        	}
-			        }
-		        }
-		        
-		        if( !$exists ){ $this->postProcessResults($obj->with,$array[count($array)-1],$original); }
-	        	
-	        }
-	        
         }
 
 		
@@ -914,11 +889,11 @@
         ********************************************************************/
 
         private function getDataType($def){
-            if( !isSet($def["data_type"]) ){ return FALSE; }												   // make sure datatype is set
-            $data_type = explode("(",$def["data_type"]);                                                       // explode datatypes that contain a size i.e. varchar(255)
+            if( !isSet($def['data_type']) ){ return FALSE; }												   // make sure datatype is set
+            $data_type = explode('(',$def['data_type']);                                                       // explode datatypes that contain a size i.e. varchar(255)
             if( !isSet($data_type[1]) ){ $data_type[1] = ''; }                                                 // if size is used then extract it
             $data_type[1] = str_replace(')','',$data_type[1]);												   // remove extra ')' and extract data type
-            return array("data_type"=>$data_type[0],"size"=>$data_type[1]);									   // return datatype with size
+            return array('data_type'=>$data_type[0],'size'=>$data_type[1]);									   // return datatype with size
         }
 
         /********************************************************************
@@ -931,16 +906,16 @@
             $count = 1; $i = 0;
             while($count > 0){
                 $new_slug = $slug;
-                if( $i == 0 ){ $appendage = ""; } else { $appendage = " $i"; }
-                $params = array("slug"=>strtolower(removeSpecialChars(str_replace("-".($i-1),'',$new_slug).$appendage,'-','and')));
-                if( !empty($parent) && isSet($this->parent_column) ){ $parent_sql = " AND $this->parent_column = :$this->parent_column "; $params[$this->parent_column] = $parent; } else { $parent_sql = ''; }
-                $sql = " SELECT $column FROM $this->table WHERE $this->slug_value_column = :slug $parent_sql ";
+                if( $i == 0 ){ $appendage = ''; } else { $appendage = ' $i'; }
+                $params = array('slug'=>strtolower(removeSpecialChars(str_replace('-'.($i-1),'',$new_slug).$appendage,'-','and')));
+                if( !empty($parent) && isSet($this->parent_column) ){ $parent_sql = ' AND $this->parent_column = :$this->parent_column '; $params[$this->parent_column] = $parent; } else { $parent_sql = ''; }
+                $sql = ' SELECT $column FROM $this->table WHERE $this->slug_value_column = :slug $parent_sql ';
                 $statement = $this->dbh->prepare($sql);
                 $statement->execute($params);
                 $count = count($statement->fetchAll());
                 ++$i;
             }
-            return $params["slug"];
+            return $params['slug'];
 
         }
         
@@ -980,17 +955,50 @@
 
 			COUNT
 			
-				Very fast way to retrive a count of records in a given table
+				Very fast way to retreive a count of records in a given table
 
         ********************************************************************/
         
         public function count( $params=array() ){
-	        $statement = $this->dbh->prepare('SELECT COUNT(*) as count FROM '.$this->table.';');
+			
+        	$this->table_alias = 't'.md5(uniqid(rand(), true));
+        	$params = $this->buildWhereClause($params);			
+        	if( !empty($this->where) ){ $where = ' WHERE ' . $this->where; } else { $where = ''; }
+        	//echo 'SELECT COUNT(*) as count FROM '.$this->table.' '.$this->table_alias . $where;
+	        $statement = $this->dbh->prepare('SELECT COUNT(*) as count FROM '.$this->table.' '.$this->table_alias . $where);
+	        forEach($params as $key => $param){ $statement->bindValue(':'.$key, trim($param), PDO::PARAM_STR); }
 	        $statement->execute();
 	        while ($row = $statement->fetch()) { $this->data[] = $row; }
 	        $this->data = $this->data[0];
 	        unset($this->data[0]);
 	        return $this;
+	        
+        }
+        
+        /********************************************************************
+
+			SUM
+			
+				Very fast way to sum a column of records in a given table
+
+        ********************************************************************/
+        
+        public function sum( $params=array() ){
+			
+			$column = $params['column']; unset($params['column']);
+			
+        	$this->table_alias = 't'.md5(uniqid(rand(), true));
+        	$params = $this->buildWhereClause($params);			
+        	if( !empty($this->where) ){ $where = ' WHERE ' . $this->where; } else { $where = ''; }
+        	//echo 'SELECT SUM('.$column.') as sum FROM '.$this->table.' '.$this->table_alias . $where;
+	        $statement = $this->dbh->prepare('SELECT SUM('.$column.') as sum FROM '.$this->table.' '.$this->table_alias . $where);
+	        forEach($params as $key => $param){ $statement->bindValue(':'.$key, trim($param), PDO::PARAM_STR); }
+	        $statement->execute();
+	        while ($row = $statement->fetch()) { $this->data[] = $row; }
+	        $this->data = $this->data[0];
+	        unset($this->data[0]);
+	        return $this;
+	        
         }
         
          /********************************************************************
