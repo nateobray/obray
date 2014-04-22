@@ -429,7 +429,7 @@
 			        	}
 			        }
 			        
-			        if($filter){ forEach( $this->data as $i => $data ){ if( empty($data->$with_name) ){ unset($this->data[$i]); } } array_values($this->data); }
+			        if($filter){ forEach( $this->data as $i => $data ){ if( empty($data->$with_name) ){ unset($this->data[$i]); } } $this->data = array_values((array)$this->data); }
 			        
 		        }
 		        
@@ -688,18 +688,18 @@
         
         protected function log( $object,$label=null ){
 	        
-	        print_r(json_encode($object));
-	        
 	        if(__OBRAY_DEBUG_MODE__){ 
-	        	$sql = 'CREATE TABLE IF NOT EXISTS ologs ( olog_id INT UNSIGNED,olog_label VARCHAR(255),olog_data TEXT,OCDT DATETIME,OCU INT UNSIGNED ), PRIMARY KEY (olog_id) ) ENGINE='.__OBRAY_DATABASE_ENGINE__.' DEFAULT CHARSET='.__OBRAY_DATABASE_CHARACTER_SET__.'; ';
+	        	$sql = 'CREATE TABLE IF NOT EXISTS ologs ( olog_id INT UNSIGNED NOT NULL AUTO_INCREMENT,olog_label VARCHAR(255),olog_data TEXT,OCDT DATETIME,OCU INT UNSIGNED, PRIMARY KEY (olog_id) ) ENGINE='.__OBRAY_DATABASE_ENGINE__.' DEFAULT CHARSET='.__OBRAY_DATABASE_CHARACTER_SET__.'; ';
 				$statement = $this->dbh->prepare($sql); $statement->execute();
 	        }
 	        
-		    $sql = 'INSERT INTO ologs(olog_label,olog_data,OCDT,OCU) VALUES(:olog_label,:olog_label,:OCDT,OCU);';
+		    $sql = 'INSERT INTO ologs(olog_label,olog_data,OCDT,OCU) VALUES(:olog_label,:olog_data,:OCDT,:OCU);';
+		    $statement = $this->dbh->prepare($sql);
 		    $statement->bindValue('olog_label',$label, PDO::PARAM_STR);
-		    $statement->bindValue('olog_data',json_encode($obj), PDO::PARAM_STR);
+		    $statement->bindValue('olog_data',json_encode($object), PDO::PARAM_STR);
 		    $statement->bindValue('OCDT',date('Y-m-d H:i:s'), PDO::PARAM_STR);
 		    $statement->bindValue('OCU',isSet($_SESSION['ouser']->ouser_id)?$_SESSION['ouser']->ouser_id:0, PDO::PARAM_INT);
+		    $statement->execute();
 	        
         }
         

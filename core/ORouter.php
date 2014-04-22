@@ -4,7 +4,7 @@
 
 	The MIT License (MIT)
 	
-	Copyright (c) 2014 Nathan A Obray <nathanobray@gmail.com>
+	Copyright (c) 2013 Nathan A Obray <nathanobray@gmail.com>
 	
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the 'Software'), to deal
@@ -26,6 +26,7 @@
 	
 	*****************************************************************************/
 
+	require_once 'dbug.php';
 	require_once 'settings.php';										                // see if a setting file exists for a given application (looks at the base path where your obray.php file exists)
 	require_once 'OObject.php';                                                         // the base object for all obray objects (basically everything will extend this or a class that has already extended it)
 	require_once 'ODBO.php';                                                            // object that extends OObject but includes database functionality and table definition support

@@ -100,16 +100,13 @@
 			if( isSet($components['host']) && $direct ){
 				
 				$ch = curl_init();
-				// determine if remote path is to obray APP configure din __REMOTE_HOSTS__ in settings.php
-				if( defined('__REMOTE_HOSTS__') && defined('__OBRAY_TOKEN__') && in_array($components['host'],unserialize(__REMOTE_HOSTS__)) ){ curl_setopt($ch, CURLOPT_HTTPHEADER, array('obray_token: '.__OBRAY_TOKEN__)); }
+				if( defined('__OBRAY_REMOTE_HOSTS__') && defined('__OBRAY_TOKEN__') && in_array($components['host'],unserialize(__OBRAY_REMOTE_HOSTS__)) ){ curl_setopt($ch, CURLOPT_HTTPHEADER, array('obray-token: '.__OBRAY_TOKEN__)); }
 				$timeout = 5;
 				curl_setopt($ch, CURLOPT_URL, $path);
 				curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
 				curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
-				
 				curl_setopt($ch,CURLOPT_POST, count($params));
 				curl_setopt($ch,CURLOPT_POSTFIELDS, $params);
-				
 				$this->data = curl_exec($ch);
 				$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 				switch( $content_type ){ 
@@ -170,14 +167,18 @@
 
 		}
 		
-		private function validateRemoteApplication(&$direct){
+		/***********************************************************************
+
+			VALIDATE REMOTE APPLICATION
+
+		***********************************************************************/
 		
-			$headers = getallheaders();
-			if( isSet($headers['obray_token']) ){
-				$otoken = $headers['obray_token']; unset($headers['obray_token']);
+		private function validateRemoteApplication(&$direct){
+			$headers = getallheaders();		
+			if( isSet($headers['obray-token']) ){
+				$otoken = $headers['obray-token']; unset($headers['obray-token']);
 				if( defined('__OBRAY_TOKEN__') && $otoken === __OBRAY_TOKEN__ && __OBRAY_TOKEN__ != '' ){ $direct = TRUE;  }
 			}
-			
 		}
 		
 		/***********************************************************************
