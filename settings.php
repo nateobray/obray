@@ -74,7 +74,3 @@ define ("__OBRAY_DATATYPES__", serialize (array (
     "datetime"  =>  array("sql"=>" datetime ",					"my_sql_type"=>"datetime",		"validation_regex"=>""),
     "password"  =>  array("sql"=>" varchar(255) ",				"my_sql_type"=>"varchar(255)",		"validation_regex"=>"")
 )));
-
-
-
-
