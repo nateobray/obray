@@ -85,7 +85,7 @@
 				$this->get(array('ouser_email'=>$params['ouser_email'], 'ouser_password' => $params['ouser_password']));
 				
 				// if the user exists log them in but only if they haven't exceed the max number of failed attempts (set in settings)
-				if( count($this->data) === 1 && $this->data[0]->ouser_failed_attempts < __MAX_FAILED_LOGIN_ATTEMPTS__ && $this->data[0]->ouser_status != 'disabled'){
+				if( count($this->data) === 1 && $this->data[0]->ouser_failed_attempts < __OBRAY_MAX_FAILED_LOGIN_ATTEMPTS__ && $this->data[0]->ouser_status != 'disabled'){
 					$_SESSION['ouser'] = $this->data[0];
 					$this->update( array('ouser_id'=>$this->data[0]->ouser_id,'ouser_failed_attempts'=>0,'ouser_last_login'=>date('Y-m-d H:i:s')) );
 					
@@ -97,7 +97,7 @@
 					$this->throwError('Invalid login, make sure you have entered a valid email and password.');
 
 				// if the user has exceeded the allowable login attempts
-				} else if( $this->data[0]->ouser_failed_attempts > __MAX_FAILED_LOGIN_ATTEMPTS__ ){
+				} else if( $this->data[0]->ouser_failed_attempts > __OBRAY_MAX_FAILED_LOGIN_ATTEMPTS__ ){
 					$this->throwError('This account has been locked.');
 
 				// if the user has been disabled
