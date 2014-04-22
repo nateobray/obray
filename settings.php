@@ -40,25 +40,32 @@ define('__OBRAY_TOKEN__','otk_PutYourTokenHere')		 		// Obray token
 ******************************************************/
 
 define('__OBRAY_ROUTES__',serialize( array( 
-	// Custom Routes - put your custom routes here
-	"d" => __SELF__ . "demo/",
-	// Obray Core Routes - DO NOT CHANGE
-	"obray" => __PATH_TO_CORE__
+	"d" => __SELF__ . "demo/",						// Custom Routes - put your custom routes here
+	"obray" => __PATH_TO_CORE__						// Obray Core Routes - DO NOT CHANGE
 ) ));
+
+/******************************************************
+    USER SETTINGS
+******************************************************/
+
+define('__OBRAY_MAX_FAILED_LOGIN_ATTEMPTS__',10);				// The maximium allowed failed login attempts before an account is locked
+
 
 /******************************************************
     DATABASE SETTINGS
 ******************************************************/
-define('__OBRAY_DATABASE_HOST__','localhost');						// database server host
-define('__OBRAY_DATABASE_PORT__','3306');						// database server port
-define('__OBRAY_DATABASE_USERNAME__','yourdbusername');					// database username
-define('__OBRAY_DATABASE_PASSWORD__','yourdbpassword');					// database password
-define('__OBRAY_DATABASE_NAME__','yourdbname');						// database name
-define('__OBRAY_DATABASE_ENGINE__','MyISAM');						// database engine
-define('__OBRAY_DATABASE_CHARACTER_SET__','utf8');					// database characterset (default: utf8)
+define('__OBRAY_DATABASE_HOST__','localhost');					// database server host
+define('__OBRAY_DATABASE_PORT__','3306');					// database server port
+define('__OBRAY_DATABASE_USERNAME__','yourdbusername');				// database username
+define('__OBRAY_DATABASE_PASSWORD__','yourdbpassword');				// database password
+define('__OBRAY_DATABASE_NAME__','yourdbname');					// database name
+define('__OBRAY_DATABASE_ENGINE__','MyISAM');					// database engine
+define('__OBRAY_DATABASE_CHARACTER_SET__','utf8');				// database characterset (default: utf8)
+
+
 
 define ("__OBRAY_DATATYPES__", serialize (array (
-//table_def data_type	  SQL TO SCRIPT TABLE					My SQL Datatypes for verification	Regex to validate values
+//  data_type	  	  SQL TO SCRIPT TABLE					My SQL Datatypes for verification	Regex to validate values
     "varchar"   =>  array("sql"=>" VARCHAR(size) COLLATE utf8_general_ci ",	"my_sql_type"=>"varchar(size)",		"validation_regex"=>""),
     "text"      =>  array("sql"=>" TEXT COLLATE utf8_general_ci ",		"my_sql_type"=>"text",			"validation_regex"=>""),
     "integer"   =>  array("sql"=>" int ",					"my_sql_type"=>"int(11)",		"validation_regex"=>"/^([0-9])*$/"),
@@ -68,11 +75,6 @@ define ("__OBRAY_DATATYPES__", serialize (array (
     "password"  =>  array("sql"=>" varchar(255) ",				"my_sql_type"=>"varchar(255)",		"validation_regex"=>"")
 )));
 
-/******************************************************
-    USER SETTINGS
-******************************************************/
-
-define('__OBRAY_MAX_FAILED_LOGIN_ATTEMPTS__',10);					// The maximium allowed failed login attempts before an account is locked
 
 
 
