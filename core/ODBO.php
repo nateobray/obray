@@ -42,6 +42,7 @@
 	    private $enable_column_additions = TRUE;
 	    private $enable_column_removal = TRUE;
 	    private $enable_data_type_changes = TRUE;
+	    public $enable_system_columns = TRUE;
 
 	    public function __construct(){
 
@@ -123,7 +124,7 @@
 			}
 
 			$sql = 'CREATE TABLE IF NOT EXISTS ' . $this->table . ' ( ' . $sql;
-			$sql .= ', OCDT DATETIME, OCU INT UNSIGNED, OMDT DATETIME, OMU INT UNSIGNED ';
+			if( $this->enable_system_columns ){ $sql .= ', OCDT DATETIME, OCU INT UNSIGNED, OMDT DATETIME, OMU INT UNSIGNED '; }
 			if( !empty($this->primary_key_column) ){ $sql .= ', PRIMARY KEY (' . $this->primary_key_column . ') ) ENGINE='.__OBRAY_DATABASE_ENGINE__.' DEFAULT CHARSET='.__OBRAY_DATABASE_CHARACTER_SET__.'; '; }
 			
 			$this->sql = $sql;
@@ -271,11 +272,19 @@
 
         	if( $this->isError() ){ $this->throwError(isSet($this->general_error)?$this->general_error:'There was an error on this form, please make sure the below fields were completed correclty: '); return $this; }
 
-        	if( isSet($_SESSION['ouser']) ){ $ocu = $_SESSION['ouser']->ouser_id; } else { $ocu = 0; }
-        	$this->sql  = ' INSERT INTO '.$this->table.' ( '.$sql.', OCDT, OCU ) values ( '.$sql_values.', \''.date('Y-m-d H:i:s').'\', '.$ocu.' ) ';
+        	if( $this->enable_system_columns ){ 
+        		if( isSet($_SESSION['ouser']) ){ $ocu = $_SESSION['ouser']->ouser_id; } else { $ocu = 0; }
+        		$system_columns = ", OCDT, OCU "; 
+        		$system_values = ', \''.date('Y-m-d H:i:s').'\', '.$ocu;
+        	} else {
+        		$system_columns = "";
+        		$system_values = "";
+        	}
+
+        	$this->sql  = ' INSERT INTO '.$this->table.' ( '.$sql.$system_columns.' ) values ( '.$sql_values.$system_values.' ) ';
         	$statement = $this->dbh->prepare($this->sql);
         	forEach( $data as $key => $dati ){
-        		if( $dati == 'NULL' ){
+        		if( $dati === 'NULL' ){
         			$statement->bindValue($key, null, PDO::PARAM_NULL);
         		} else {
         			$statement->bindValue($key, $dati);
@@ -337,8 +346,17 @@
         	if( !isSet( $params[$this->primary_key_column] ) ){ $this->throwError('Please specify a value for the primary key.','500',$this->primary_key_column); }
         	if( $this->isError() ){ return $this; }
 
-        	if( isSet($_SESSION['ouser']) && !empty($_SESSION['ouser']->ouser_id) ){ $omu = $_SESSION['ouser']->ouser_id; } else { $omu = 0; }
-        	$this->sql  = ' UPDATE '.$this->table.' SET '.$sql.', OMDT = \''.date('Y-m-d H:i:s').'\', OMU = '.$omu.' WHERE '.$this->primary_key_column.' = :'.$this->primary_key_column.' ';
+        	
+
+        	if( $this->enable_system_columns ){ 
+        		if( isSet($_SESSION['ouser']) && !empty($_SESSION['ouser']->ouser_id) ){ $omu = $_SESSION['ouser']->ouser_id; } else { $omu = 0; }
+        		$system_columns = ', OMDT = \''.date('Y-m-d H:i:s').'\', OMU = '.$omu; 
+        		
+        	} else {
+        		$system_columns = "";
+        	}
+
+        	$this->sql  = ' UPDATE '.$this->table.' SET '.$sql.$system_columns.' WHERE '.$this->primary_key_column.' = :'.$this->primary_key_column.' ';
         	//echo $this->sql;
         	//print_r($data);
         	$statement = $this->dbh->prepare($this->sql);
@@ -388,8 +406,12 @@
 
         	$original_params = $params;
 
-			$this->table_definition['OCDT'] = array('data_type'=>'datetime');
-			$this->table_definition['OMDT'] = array('data_type'=>'datetime');
+        	if( $this->enable_system_columns ){
+				$this->table_definition['OCDT'] = array('data_type'=>'datetime');
+				$this->table_definition['OMDT'] = array('data_type'=>'datetime');
+				$this->table_definition['OCU'] = array('data_type'=>'integer');
+				$this->table_definition['OMU'] = array('data_type'=>'integer');
+			}
 
         	$limit = ''; $order_by = ''; $filter = TRUE;
         	if( isSet($params['start']) && isSet($params['rows']) ){ $limit = ' LIMIT ' . $params['start'] . ',' . $params['rows'] . ''; unset($params['start']); unset($params['rows']); unset($original_params['start']); unset($original_params['rows']); }
@@ -416,7 +438,7 @@
 	        forEach($this->table_definition as $column => $def){
 	        	if( isSet($def['data_type']) && $def['data_type'] == "filter" ){ $filter_columns[] = $columns; continue; }
 	        	if( isSet($def['data_type']) && $def['data_type'] == 'password' && isSet($params[$column]) ){ $password_column = $column; $password_value = $params[$column]; unset($params[$column]); }
-	        	$columns[] = $column;
+	        	$columns[] = $this->table.'.'.$column;
 	        	if( array_key_exists('primary_key',$def) ){ $primary_key = $column; }
 	        	forEach( $withs as $i => &$with ){
 	        		if( !is_array($with) && array_key_exists($with,$def) ){
@@ -443,7 +465,8 @@
 	        if( isSet($original_params['with']) ){ $original_params['with'] = implode('|',$original_withs); }
 	        $values = array();
 	        $where_str = $this->getWhere($params,$values,$original_params);
-	        $this->sql = 'SELECT '.implode(',',$columns).',OCU,OMU FROM '.$this->table . $filter_join .$where_str . $order_by . $limit;
+
+	        $this->sql = 'SELECT '.implode(',',$columns).' FROM '.$this->table . $this->getJoin() . $filter_join .$where_str . $order_by . $limit;
 	        $statement = $this->dbh->prepare($this->sql);
 	        forEach($values as $value){ if( is_integer($value) ){ $statement->bindValue($value['key'], trim($value['value']), PDO::PARAM_INT); } else { $statement->bindValue($value['key'], trim((string)$value['value']), PDO::PARAM_STR); } }
 	        $statement->execute();
@@ -493,7 +516,7 @@
 
 	        }
 
-	        if( $this->table == 'ousers' ){
+	        if( $this->table == 'ousers' || (isset($this->user_session) && $this->table == $this->user_session) ){
 	        	forEach( $this->data as $i => &$data ){
 		        	if( isSet($password_column) && strcmp($data->$password_column,crypt($password_value,$data->$password_column)) != 0 ){ unset($this->data[$i]); }
 		        	unset($data->ouser_password);
@@ -505,6 +528,23 @@
 
         }
 
+        private function getJoin(){
+
+        	if( !empty($this->join) ){
+	        	$obj = $this->route($this->join);
+	        	forEach( $obj->table_definition as $key => $def ){
+	        		if( !empty($def["primary_key"]) && $def["primary_key"] === TRUE ){ $primary_key = $key; }
+	        	}
+	        	forEach( $this->table_definition as $key => $def ){
+	        		if( !empty($def["primary_key"]) && $def["primary_key"] === TRUE ){ $this->primary_key_column = $key; }
+	        	}
+	        	return ' INNER JOIN '.strtolower($obj->table).' ON '.strtolower($obj->table).'.'.$primary_key.' = '.strtolower($this->table).'.'.$this->primary_key_column.' ';
+        	} else {
+        		return '';
+        	}
+        	
+        }
+
         /********************************************************************
 
             GETWHERE
@@ -513,8 +553,10 @@
 
 		private function getWhere( &$params=array(),&$values=array(),&$original_params=array() ){
 
-			$this->table_definition['OCDT'] = array('data_type'=>'datetime');
-			$this->table_definition['OMDT'] = array('data_type'=>'datetime');
+			if( $this->enable_system_columns ){
+				$this->table_definition['OCDT'] = array('data_type'=>'datetime');
+				$this->table_definition['OMDT'] = array('data_type'=>'datetime');
+			}
 
 	        $where = array(); $count = 0; $p = array();
 	        forEach( $params as $key => &$param ){
@@ -822,6 +864,7 @@
         ********************************************************************/
 
         public function run( $sql ){
+        	if( is_array($sql) ){ $sql = $sql["sql"]; }
 	        $statement = $this->dbh->prepare($sql);
             $statement->execute();
             $statement->setFetchMode(PDO::FETCH_OBJ);

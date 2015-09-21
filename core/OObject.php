@@ -34,7 +34,6 @@
 	function getDatabaseConnection(){
 
 		global $conn;
-
 		if( !isSet( $conn ) ){
 			try {
 		        $conn = new PDO('mysql:host='.__OBRAY_DATABASE_HOST__.';dbname='.__OBRAY_DATABASE_NAME__.';charset=utf8', __OBRAY_DATABASE_USERNAME__,__OBRAY_DATABASE_PASSWORD__,array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'));
@@ -344,8 +343,6 @@
 
 		private function executeMethod($path,$path_array,$direct,&$params){
 
-
-
 			$path = str_replace('-','',$path_array[0]);
 			
 			if( method_exists($this,$path) ){
@@ -383,23 +380,26 @@
 
 	    		// set the "method" permission is set and the specific method has no permis then set the object_name to "method"
 	    		if( !isSet($perms[$object_name]) && isSet($perms['method']) ){ $object_name = 'method'; }
-	    		
+
+				//This is to add greater flexibility for using custom session variable for storage of user data
+				$user_session_key = isset($this->user_session) ? $this->user_session : 'ouser';
+				
 	    		// restrict permissions on undefined keys
 	    		if( !isSet($perms[$object_name]) ){
 		    		$this->throwError('You cannot access this resource.',403,'Forbidden');
 	    		// restrict access to users that are not logged in if that's required
-	    		} else if( ( $perms[$object_name] === 'user' && !isSet($_SESSION['ouser']) ) || ( is_int($perms[$object_name]) && !isSet($_SESSION['ouser']) ) ){
+	    		} else if( ( $perms[$object_name] === 'user' && !isSet($_SESSION[$user_session_key]) ) || ( is_int($perms[$object_name]) && !isSet($_SESSION[$user_session_key]) ) ){
 
 		    		if( isSet($_SERVER['PHP_AUTH_USER']) && isSet($_SERVER['PHP_AUTH_PW']) ){
 			    		$login = $this->route('/obray/OUsers/login/',array('ouser_email'=>$_SERVER['PHP_AUTH_USER'],'ouser_password'=>$_SERVER['PHP_AUTH_PW']),TRUE);
-			    		if( !isSet($_SESSION['ouser']) ){ $this->throwError('You cannot access this resource.',401,'Unauthorized');	}
+			    		if( !isSet($_SESSION[$user_session_key]) ){ $this->throwError('You cannot access this resource.',401,'Unauthorized');	}
 		    		} else { $this->throwError('You cannot access this resource.',401,'Unauthorized'); }
 
 		    	// restrict access to users without correct permissions
-	    		} else if( is_int($perms[$object_name]) && isSet($_SESSION['ouser']) && $_SESSION['ouser']->ouser_permission_level != $perms[$object_name] ){ $this->throwError('You cannot access this resource.',403,'Forbidden'); }
+	    		} else if( is_int($perms[$object_name]) && isSet($_SESSION[$user_session_key]) && (isset($_SESSION[$user_session_key]->ouser_permission_level) && $_SESSION[$user_session_key]->ouser_permission_level != $perms[$object_name]) ){ $this->throwError('You cannot access this resource.',403,'Forbidden'); }
 
 	    		// add user_id to params if restriction is based on user
-	    		if( isSet($perms[$object_name]) && $perms[$object_name] === 'user' && isSet($_SESSION['ouser']) ){ $params['ouser_id'] = $_SESSION['ouser']->ouser_id; }
+	    		if( isSet($perms[$object_name]) && $perms[$object_name] === 'user' && isSet($_SESSION[$user_session_key]) ){ $params['ouser_id'] = $_SESSION['ouser']->ouser_id; }
 
     		}
 
@@ -535,6 +535,17 @@
 		public  function setMissingPathHandler($handler,$path){ $this->missing_path_handler = $handler; $this->missing_path_handler_path = $path; }
 		public function dumpster($data,$force=false) { if( (defined("__LOCAL__") && __LOCAL__) || $force ) { echo '<pre>'; print_r($data); echo '</pre>'; } }
 		public function redirect($location="/"){ header( 'Location: '.$location ); die(); }
+
+		public function switchDB($db,$uname,$psswd){
+			global $conn;
+
+			try {
+		        $conn = new PDO('mysql:host='.__OBRAY_DATABASE_HOST__.';dbname='.$db.';charset=utf8',$uname,$psswd,array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'));
+		        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+		    } catch(PDOException $e) { echo 'ERROR: ' . $e->getMessage(); exit(); }
+			
+		    return $conn;
+		}
 
 	}
 ?>
