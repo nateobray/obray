@@ -108,7 +108,7 @@
 
 		***********************************************************************/
 
-		public function route( $path , $params = array(), $direct = TRUE ) {
+		public function route( $path , $params = array(), $direct = TRUE ) {	
 			if( !$direct ){ $params = array_merge($params,$_GET,$_POST); }
 			//$_GET = array(); $_POST = array();
 			$cmd = $path;
@@ -304,6 +304,7 @@
 				    		$obj->setObject(get_class($obj));
 				    		$obj->setContentType($obj->content_type);
 				    		$obj->path_to_object = implode('/',$path_array);
+							array_pop($rPath);
 							$obj->rPath = $rPath;
 
 				    		//	CHECK PERMISSIONS
@@ -545,6 +546,10 @@
 		    } catch(PDOException $e) { echo 'ERROR: ' . $e->getMessage(); exit(); }
 			
 		    return $conn;
+		}
+
+		public function startSocketServer( $params=array() ){
+			
 		}
 
 	}
