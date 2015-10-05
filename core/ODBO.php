@@ -627,7 +627,14 @@
 	        if( !empty($where) ){
 		        $where_str = ' WHERE ';
 		        forEach( $where as $key => $value ){
-		        	if( $value['value'] === 'NULL' ){
+		        	
+		        	$val = array();
+		        	forEach( $values as $i => $v ){
+		        		if( $key === $value["value"] ){ $val = &$values[$i]; break; }
+		        	}
+
+		        	if( !empty($val) && $val["value"] === 'NULL' ){
+
 		        		if( $value['operator'] === '=' ){
 		        			$where_str .= ' ' . $value['join'] . ' ' . $value['key'] . ' IS NULL ';
 		        		} else if ( $value['operator'] === '!=' ){
@@ -636,7 +643,7 @@
 		        	} else {
 			        	$where_str .= ' ' . $value['join'] . ' ' . $value['key'] . ' ' . $value['operator'] . ' ' . $value['value'] . ' ';
 			    	}
-			        if( $value['operator'] == '!=' ){ $where_str .= ' OR '.$value['key'].' IS NULL '; }
+			        //if( $value['operator'] == '!=' ){ $where_str .= ' OR '.$value['key'].' IS NULL '; }
 		        }
 	        }
 
@@ -864,12 +871,13 @@
         ********************************************************************/
 
         public function run( $sql ){
+
         	if( is_array($sql) ){ $sql = $sql["sql"]; }
 	        $statement = $this->dbh->prepare($sql);
             $statement->execute();
             $statement->setFetchMode(PDO::FETCH_OBJ);
             $this->data = [];
-	        while ($row = $statement->fetch()) { $this->data[] = $row; }
+	        try { while ($row = $statement->fetch()) { $this->data[] = $row; } } catch(Exception $e) {	$this->throwError($e); }
 	        return $this;
         }
 
