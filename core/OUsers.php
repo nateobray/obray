@@ -50,7 +50,8 @@
 				'ouser_status' =>			array('data_type'=>'varchar(20)',		'required'=>FALSE,	'label'=>'Status',			'error_message'=>'Please specify the user\'s status'),
 				'ouser_password' =>			array('data_type'=>'password',			'required'=>TRUE,	'label'=>'Password',		'error_message'=>'Please specify the user\'s password'),
 				'ouser_failed_attempts' =>	array('data_type'=>'integer',			'required'=>FALSE,	'label'=>'Failed Logins'),
-				'ouser_last_login' =>		array('data_type'=>'datetime',			'required'=>FALSE,	'label'=>'Last Login')
+				'ouser_last_login' =>		array('data_type'=>'datetime',			'required'=>FALSE,	'label'=>'Last Login'),
+				'ouser_settings' => 		array('data_type'=>'text',				'required'=>FALSE,	'label'=>'Settings')
 			);
 			
 			$this->permissions = array(
@@ -87,6 +88,7 @@
 				// if the user exists log them in but only if they haven't exceed the max number of failed attempts (set in settings)
 				if( count($this->data) === 1 && $this->data[0]->ouser_failed_attempts < __OBRAY_MAX_FAILED_LOGIN_ATTEMPTS__ && $this->data[0]->ouser_status != 'disabled'){
 					$_SESSION['ouser'] = $this->data[0];
+					$_SESSION['ouser']->ouser_settings = unserialize(base64_decode($_SESSION['ouser']->ouser_settings));
 					$this->update( array('ouser_id'=>$this->data[0]->ouser_id,'ouser_failed_attempts'=>0,'ouser_last_login'=>date('Y-m-d H:i:s')) );
 					
 				// if the data is empty (no user is found with the provided credentials)	
@@ -120,7 +122,7 @@
 
 		********************************************************************************************************************/
 
-		public function logout($params){ unset($_SESSION['ouser']);	}
+		public function logout($params){ unset($_SESSION['ouser']);  $this->data['logout'] = TRUE;	}
 		
 		public function authorize($params=array()){
 			
@@ -133,6 +135,26 @@
 		}
 		
 		public function hasPermission($object){ if( isSet($this->permissions[$object]) && $this->permissions[$object] === 'any'){ return TRUE; } else { return FALSE; }	}
+		
+		public function setting($params=array()){
+			
+			if( !empty($params) && !empty($_SESSION['ouser']->ouser_id) ){
+				
+				if( !empty($params['key']) && isSet($params['value'])){
+					
+					$_SESSION['ouser']->ouser_settings[$params['key']] = $params['value'];
+					
+					$this->route('/obray/OUsers/update/?ouser_id='.$_SESSION['ouser']->ouser_id.'&ouser_settings='.base64_encode(serialize($_SESSION['ouser']->ouser_settings)));
+					
+				} else if( !empty($params['key']) ) {
+					
+					$this->data[$params['key']] = $_SESSION['ouser']->ouser_settings[$params['key']];
+					
+				}
+				
+			}
+			
+		}
 
 	}
 ?>

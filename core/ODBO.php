@@ -42,6 +42,7 @@
 	    private $enable_column_additions = TRUE;
 	    private $enable_column_removal = TRUE;
 	    private $enable_data_type_changes = TRUE;
+	    public $enable_system_columns = TRUE;
 
 	    public function __construct(){
 
@@ -52,18 +53,34 @@
 	       if( !defined('__OBRAY_DATATYPES__') ){
 
 				define ('__OBRAY_DATATYPES__', serialize (array (
-				    'varchar'   	=>  array('sql'=>' VARCHAR(size) COLLATE utf8_general_ci ',	'my_sql_type'=>'varchar(size)',		'validation_regex'=>''),
-				    'mediumtext'	=>  array('sql'=>' MEDIUMTEXT COLLATE utf8_general_ci ',	'my_sql_type'=>'mediumtext',		'validation_regex'=>''),
-				    'text'      	=>  array('sql'=>' TEXT COLLATE utf8_general_ci ',			'my_sql_type'=>'text',				'validation_regex'=>''),
-				    'integer'   	=>  array('sql'=>' int ',									'my_sql_type'=>'int(11)',			'validation_regex'=>'/^([0-9])*$/'),
-				    'float'     	=>  array('sql'=>' float ',									'my_sql_type'=>'float',				'validation_regex'=>'/[0-9\.]*/'),
-				    'boolean'   	=>  array('sql'=>' boolean ',								'my_sql_type'=>'boolean',			'validation_regex'=>''),
-				    'datetime'  	=>  array('sql'=>' datetime ',								'my_sql_type'=>'datetime',			'validation_regex'=>''),
-				    'password'  	=>  array('sql'=>' varchar(255) ',							'my_sql_type'=>'varchar(255)',		'validation_regex'=>'')
+				    'varchar'   	=>  array('sql'=>' VARCHAR(size) COLLATE utf8_general_ci ',		'my_sql_type'=>'varchar(size)',		'validation_regex'=>''),
+				    'mediumtext'	=>  array('sql'=>' MEDIUMTEXT COLLATE utf8_general_ci ',		'my_sql_type'=>'mediumtext',		'validation_regex'=>''),
+				    'text'      	=>  array('sql'=>' TEXT COLLATE utf8_general_ci ',				'my_sql_type'=>'text',				'validation_regex'=>''),
+				    'integer'   	=>  array('sql'=>' int ',										'my_sql_type'=>'int(11)',			'validation_regex'=>'/^([+,-]?[0-9])*$/'),
+				    'uninteger'		=>	array('sql'=>' int(11) unsigned NOT NULL DEFAULT \'0\'  ',	'my_sql_type'=>'int(11) unsigned',	'validation_regex'=>'/^([+,-]?[0-9])*$/'),
+				    'float'     	=>  array('sql'=>' float ',										'my_sql_type'=>'float',				'validation_regex'=>'/[0-9\.]*/'),
+				    'boolean'   	=>  array('sql'=>' boolean ',									'my_sql_type'=>'boolean',			'validation_regex'=>''),
+				    'datetime'  	=>  array('sql'=>' datetime ',									'my_sql_type'=>'datetime',			'validation_regex'=>''),
+				    'password'  	=>  array('sql'=>' varchar(255) ',								'my_sql_type'=>'varchar(255)',		'validation_regex'=>'')
 				)));
 
             }
 
+	    }
+
+	    public function getOptions( $params=array() ){
+	    	$this->data = FALSE;
+	    	if( !empty($this->table_definition[$params["column"]]["options"]) ){
+	    		if(isset($params['key']) && strlen(trim($params['key']))){
+	    			if( !empty($this->table_definition[$params["column"]]["options"][$params["key"]]) ){
+	    				$this->data = $this->table_definition[$params["column"]]["options"][$params["key"]];
+	    			} else {
+	    				$this->data = FALSE;
+	    			}
+	    		} else {
+	    			$this->data = $this->table_definition[$params["column"]]["options"];
+	    		}
+	    	}
 	    }
 
 	    public function setDatabaseConnection($dbh){
@@ -90,6 +107,7 @@
 			$data_types = unserialize(__OBRAY_DATATYPES__);
 
 			forEach($this->table_definition as $name => $def){
+				if( isSet($def['data_type']) && $def['data_type'] == "filter" ){ continue; }
 			    if( array_key_exists('store',$def) == FALSE || (array_key_exists('store',$def) == TRUE && $def['store'] == TRUE ) ){
 
 			        if( !empty($sql) ){ $sql .= ','; }
@@ -106,9 +124,9 @@
 			}
 
 			$sql = 'CREATE TABLE IF NOT EXISTS ' . $this->table . ' ( ' . $sql;
-			$sql .= ', OCDT DATETIME, OCU INT UNSIGNED, OMDT DATETIME, OMU INT UNSIGNED ';
+			if( $this->enable_system_columns ){ $sql .= ', OCDT DATETIME, OCU INT UNSIGNED, OMDT DATETIME, OMU INT UNSIGNED '; }
 			if( !empty($this->primary_key_column) ){ $sql .= ', PRIMARY KEY (' . $this->primary_key_column . ') ) ENGINE='.__OBRAY_DATABASE_ENGINE__.' DEFAULT CHARSET='.__OBRAY_DATABASE_CHARACTER_SET__.'; '; }
-
+			
 			$this->sql = $sql;
 			$statement = $this->dbh->prepare($sql);
 			$this->script = $statement->execute();
@@ -124,8 +142,6 @@
         public function alterTable(){
         	if( empty($this->dbh) ){ return $this; }
 
-        	$this->dump();
-
         	$sql = 'DESCRIBE '.$this->table.';';
         	$statement = $this->dbh->prepare($sql);
         	$statement->execute();
@@ -140,42 +156,39 @@
         	$data_types = unserialize(__OBRAY_DATATYPES__);
 
         	forEach($data as $def){
-
+        		if( isSet($def->data_type) && $def->data_type == "filter" ){ continue; }
         		if( array_key_exists('store',$def) == FALSE || (array_key_exists('store',$def) == TRUE && $def['store'] == TRUE ) ){
 
-	        	if( array_search($def->Field,$obray_fields) === FALSE ){
-		        	if( isSet($this->table_definition[$def->Field]) ){
+		        	if( array_search($def->Field,$obray_fields) === FALSE ){
+			        	if( isSet($this->table_definition[$def->Field]) ){
 
-			        	if( $this->enable_data_type_changes && isSet($this->table_definition[$def->Field]['data_type']) ){
-			        		$data_type = $this->getDataType($this->table_definition[$def->Field]);
+				        	if( $this->enable_data_type_changes && isSet($this->table_definition[$def->Field]['data_type']) ){
+				        		$data_type = $this->getDataType($this->table_definition[$def->Field]);
+				        		if( str_replace('size',$data_type['size'],$data_types[$data_type['data_type']]['my_sql_type']) != $def->Type ){
+					        		if( !isSet($this->table_alterations) ){ $this->table_alterations = array(); }
+					        		$sql = 'ALTER TABLE '.$this->table.' MODIFY COLUMN '.$def->Field.' '.str_replace('size',$data_type['size'],$data_types[$data_type['data_type']]['sql']);
+					        		$statement = $this->dbh->prepare($sql);
+					        		$this->table_alterations[] = $statement->execute();
+				        		}
+				        	}
+				        	unset( $this->table_definition[$def->Field] );
 
-			        		if( str_replace('size',$data_type['size'],$data_types[$data_type['data_type']]['my_sql_type']) != $def->Type ){
+			        	} else {
+				        	if( $this->enable_column_removal && isSet($_REQUEST['enableDrop']) ){
 				        		if( !isSet($this->table_alterations) ){ $this->table_alterations = array(); }
-				        		$sql = 'ALTER TABLE '.$this->table.' MODIFY COLUMN '.$def->Field.' '.str_replace('size',$data_type['size'],$data_types[$data_type['data_type']]['sql']);
+	    						$sql = 'ALTER TABLE '.$this->table.' DROP COLUMN '.$def->Field.' ';
 				        		$statement = $this->dbh->prepare($sql);
 				        		$this->table_alterations[] = $statement->execute();
-
-			        		}
-
-			        	}
-
-			        	unset( $this->table_definition[$def->Field] );
-
-		        	} else {
-			        	if( $this->enable_column_removal && isSet($_REQUEST['enableDrop']) ){
-			        		if( !isSet($this->table_alterations) ){ $this->table_alterations = array(); }
-    						$sql = 'ALTER TABLE '.$this->table.' DROP COLUMN '.$def->Field.' ';
-			        		$statement = $this->dbh->prepare($sql);
-			        		$this->table_alterations[] = $statement->execute();
+				        	}
 			        	}
 		        	}
-	        	}
 
 	        	}
         	}
 
         	if( $this->enable_column_additions ){
 	        	forEach($this->table_definition as $key => $def){
+	        		if( isSet($def['data_type']) && $def['data_type'] == "filter" ){ continue; }
 	        		if( array_key_exists('store',$def) == FALSE || (array_key_exists('store',$def) == TRUE && $def['store'] == TRUE ) ){
 		        		if( !isSet($this->table_alterations) ){ $this->table_alterations = array(); }
 		        		$data_type = $this->getDataType($def);
@@ -237,7 +250,7 @@
 					$data_type = $this->getDataType($def);
 
 					if( isSet($this->required[$key]) ){ unset($this->required[$key]); }
-					if( isSet($def['data_type']) && !empty($this->data_types[$data_type['data_type']]['validation_regex']) && !preg_match($this->data_types[$data_type['data_type']]['validation_regex'],$params[$key]) ){
+					if( isSet($def['data_type']) && !empty($this->data_types[$data_type['data_type']]['validation_regex']) && !preg_match($this->data_types[$data_type['data_type']]['validation_regex'],$params[$key]) && $params[$key] == NULL ){
 					   $this->throwError(isSet($def['error_message'])?$def['error_message']:isSet($def['label'])?$def['label'].' is invalid.':$key.' is invalid.','500',$key);
 					}
 
@@ -259,10 +272,25 @@
 
         	if( $this->isError() ){ $this->throwError(isSet($this->general_error)?$this->general_error:'There was an error on this form, please make sure the below fields were completed correclty: '); return $this; }
 
-        	if( isSet($_SESSION['ouser']) ){ $ocu = $_SESSION['ouser']->ouser_id; } else { $ocu = 0; }
-        	$this->sql  = ' INSERT INTO '.$this->table.' ( '.$sql.', OCDT, OCU ) values ( '.$sql_values.', \''.date('Y-m-d H:i:s').'\', '.$ocu.' ) ';
+        	if( $this->enable_system_columns ){ 
+        		if( isSet($_SESSION['ouser']) ){ $ocu = $_SESSION['ouser']->ouser_id; } else { $ocu = 0; }
+        		$system_columns = ", OCDT, OCU "; 
+        		$system_values = ', \''.date('Y-m-d H:i:s').'\', '.$ocu;
+        	} else {
+        		$system_columns = "";
+        		$system_values = "";
+        	}
+
+        	$this->sql  = ' INSERT INTO '.$this->table.' ( '.$sql.$system_columns.' ) values ( '.$sql_values.$system_values.' ) ';
         	$statement = $this->dbh->prepare($this->sql);
-        	$this->script = $statement->execute($data);
+        	forEach( $data as $key => $dati ){
+        		if( $dati === 'NULL' ){
+        			$statement->bindValue($key, null, PDO::PARAM_NULL);
+        		} else {
+        			$statement->bindValue($key, $dati);
+        		}
+        	}
+        	$this->script = $statement->execute();
 
 			$this->get(array( $this->primary_key_column => $this->dbh->lastInsertId() ) );
 
@@ -283,15 +311,18 @@
 
 			$this->getWorkingDef();
 
+			/*
 			if( isSet($this->slug_key_column) && isSet($this->slug_value_column) && isSet($params[$this->slug_key_column]) ){
 				if( isSet($this->parent_column) && isSet($params[$this->parent_column]) ){ $parent = $params[$this->parent_column];  } else { $parent = null; }
 				$params[$this->slug_value_column] = $this->getSlug($params[$this->slug_key_column],$this->slug_value_column,$parent);
 			}
+			*/
 
         	forEach( $params as $key => $param ){
 
 	        	if( isSet($this->table_definition[$key]) ){
 	        		$def = $this->table_definition[$key];
+
 	        		$data[$key] = $param;
 		        	$data_type = $this->getDataType($def);
 
@@ -299,7 +330,7 @@
 							$this->throwError(isSet($def['error_message'])?$def['error_message']:isSet($def['label'])?$def['label'].' is required.':$key.' is required.',500,$key);
 					}
 
-					if( isSet($def['data_type']) && !empty($this->data_types[$data_type['data_type']]['validation_regex']) && !preg_match($this->data_types[$data_type['data_type']]['validation_regex'],$params[$key]) ){
+					if( (isSet($def['data_type']) && !empty($this->data_types[$data_type['data_type']]['validation_regex']) && !preg_match($this->data_types[$data_type['data_type']]['validation_regex'],$params[$key])) && $params[$key] == NULL ){
 						$this->throwError(isSet($def['error_message'])?$def['error_message']:isSet($def['label'])?$def['label'].' is invalid.':$key.' is invalid.',500,$key);
 					}
 
@@ -315,11 +346,28 @@
         	if( !isSet( $params[$this->primary_key_column] ) ){ $this->throwError('Please specify a value for the primary key.','500',$this->primary_key_column); }
         	if( $this->isError() ){ return $this; }
 
-        	if( isSet($_SESSION['ouser']) ){ $omu = $_SESSION['ouser']->ouser_id; } else { $omu = 0; }
-        	$this->sql  = ' UPDATE '.$this->table.' SET '.$sql.', OMDT = \''.date('Y-m-d H:i:s').'\', OMU = '.$omu.' WHERE '.$this->primary_key_column.' = :'.$this->primary_key_column.' ';
-        	$statement = $this->dbh->prepare($this->sql);
-        	$this->script = $statement->execute($data);
+        	
 
+        	if( $this->enable_system_columns ){ 
+        		if( isSet($_SESSION['ouser']) && !empty($_SESSION['ouser']->ouser_id) ){ $omu = $_SESSION['ouser']->ouser_id; } else { $omu = 0; }
+        		$system_columns = ', OMDT = \''.date('Y-m-d H:i:s').'\', OMU = '.$omu; 
+        		
+        	} else {
+        		$system_columns = "";
+        	}
+
+        	$this->sql  = ' UPDATE '.$this->table.' SET '.$sql.$system_columns.' WHERE '.$this->primary_key_column.' = :'.$this->primary_key_column.' ';
+        	//echo $this->sql;
+        	//print_r($data);
+        	$statement = $this->dbh->prepare($this->sql);
+        	forEach( $data as $key => $dati ){
+        		if( $dati == 'NULL' ){
+        			$statement->bindValue($key, null, PDO::PARAM_NULL);
+        		} else {
+        			$statement->bindValue($key, $dati);
+        		}
+        	}
+        	$this->script = $statement->execute();
         	$this->get(array($this->primary_key_column=>$params[$this->primary_key_column]));
 
         }
@@ -357,10 +405,14 @@
         public function get($params=array()){
 
         	$original_params = $params;
-			
-			$this->table_definition['OCDT'] = array('data_type'=>'datetime');
-			$this->table_definition['OMDT'] = array('data_type'=>'datetime');
-			
+
+        	if( $this->enable_system_columns ){
+				$this->table_definition['OCDT'] = array('data_type'=>'datetime');
+				$this->table_definition['OMDT'] = array('data_type'=>'datetime');
+				$this->table_definition['OCU'] = array('data_type'=>'integer');
+				$this->table_definition['OMU'] = array('data_type'=>'integer');
+			}
+
         	$limit = ''; $order_by = ''; $filter = TRUE;
         	if( isSet($params['start']) && isSet($params['rows']) ){ $limit = ' LIMIT ' . $params['start'] . ',' . $params['rows'] . ''; unset($params['start']); unset($params['rows']); unset($original_params['start']); unset($original_params['rows']); }
         	if( isSet($params['filter']) && ($params['filter'] == 'false' || !$filter) ){ $filter = FALSE; unset($params['filter']); }
@@ -377,12 +429,16 @@
         	}
 
 	        $withs = array(); $original_withs = array();
+
 	        if( !empty($params['with']) ){ $withs = explode('|',$params['with']); $original_withs = $withs; }
 
 	        $columns = array();
+	        $withs_to_pass = array();
+	        $filter_columns = array();
 	        forEach($this->table_definition as $column => $def){
+	        	if( isSet($def['data_type']) && $def['data_type'] == "filter" ){ $filter_columns[] = $columns; continue; }
 	        	if( isSet($def['data_type']) && $def['data_type'] == 'password' && isSet($params[$column]) ){ $password_column = $column; $password_value = $params[$column]; unset($params[$column]); }
-	        	$columns[] = $column;
+	        	$columns[] = $this->table.'.'.$column;
 	        	if( array_key_exists('primary_key',$def) ){ $primary_key = $column; }
 	        	forEach( $withs as $i => &$with ){
 	        		if( !is_array($with) && array_key_exists($with,$def) ){
@@ -394,43 +450,65 @@
 	        		}
 	        	}
 	        }
-			
-			
-			
+
+	        $filter_join = "";
+
+	        forEach( $withs as $i => $w ){ if( !is_array($w) ){ $withs_to_pass[] = $w; unset($withs[(int)$i]);  } }
+	        $withs = array_values($withs);
+	        $withs_to_pass = http_build_query(array('with'=>implode('|',$withs_to_pass)));
+	        forEach( $withs as &$with ){
+	        	if( strpos($with[1],'with') === FALSE ){
+		        	if( strpos($with[1],'?') === FALSE ){ $with[1] .= '?' . $withs_to_pass; } else { $with[1] .= '&' . $withs_to_pass; }
+		        }
+	        }
+
 	        if( isSet($original_params['with']) ){ $original_params['with'] = implode('|',$original_withs); }
 	        $values = array();
 	        $where_str = $this->getWhere($params,$values,$original_params);
-	        $this->sql = 'SELECT '.implode(',',$columns).',OCU,OMU FROM '.$this->table .$where_str . $order_by . $limit;
+
+	        $this->sql = 'SELECT '.implode(',',$columns).' FROM '.$this->table . $this->getJoin() . $filter_join .$where_str . $order_by . $limit;
 	        $statement = $this->dbh->prepare($this->sql);
 	        forEach($values as $value){ if( is_integer($value) ){ $statement->bindValue($value['key'], trim($value['value']), PDO::PARAM_INT); } else { $statement->bindValue($value['key'], trim((string)$value['value']), PDO::PARAM_STR); } }
 	        $statement->execute();
 	        $statement->setFetchMode(PDO::FETCH_NUM);
 	        $this->data = $statement->fetchAll(PDO::FETCH_OBJ);
 
-	        if( !empty($withs) ){
+	        if( !empty($withs) && !empty($this->data) ){
 
 		        forEach( $withs as &$with ){
+
 		        	$ids_to_index = array();
 		        	if( !is_array($with) ){ break; }
 		        	$with_key = $with[0]; $with_column = $with[2]; $with_name = $with[3]; $with_components = parse_url($with[1]); $sub_params = array();
 		        	forEach( $this->data as $i => $data ){ if( !isSet($ids_to_index[$data->$with_column]) ){ $ids_to_index[$data->$with_column] = array(); } $ids_to_index[$data->$with_column][] = (int)$i; }
 		        	$ids = array();
-		        	if( count($this->data) < 1000 ){ forEach( $this->data as $row ){ $ids[] = $row->$with_column; }  }
+	        		forEach( $this->data as $row ){ $ids[] = $row->$with_column; }
 		        	$ids = implode('|',$ids);
 		        	if( !empty($with_components['query']) ){ parse_str($with_components['query'],$sub_params); }
-		        	if( !empty($ids) ){ $with[0] = $with[0].'='.$ids; } else { $with[0] = ''; }
+		        	if( $ids !== '' ){ $with[0] = $with[0].'='.$ids; } else { $with[0] = $with[0].'='; }
+		        	if( isSet($original_params['with']) && empty($original_params['with']) ){ unset($original_params['with']); }
+		        	if( !empty($original_params['with']) && !empty($sub_params['with']) ){
+		        		$original_params['with'] = array_unique(array_merge( explode('|',$sub_params['with']), explode('|',$original_params['with']) ));
+		        		$original_params['with'] = implode('|',$original_params['with']);
+		        	}
 		        	$sub_params = array_replace($sub_params,$original_params);
 		        	$new_params = array(); parse_str($with[0],$new_params);
 		        	$sub_params = array_replace($sub_params,$new_params);
+
+		        	if( !empty($this->data) && !empty($withs) && in_array('children',$withs[0]) ){ $sub_params['with'] = 'children'; }
 			        $with = $this->route($with_components['path'].'get/',$sub_params)->data;
+
 			        forEach( $with as &$w ){
+
 			        	if( isSet($ids_to_index[$w->$with_key]) ){
 				        	forEach( $ids_to_index[$w->$with_key] as $index ){
 				        		if( !isSet($this->data[$index]->$with_name) ){ $this->data[$index]->$with_name = array(); }
 				        		array_push($this->data[$index]->$with_name,$w);
 				        	}
 			        	}
+
 			        }
+
 
 			        if($filter){ forEach( $this->data as $i => $data ){ if( empty($data->$with_name) ){ unset($this->data[$i]); } } $this->data = array_values((array)$this->data); }
 
@@ -438,7 +516,7 @@
 
 	        }
 
-	        if( $this->table == 'ousers' ){
+	        if( $this->table == 'ousers' || (isset($this->user_session) && $this->table == $this->user_session) ){
 	        	forEach( $this->data as $i => &$data ){
 		        	if( isSet($password_column) && strcmp($data->$password_column,crypt($password_value,$data->$password_column)) != 0 ){ unset($this->data[$i]); }
 		        	unset($data->ouser_password);
@@ -450,17 +528,36 @@
 
         }
 
+        private function getJoin(){
+
+        	if( !empty($this->join) ){
+	        	$obj = $this->route($this->join);
+	        	forEach( $obj->table_definition as $key => $def ){
+	        		if( !empty($def["primary_key"]) && $def["primary_key"] === TRUE ){ $primary_key = $key; }
+	        	}
+	        	forEach( $this->table_definition as $key => $def ){
+	        		if( !empty($def["primary_key"]) && $def["primary_key"] === TRUE ){ $this->primary_key_column = $key; }
+	        	}
+	        	return ' INNER JOIN '.strtolower($obj->table).' ON '.strtolower($obj->table).'.'.$primary_key.' = '.strtolower($this->table).'.'.$this->primary_key_column.' ';
+        	} else {
+        		return '';
+        	}
+        	
+        }
+
         /********************************************************************
 
             GETWHERE
 
         ********************************************************************/
 
-        private function getWhere( &$params=array(),&$values=array(),&$original_params=array() ){
-			
-			$this->table_definition['OCDT'] = array('data_type'=>'datetime');
-			$this->table_definition['OMDT'] = array('data_type'=>'datetime');
-			
+		private function getWhere( &$params=array(),&$values=array(),&$original_params=array() ){
+
+			if( $this->enable_system_columns ){
+				$this->table_definition['OCDT'] = array('data_type'=>'datetime');
+				$this->table_definition['OMDT'] = array('data_type'=>'datetime');
+			}
+
 	        $where = array(); $count = 0; $p = array();
 	        forEach( $params as $key => &$param ){
 				$original_key = $key;
@@ -473,7 +570,7 @@
 		        	default:
 		        		if( empty($params[$key]) ){
 		        			$array = explode('~',$key);
-		        			if( count($array) === 2 ){ $param = '%'.urldecode($array[1]).'%'; $key = $array[0]; unset($params[$key]); $operator = 'LIKE'; }
+		        			if( count($array) === 2 ){ $param = urldecode($array[1]); $key = $array[0]; unset($params[$key]); $operator = 'LIKE'; }
 		        			$array = explode('>',$key);
 		        			if( count($array) === 2 ){ $param = urldecode($array[1]); $key = $array[0]; unset($params[$key]); $operator = '>'; }
 		        			$array = explode('<',$key);
@@ -481,19 +578,119 @@
 		        		}
 		        	break;
 	        	}
-				
+
 		        if( array_key_exists($key,$this->table_definition) ){
 
 		        	if( !is_array($param) ){ $param = array(0=>$param); }
 
 		        	forEach( $param as &$param_value ){
-		        		
+
+		        		if( empty($where) ){ $new_key = ''; } else { $new_key = 'AND'; }
+		        		$ors = explode('|',$param_value);
+
+		        		$where[] = array('join'=>$new_key.' (','key'=>'','value'=>'','operator'=>'');
+		        		if( $operator == '=' && count($ors) > 1 ){
+
+		        			$value_keys = array();
+		        			forEach( $ors as $v ){
+			        			++$count; $values[] = array('key'=>':'.$key.'_'.$count,'value'=>$v);
+			        			$value_keys[] = ':'.$key.'_'.$count;
+		        			}
+		        			$where[] = array('join'=>'','key'=>$key,'value'=>'('.implode(',',$value_keys).')','operator'=>'IN');
+
+			        	} else {
+
+
+				        	$or_key = '';
+
+				        	forEach( $ors as $v ){
+
+				        		if( $operator == 'LIKE' ){ $v = '%'.$v.'%'; }
+				        		++$count;
+				        		$values[] = array('key'=>':'.$key.'_'.$count,'value'=>$v);
+					        	$where[] = array('join'=>$or_key,'key'=>$key,'value'=>':'.$key.'_'.$count,'operator'=>$operator);
+					        	$or_key = 'OR';
+
+					        }
+
+				        }
+				        $where[] = array('join'=>')','key'=>'','value'=>'','operator'=>'');
+		        	}
+		        }
+
+				if( !empty($original_params) && $key == 'OMDT' ){ unset($original_params[$original_key]); }
+				if( !empty($original_params) && $key == 'OCDT' ){ unset($original_params[$original_key]); }
+
+	        }
+
+	        $where_str = '';
+	        if( !empty($where) ){
+		        $where_str = ' WHERE ';
+		        forEach( $where as $key => $value ){
+		        	
+		        	$val = array();
+		        	forEach( $values as $i => $v ){
+		        		if( $key === $value["value"] ){ $val = &$values[$i]; break; }
+		        	}
+
+		        	if( !empty($val) && $val["value"] === 'NULL' ){
+
+		        		if( $value['operator'] === '=' ){
+		        			$where_str .= ' ' . $value['join'] . ' ' . $value['key'] . ' IS NULL ';
+		        		} else if ( $value['operator'] === '!=' ){
+		        			$where_str .= ' ' . $value['join'] . ' ' . $value['key'] . ' IS NOT NULL ';
+		        		}
+		        	} else {
+			        	$where_str .= ' ' . $value['join'] . ' ' . $value['key'] . ' ' . $value['operator'] . ' ' . $value['value'] . ' ';
+			    	}
+			        //if( $value['operator'] == '!=' ){ $where_str .= ' OR '.$value['key'].' IS NULL '; }
+		        }
+	        }
+
+	        return $where_str;
+
+        }
+
+
+        private function oldgetWhere( &$params=array(),&$values=array(),&$original_params=array() ){
+
+			$this->table_definition['OCDT'] = array('data_type'=>'datetime');
+			$this->table_definition['OMDT'] = array('data_type'=>'datetime');
+
+	        $where = array(); $count = 0; $p = array();
+	        forEach( $params as $key => &$param ){
+				$original_key = $key;
+	        	$operator = '=';
+	        	switch(substr($key,-1)){
+		        	case '!': case '<': case '>':
+		        		$operator = substr($key,-1).'=';
+		        		//$p[str_replace(substr($key,-1),'',$key)] = $params[$key];
+		        		$key = str_replace(substr($key,-1),'',$key);
+		        	default:
+		        		if( empty($params[$key]) ){
+		        			$array = explode('~',$key);
+		        			if( count($array) === 2 ){ $param = urldecode($array[1]); $key = $array[0]; unset($params[$key]); $operator = 'LIKE'; }
+		        			$array = explode('>',$key);
+		        			if( count($array) === 2 ){ $param = urldecode($array[1]); $key = $array[0]; unset($params[$key]); $operator = '>'; }
+		        			$array = explode('<',$key);
+		        			if( count($array) === 2 ){ $param = urldecode($array[1]); $key = $array[0]; unset($params[$key]); $operator = '<'; }
+		        		}
+		        	break;
+	        	}
+
+		        if( array_key_exists($key,$this->table_definition) ){
+
+		        	if( !is_array($param) ){ $param = array(0=>$param); }
+
+		        	forEach( $param as &$param_value ){
+
 			        	if( empty($where) ){ $new_key = ''; } else { $new_key = 'AND'; }
 			        	$ors = explode('|',$param_value);
 			        	$where[] = array('join'=>$new_key.' (','key'=>'','value'=>'','operator'=>'');
 			        	$or_key = '';
-			        	
+
 			        	forEach( $ors as $v ){
+			        		if( $operator == 'LIKE' ){ $v = '%'.$v.'%'; }
 			        		++$count; $values[] = array('key'=>':'.$key.'_'.$count,'value'=>$v);
 				        	$where[] = array('join'=>$or_key,'key'=>$key,'value'=>':'.$key.'_'.$count,'operator'=>$operator);
 				        	$or_key = 'OR';
@@ -501,18 +698,19 @@
 				        $where[] = array('join'=>')','key'=>'','value'=>'','operator'=>'');
 		        	}
 		        }
-				
-				
+
+
 				if( !empty($original_params) && $key == 'OMDT' ){ unset($original_params[$original_key]); }
 				if( !empty($original_params) && $key == 'OCDT' ){ unset($original_params[$original_key]); }
-				
+
 	        }
-			
+
 	        $where_str = '';
 	        if( !empty($where) ){
 		        $where_str = ' WHERE ';
 		        forEach( $where as $key => $value ){
 			        $where_str .= ' ' . $value['join'] . ' ' . $value['key'] . ' ' . $value['operator'] . ' ' . $value['value'] . ' ';
+			        if( $value['operator'] == '!=' ){ $where_str .= ' OR '.$value['key'].' IS NULL '; }
 		        }
 	        }
 
@@ -528,7 +726,7 @@
 
         public function dump($params=array()){
 
-	        exec('mysqldump --user='.__OBRAY_DATABASE_USERNAME__.' --password='.__OBRAY_DATABASE_PASSWORD__.' --host='.__OBRAY_DATABASE_HOST__.' '.__OBRAY_DATABASE_NAME__.' '.$this->table.' | gzip > '.dirname(__FILE__).'backups/'.$this->table.'-'.time().'.sql.gz');
+	        //exec('mysqldump --user='.__OBRAY_DATABASE_USERNAME__.' --password='.__OBRAY_DATABASE_PASSWORD__.' --host='.__OBRAY_DATABASE_HOST__.' '.__OBRAY_DATABASE_NAME__.' '.$this->table.' | gzip > '.dirname(__FILE__).'backups/'.$this->table.'-'.time().'.sql.gz');
 
         }
 
@@ -571,6 +769,91 @@
 
         /********************************************************************
 
+			SORT
+
+        ********************************************************************/
+
+        public function sort($column,$order='asc',$with=null,$query=''){
+
+	        parse_str($query,$this->params);
+	        $this->column = $column;
+	        $this->order = $order;
+	        if( empty($with) ){
+		        $this->with = array();
+	        } else {
+		        $this->with = explode('|',$with);
+	        }
+
+		    usort($this->data,array($this,'sortCallback'));
+
+		   	return $this;
+        }
+
+        private function sortCallback($a,$b){
+
+	        $column = $this->column;
+	        $filters = array();
+
+	        $with_array = $this->with;
+	        if( !empty($this->with) ){
+
+	        	$with = array_shift($with_array);
+
+	        	if( empty($a->$with) || empty($b->$with) ){ return FALSE; }
+	        	$filters_a = $a->$with;
+	        	$filters_b = $b->$with;
+
+	        	$final_a = new stdClass();
+	        	forEach( $filters_a as $a ){
+		        	forEach( $this->with as $i => $with ){
+		        		if( !empty($a->$with) ){
+			        		forEach( $a->$with as $a_item ){
+			        			forEach( $this->params as $key => $value ){
+			        				if( !empty($a_item->$key) && $a_item->$key == $value ){
+			        					$final_a = $a_item;
+			        				}
+			        			}
+			        		}
+		        		}
+		        	}
+	        	}
+
+	        	$final_b = new stdClass();
+	        	forEach( $filters_b as $b ){
+		        	forEach( $this->with as $i => $with ){
+		        		if( !empty($b->$with) ){
+			        		forEach( $b->$with as $b_item ){
+			        			forEach( $this->params as $key => $value ){
+			        				if( !empty($b_item->$key) && $b_item->$key == $value ){
+			        					$final_b = $b_item;
+			        				}
+			        			}
+			        		}
+		        		}
+		        	}
+	        	}
+
+	        }
+
+	        if( empty($final_a->$column) ){ return FALSE; }
+	        if( empty($final_b->$column) ){ return TRUE	; }
+
+	    	$a = $final_a->$column;
+			$b = $final_b->$column;
+
+	        switch( $this->order ){
+		        case 'asc': case 'ASC':
+		        	if( $a > $b ){ return TRUE; } else { return FALSE; }
+		        	break;
+		        case 'desc': case 'DESC':
+		        	if( $a < $b ){ return TRUE; } else { return FALSE; }
+		        	break;
+	        }
+
+        }
+
+        /********************************************************************
+
 			GETFIRST
 
         ********************************************************************/
@@ -588,11 +871,13 @@
         ********************************************************************/
 
         public function run( $sql ){
+
+        	if( is_array($sql) ){ $sql = $sql["sql"]; }
 	        $statement = $this->dbh->prepare($sql);
             $statement->execute();
             $statement->setFetchMode(PDO::FETCH_OBJ);
             $this->data = [];
-	        while ($row = $statement->fetch()) { $this->data[] = $row; }
+	        try { while ($row = $statement->fetch()) { $this->data[] = $row; } } catch(Exception $e) {	$this->throwError($e); }
 	        return $this;
         }
 
@@ -603,7 +888,7 @@
         ********************************************************************/
 
         public function count( $params=array() ){
-			
+
 			$values = array();
 			$where_str = $this->getWhere($params,$values);
 			$this->sql = 'SELECT COUNT(*) as count FROM '.$this->table.' '.$where_str;
@@ -647,6 +932,10 @@
         public function average( $params=array() ){  $this->math('AVG','average',$params); }
         public function maximum( $params=array() ){  $this->math('MAX','maximum',$params); }
         public function minimum( $params=array() ){  $this->math('MIN','minimum',$params); }
+        public function truncate(){ 
+	        $statement = $this->dbh->prepare('TRUNCATE TABLE '.$this->table); 
+	        $statement->execute();
+	   }
 
         private function math( $fn, $key, $params=array() ){
 
