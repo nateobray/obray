@@ -160,7 +160,7 @@
 				
 				curl_setopt($ch, CURLOPT_URL, $path);
 				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-				$this->data = curl_exec($ch);			
+				$this->data = curl_exec($ch);
 				$headers = curl_getinfo($ch, CURLINFO_HEADER_OUT);
 				$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 				$info = curl_getinfo( $ch );
@@ -262,7 +262,7 @@
 		***********************************************************************/
 
 		private function createObject($path_array,$path,$base_path,&$params,$direct){
-				
+
 			$path = '';
 			$rPath = array();
 
@@ -279,6 +279,7 @@
 				$obj_name = array_pop($path_array);
 				$this->controller_path = __OBRAY_SITE_ROOT__."controllers/".implode('/',$path_array).'/c'.ucfirst($obj_name).'.php';
 				$this->model_path = $base_path . implode('/',$path_array).'/'.$obj_name.'.php';
+
 				if( file_exists( $this->model_path ) ){
 					$objectType = "model";
 					$this->path = $this->model_path;

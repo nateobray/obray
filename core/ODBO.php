@@ -435,11 +435,13 @@
 	        $columns = array();
 	        $withs_to_pass = array();
 	        $filter_columns = array();
+
 	        forEach($this->table_definition as $column => $def){
 	        	if( isSet($def['data_type']) && $def['data_type'] == "filter" ){ $filter_columns[] = $columns; continue; }
 	        	if( isSet($def['data_type']) && $def['data_type'] == 'password' && isSet($params[$column]) ){ $password_column = $column; $password_value = $params[$column]; unset($params[$column]); }
 	        	$columns[] = $this->table.'.'.$column;
 	        	if( array_key_exists('primary_key',$def) ){ $primary_key = $column; }
+
 	        	forEach( $withs as $i => &$with ){
 	        		if( !is_array($with) && array_key_exists($with,$def) ){
 	        			unset( $original_withs[$i] );
@@ -451,8 +453,8 @@
 	        	}
 	        }
 
-	        $filter_join = "";
 
+	        $filter_join = "";
 	        forEach( $withs as $i => $w ){ if( !is_array($w) ){ $withs_to_pass[] = $w; unset($withs[(int)$i]);  } }
 	        $withs = array_values($withs);
 	        $withs_to_pass = http_build_query(array('with'=>implode('|',$withs_to_pass)));
@@ -462,6 +464,26 @@
 		        }
 	        }
 
+	        $GPCalls = array();
+	        $gp_columns_to_index = array();
+	        $gp_index = array_search( "gp",$original_withs );
+	        if( $gp_index !== FALSE ){
+	        	$gp = explode(":",$original_withs[$gp_index]);
+	        	array_shift($gp);
+	        	if( count($gp) > 0 ){
+	        		forEach( $gp as $name ){
+	        			//if( $name == "gp" ){ $obj_name = "gp"; } else { $obj_name = $name; }
+	        			//$GPCalls[$obj_name] = $this->gp[$name];
+	        			//$gp_columns_to_index[] = $obj[0];
+					}
+	        	} else{
+	        		$obj = explode(':',$this->gp["default"]);
+	        		$GPCalls["gp"] = new stdClass();
+	        		$GPCalls["gp"]->column = $obj[0];
+	        		$GPCalls["gp"]->path = $obj[1];
+	        	}
+	        }
+	        
 	        if( isSet($original_params['with']) ){ $original_params['with'] = implode('|',$original_withs); }
 	        $values = array();
 	        $where_str = $this->getWhere($params,$values,$original_params);
@@ -471,7 +493,40 @@
 	        forEach($values as $value){ if( is_integer($value) ){ $statement->bindValue($value['key'], trim($value['value']), PDO::PARAM_INT); } else { $statement->bindValue($value['key'], trim((string)$value['value']), PDO::PARAM_STR); } }
 	        $statement->execute();
 	        $statement->setFetchMode(PDO::FETCH_NUM);
-	        $this->data = $statement->fetchAll(PDO::FETCH_OBJ);
+	        $data = $statement->fetchAll(PDO::FETCH_OBJ);
+
+	        if( !empty($GPCalls) ){
+	        	
+	        	forEach( $GPCalls as $key => $GPCall ){
+	        		$data_to_encode = new stdClass();
+	        		$data_to_encode->Id = array();
+	        		$ids_to_index = array(); $gp_column = $GPCall->column;
+		        	
+	        		forEach( $data as $i => $d ){ 
+	        			if( !isSet($ids_to_index[$d->$gp_column]) ){ $ids_to_index[$d->$gp_column] = array(); } 
+	        			$ids_to_index[$d->$gp_column][] = (int)$i; 
+	        			if( !empty($d->$gp_column) ){ $data_to_encode->Id[] = $d->$gp_column; }
+	        		}
+	        		
+		        	$response = $this->route(__HULK__.$GPCall->path.'?http_method=post&http_content_type=application/json&http_accept=application/json',json_encode( $data_to_encode ) )->data;
+		        	$response = reset($response);
+		        	$response = next($response);
+		        	forEach( $data as $index => $obj ){
+		        		
+		        		if( !isSet($data[$index]->$key) ){ $data[$index]->$key = array(); }
+		        		$obj_key = $obj->$gp_column;
+		        		if( !empty( $response->$obj_key ) ){
+		        			array_push($data[$index]->$key,$response->$obj_key);
+		        		}
+		        	}
+		        	
+		        	
+	        	}
+
+
+	        }
+
+	        $this->data = $data;
 
 	        if( !empty($withs) && !empty($this->data) ){
 
@@ -644,73 +699,6 @@
 			        	$where_str .= ' ' . $value['join'] . ' ' . $value['key'] . ' ' . $value['operator'] . ' ' . $value['value'] . ' ';
 			    	}
 			        //if( $value['operator'] == '!=' ){ $where_str .= ' OR '.$value['key'].' IS NULL '; }
-		        }
-	        }
-
-	        return $where_str;
-
-        }
-
-
-        private function oldgetWhere( &$params=array(),&$values=array(),&$original_params=array() ){
-
-			$this->table_definition['OCDT'] = array('data_type'=>'datetime');
-			$this->table_definition['OMDT'] = array('data_type'=>'datetime');
-
-	        $where = array(); $count = 0; $p = array();
-	        forEach( $params as $key => &$param ){
-				$original_key = $key;
-	        	$operator = '=';
-	        	switch(substr($key,-1)){
-		        	case '!': case '<': case '>':
-		        		$operator = substr($key,-1).'=';
-		        		//$p[str_replace(substr($key,-1),'',$key)] = $params[$key];
-		        		$key = str_replace(substr($key,-1),'',$key);
-		        	default:
-		        		if( empty($params[$key]) ){
-		        			$array = explode('~',$key);
-		        			if( count($array) === 2 ){ $param = urldecode($array[1]); $key = $array[0]; unset($params[$key]); $operator = 'LIKE'; }
-		        			$array = explode('>',$key);
-		        			if( count($array) === 2 ){ $param = urldecode($array[1]); $key = $array[0]; unset($params[$key]); $operator = '>'; }
-		        			$array = explode('<',$key);
-		        			if( count($array) === 2 ){ $param = urldecode($array[1]); $key = $array[0]; unset($params[$key]); $operator = '<'; }
-		        		}
-		        	break;
-	        	}
-
-		        if( array_key_exists($key,$this->table_definition) ){
-
-		        	if( !is_array($param) ){ $param = array(0=>$param); }
-
-		        	forEach( $param as &$param_value ){
-
-			        	if( empty($where) ){ $new_key = ''; } else { $new_key = 'AND'; }
-			        	$ors = explode('|',$param_value);
-			        	$where[] = array('join'=>$new_key.' (','key'=>'','value'=>'','operator'=>'');
-			        	$or_key = '';
-
-			        	forEach( $ors as $v ){
-			        		if( $operator == 'LIKE' ){ $v = '%'.$v.'%'; }
-			        		++$count; $values[] = array('key'=>':'.$key.'_'.$count,'value'=>$v);
-				        	$where[] = array('join'=>$or_key,'key'=>$key,'value'=>':'.$key.'_'.$count,'operator'=>$operator);
-				        	$or_key = 'OR';
-				        }
-				        $where[] = array('join'=>')','key'=>'','value'=>'','operator'=>'');
-		        	}
-		        }
-
-
-				if( !empty($original_params) && $key == 'OMDT' ){ unset($original_params[$original_key]); }
-				if( !empty($original_params) && $key == 'OCDT' ){ unset($original_params[$original_key]); }
-
-	        }
-
-	        $where_str = '';
-	        if( !empty($where) ){
-		        $where_str = ' WHERE ';
-		        forEach( $where as $key => $value ){
-			        $where_str .= ' ' . $value['join'] . ' ' . $value['key'] . ' ' . $value['operator'] . ' ' . $value['value'] . ' ';
-			        if( $value['operator'] == '!=' ){ $where_str .= ' OR '.$value['key'].' IS NULL '; }
 		        }
 	        }
 
