@@ -467,7 +467,7 @@
 	        $GPCalls = array();
 	        $gp_columns_to_index = array();
 	        $gp_index = array_search( "gp",$original_withs );
-	        if( $gp_index !== FALSE ){
+	        if( $gp_index !== FALSE  && !empty($this->gp) ){
 	        	$gp = explode(":",$original_withs[$gp_index]);
 	        	array_shift($gp);
 	        	if( count($gp) > 0 ){

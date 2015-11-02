@@ -147,6 +147,7 @@
 					if( count($params) == 1 && !empty($params["body"]) ){
 						curl_setopt($ch, CURLOPT_POST, 1);
 						curl_setopt($ch, CURLOPT_POSTFIELDS, $params["body"]);
+						
 					} else {
 						curl_setopt($ch, CURLOPT_POST, count($params));
 						curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
@@ -165,14 +166,17 @@
 				$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 				$info = curl_getinfo( $ch );
 				$data = json_decode($this->data);
-				
-				if( $info["http_code"] != "200" && $info["http_code"] != 200 ){
+
+				 $info["http_code"] =  intval($info["http_code"]);
+				if( !( $info["http_code"] >= 200 && $info["http_code"] < 300)  ){
 					$this->data = array();
 					//echo "HTTP CODE IS NOT 200";
 					if( !empty($data->Message) ){
-						//$this->throwError($data->Message,$info["http_code"]);
+						$this->throwError($data->Message,$info["http_code"]);
+					} else if ( !empty($data->error) ){
+						$this->throwError( $data->error );
 					} else {
-						//$this->throwError("An error has occurred with no message.",$info["http_code"]);
+						$this->throwError("An error has occurred with no message.",$info["http_code"]);
 					}
 					return $this;
 				} else {
