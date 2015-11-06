@@ -162,6 +162,8 @@
 				curl_setopt($ch, CURLOPT_URL, $path);
 				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 				$this->data = curl_exec($ch);
+				print_r( $this->data );
+
 				$headers = curl_getinfo($ch, CURLINFO_HEADER_OUT);
 				$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 				$info = curl_getinfo( $ch );
@@ -270,13 +272,13 @@
 			$path = '';
 			$rPath = array();
 
-			if( empty($path_array) && empty($this->object) && empty($base_path)){				
+			if( empty($path_array) && empty($this->object) && empty($base_path)){
 				if(empty($path_array)){	$path_array[] = "index";	}
 			}
 
 			while(count($path_array)>0){
 
-				if( empty($this->object) && empty($base_path)){
+				if( empty($base_path) ){
 					if(is_dir(__OBRAY_SITE_ROOT__.'controllers/'.implode('/',$path_array))){	$path_array[] = $path_array[count($path_array)-1];		}
 				}
 
@@ -292,7 +294,7 @@
 					$obj_name = "c".ucfirst($obj_name);
 					$this->path = $this->controller_path;
 					// include the root controller
-					if( file_exists( __OBRAY_SITE_ROOT__."controllers/cRoot.php" ) ){ require_once __OBRAY_SITE_ROOT__."controllers/cRoot.php"; }
+					if( file_exists( __OBRAY_SITE_ROOT__ . "controllers/cRoot.php" ) ){ require_once __OBRAY_SITE_ROOT__."controllers/cRoot.php"; }
 					if( empty($path) ){ $path = "/index/"; }
 				}
 				
