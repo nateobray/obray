@@ -162,8 +162,6 @@
 				curl_setopt($ch, CURLOPT_URL, $path);
 				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 				$this->data = curl_exec($ch);
-				print_r( $this->data );
-
 				$headers = curl_getinfo($ch, CURLINFO_HEADER_OUT);
 				$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 				$info = curl_getinfo( $ch );

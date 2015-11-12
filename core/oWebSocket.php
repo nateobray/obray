@@ -37,12 +37,12 @@
 
 	********************************************************************************************************************/
 
-	Class oServer extends OObject {
+	Class oWebSocket extends ODBO {
 
-		public function __construct(){
+		public function __construct($params){
 
-			$this->host = "10.5.0.132";
-			$this->port = "2525";
+			$this->host = !empty($params["host"])?$params["host"]:"localhost";
+			$this->port = !empty($params["port"])?$params["port"]:"80";
 
 			$this->console("Binding to ".$this->host.":".$this->port."\n");
 			//Create TCP/IP sream socket
@@ -58,6 +58,9 @@
 
 			//create & add listning socket to the list
 			$this->clients = array($this->socket);
+			$this->clientMap = array();
+			$this->clientData = array();
+
 
 			while (true) {
 				//manage multipal connections
@@ -68,30 +71,47 @@
 				//check for new socket
 				if (in_array($this->socket, $changed)) {
 					$socket_new = socket_accept($this->socket); //accpet new socket
+
 					$this->clients[] = $socket_new; //add socket to client array
-					
+						
 					$header = socket_read($socket_new, 1024); //read data sent by the socket
-					$this->handshake($header, $socket_new, $this->host, $this->port); //perform websocket handshake
-					
+					$ouser = $this->handshake($header, $socket_new, $this->host, $this->port); //perform websocket handshake
+					$ouser->subscriptions = array( "all" => TRUE );
+					$this->clientData[ count($this->clients) - 1 ] = $ouser;
+
 					socket_getpeername($socket_new, $ip); //get ip address of connected socket
-					$response = $this->mask(json_encode(array('type'=>'system', 'message'=>$ip.' connected'))); //prepare json data
+					$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' connected.' ); //prepare json data
 					$this->send($response); //notify all users about new connection
 					
 					//make room for new socket
 					$found_socket = array_search($this->socket, $changed);
 					unset($changed[$found_socket]);
+					print_r( count($this->clients) );
+					echo "\n";
 				}
 				
 				//loop through all connected sockets
-				foreach ($changed as $changed_socket) {	
-					
+				foreach ( array_keys($changed) as $changed_key) {	
+					$changed_socket = $changed[$changed_key];
 					//check for any incomming data
 					while(socket_recv($changed_socket, $buf, 1024, 0) >= 1)
 					{
-						$received_text = $this->unmask($buf); //unmask data
+						$msg = $this->unmask($buf); //unmask data
 						//prepare data to be sent to client
-						$response_text = $this->mask(json_encode(array('type'=>'usermsg', 'message'=>$received_text)));
-						$this->send($response_text); //send data
+						$msg = json_decode($msg);
+						
+						if( !empty($msg) ){
+
+							switch( $msg->type ){
+								case 'subscription':
+									$this->clientData[$changed_key]->subscriptions[ $msg->channel ] = TRUE;
+									break;
+								case 'broadcast': case 'navigate':
+									$this->send($msg);
+									break;
+							}
+						}
+						
 						break 2; //exist this loop
 					}
 					
@@ -99,23 +119,30 @@
 					if ($buf === false) { // check disconnected client
 						// remove client for $clients array
 						$found_socket = array_search($changed_socket, $this->clients);
+						$this->console("%s","Attempting to disconnect index: ".$found_socket."\n");
 						socket_getpeername($changed_socket, $ip);
+						if( !empty($this->clientData[$found_socket]) ){
+							$ouser = $this->clientData[$found_socket];	
+							//notify all users about disconnected connection
+							$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' disconnected.');
+							$this->send($response);
+						}
 						unset($this->clients[$found_socket]);
-						
-						//notify all users about disconnected connection
-						$response = $this->mask(json_encode(array('type'=>'system', 'message'=>$ip.' disconnected')));
-						$this->console("someone disconnected");
-						$this->send($response);
 					}
 				}
 			}
 
 		}
 
-		function send($msg){
-			
-			foreach($this->clients as $changed_socket){
-				@socket_write($changed_socket,$msg,strlen($msg));
+		function send($msg){			
+			foreach( array_keys($this->clients) as $changed_key){
+				if( !empty($this->clientData[$changed_key]) ){
+					if( !empty($this->clientData[$changed_key]->subscriptions[$msg->channel]) ){
+						print_r($msg);
+						$message =  $this->mask( json_encode($msg) );
+						socket_write($this->clients[$changed_key], $message, strlen($message));	
+					}
+				}
 			}
 			return true;
 		}
@@ -124,14 +151,26 @@
 		function handshake($header,$client_conn, $host, $port){
 			$headers = array();
 			$lines = preg_split("/\r\n/", $header);
+			$ouser = new stdClass();
 			foreach($lines as $line)
 			{
+				$get_request = explode("?",$line);
+				if( count($get_request) > 1 ){ 
+					$get = $get_request; 
+					$get = explode(" ",$get[1]);
+					$ouser = explode("=",$get[0]);
+					if( count($ouser) === 2 ){
+						$ouser = $this->route('/obray/OUsers/get/?ouser_id='.$ouser[1])->getFirst();
+					}
+				}
 				$line = chop($line);
+
 				if(preg_match('/\A(\S+): (.*)\z/', $line, $matches))
 				{
 					$headers[$matches[1]] = $matches[2];
 				}
 			}
+			
 
 			$secKey = $headers['Sec-WebSocket-Key'];
 			$secAccept = base64_encode(pack('H*', sha1($secKey . '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')));
@@ -143,6 +182,7 @@
 			"WebSocket-Location: ws://$host:$port/demo/shout.php\r\n".
 			"Sec-WebSocket-Accept:$secAccept\r\n\r\n";
 			socket_write($client_conn,$upgrade,strlen($upgrade));
+			return $ouser;
 		}
 
 		//Unmask incoming framed message

@@ -508,8 +508,8 @@
 	        			if( !empty($d->$gp_column) ){ $data_to_encode->Id[] = $d->$gp_column; }
 	        		}
 	        		
-		        	$response = $this->route(__HULK__.$GPCall->path.'?http_method=post&http_content_type=application/json&http_accept=application/json',json_encode( $data_to_encode ) )->data[0];
-		        	
+		        	$response = $this->route(__HULK__.$GPCall->path.'?http_method=post&http_content_type=application/json&http_accept=application/json',json_encode( $data_to_encode ) )->data;
+
 		        	forEach( $data as $index => $obj ){
 		        		
 		        		if( !isSet($data[$index]->$key) ){ $data[$index]->$key = array(); }
