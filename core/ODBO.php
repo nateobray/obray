@@ -273,7 +273,7 @@
         	if( $this->isError() ){ $this->throwError(isSet($this->general_error)?$this->general_error:'There was an error on this form, please make sure the below fields were completed correclty: '); return $this; }
 
         	if( $this->enable_system_columns ){ 
-        		if( isSet($_SESSION['ouser']) ){ $ocu = $_SESSION['ouser']->ouser_id; } else { $ocu = 0; }
+        		if( isSet($_SESSION['ouser']->ouser_id) ){ $ocu = $_SESSION['ouser']->ouser_id; } else { $ocu = 0; }
         		$system_columns = ", OCDT, OCU "; 
         		$system_values = ', \''.date('Y-m-d H:i:s').'\', '.$ocu;
         	} else {
@@ -349,7 +349,7 @@
         	
 
         	if( $this->enable_system_columns ){ 
-        		if( isSet($_SESSION['ouser']) && !empty($_SESSION['ouser']->ouser_id) ){ $omu = $_SESSION['ouser']->ouser_id; } else { $omu = 0; }
+        		if( isSet($_SESSION['ouser']->ouser_id) && !empty($_SESSION['ouser']->ouser_id) ){ $omu = $_SESSION['ouser']->ouser_id; } else { $omu = 0; }
         		$system_columns = ', OMDT = \''.date('Y-m-d H:i:s').'\', OMU = '.$omu; 
         		
         	} else {
@@ -927,7 +927,6 @@
         private function math( $fn, $key, $params=array() ){
 
 	        $column = $params['column']; unset($params['column']);
-
 			if( array_key_exists($column,$this->table_definition) ){
 				$values = array();
 				$where_str = $this->getWhere($params,$values);
