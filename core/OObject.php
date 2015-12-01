@@ -140,14 +140,16 @@
 				if( defined('__OBRAY_REMOTE_HOSTS__') && defined('__OBRAY_TOKEN__') && in_array($components['host'],unserialize(__OBRAY_REMOTE_HOSTS__)) ){ $headers[] = 'Obray-Token: '.__OBRAY_TOKEN__; }
 				if( !empty($params['http_content_type']) ){ $headers[] = 'Content-type: '.$params['http_content_type']; unset($params['http_content_type']); }
 				if( !empty($params['http_accept']) ){ $headers[] = 'Accept: '.$params['http_accept']; unset($params['http_accept']); }
+				if( !empty($params['http_username']) && !empty($params['http_password']) ){ curl_setopt($ch, CURLOPT_USERPWD, $params['http_username'].":".$params['http_password']); unset($params['http_username']); unset($params['http_password']); }
+				if( !empty($params['http_username']) && empty($params['http_password']) ){ curl_setopt($ch, CURLOPT_USERPWD, $params['http_username'].":"); unset($params['http_username']); }
+				if( !empty($params['http_raw']) ){ $show_raw_data = TRUE; unset($params['http_raw']); }
 				if( !empty($headers) ){ curl_setopt($ch, CURLOPT_HTTPHEADER, $headers); }
 
-				if( !empty($this->params) ){
+				if( (!empty($this->params) && empty($params['http_method'])) || (!empty($params['http_method']) && $params['http_method'] == 'post') ){
 					unset($params["http_method"]);
 					if( count($params) == 1 && !empty($params["body"]) ){
 						curl_setopt($ch, CURLOPT_POST, 1);
 						curl_setopt($ch, CURLOPT_POSTFIELDS, $params["body"]);
-						
 					} else {
 						curl_setopt($ch, CURLOPT_POST, count($params));
 						curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
@@ -185,7 +187,7 @@
 					if( !empty($this->data) ){
 						if( isSet($this->data->errors) ){ $this->errors = $this->data->errors; }
 						if( isSet($this->data->html) ){ $this->html = $this->data->html; }
-						if( isSet($this->data->data) ){ $this->data = $this->data->data; }
+						if( isSet($this->data->data) && empty($show_raw_data) ){ $this->data = $this->data->data; }
 					}
 				}
 
