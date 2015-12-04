@@ -169,21 +169,29 @@
 				$info = curl_getinfo( $ch );
 				$data = json_decode($this->data);
 
-				 $info["http_code"] =  intval($info["http_code"]);
+				$info["http_code"] =  intval($info["http_code"]);
+				
 				if( !( $info["http_code"] >= 200 && $info["http_code"] < 300)  ){
+
+					//print_r( $data );
 					$this->data = array();
 					//echo "HTTP CODE IS NOT 200";
 					if( !empty($data->Message) ){
 						$this->throwError($data->Message,$info["http_code"]);
 					} else if ( !empty($data->error) ){
 						$this->throwError( $data->error );
+					} else if ( !empty($data->errors) ){
+						$this->throwError("");
+						$this->errors = $data->errors;
 					} else {
 						$this->throwError("An error has occurred with no message.",$info["http_code"]);
 					}
 					return $this;
 				} else {
+
 					
 					if( !empty($data) ){ $this->data = $data; } else { return $this; }
+					
 					if( !empty($this->data) ){
 						if( isSet($this->data->errors) ){ $this->errors = $this->data->errors; }
 						if( isSet($this->data->html) ){ $this->html = $this->data->html; }

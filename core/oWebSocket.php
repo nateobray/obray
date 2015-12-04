@@ -154,11 +154,19 @@
 									$this->cData[ $found_socket ]->subscriptions[ $msg->channel ] = TRUE;
 									$this->console("done\n");
 									break;
+								case 'unsubscribe':
+									$this->console("Received unsubscribe, unsubcribing...");
+									forEach( $this->cData[ $found_socket ]->subscriptions as $key => $subscription ){
+										if( $key != "all" ){ unset( $this->cData[ $found_socket ]->subscriptions[ $key ] ); }
+									}
+									$this->console("done\n");
+									break;
 								case 'broadcast': case 'navigate':
 									$this->console("Received broadcast, sending...");
 									$this->send($msg);
 									$this->console("done\n");
 									break;
+
 							}
 						}
 						
