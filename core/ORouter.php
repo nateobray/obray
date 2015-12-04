@@ -149,6 +149,7 @@
 
 					$obj->runtime = (microtime(TRUE) - $start_time)*1000;
 					$json = json_encode($obj,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK);
+					if( $json === FALSE ){ $json = json_encode($obj,JSON_PRETTY_PRINT); }
 					if( $json ){ echo $json; } else { echo 'There was en error encoding JSON.'; }
 					break;
 
