@@ -357,8 +357,6 @@
         	}
 
         	$this->sql  = ' UPDATE '.$this->table.' SET '.$sql.$system_columns.' WHERE '.$this->primary_key_column.' = :'.$this->primary_key_column.' ';
-        	//echo $this->sql;
-        	//print_r($data);
         	$statement = $this->dbh->prepare($this->sql);
         	forEach( $data as $key => $dati ){
         		if( $dati == 'NULL' ){
@@ -494,6 +492,7 @@
 	        $statement->execute();
 	        $statement->setFetchMode(PDO::FETCH_NUM);
 	        $data = $statement->fetchAll(PDO::FETCH_OBJ);
+
 
 	        if( !empty($GPCalls) ){
 	        	
