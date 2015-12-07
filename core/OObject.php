@@ -97,7 +97,7 @@
 		public function console(){ 
 			
 			$args = func_get_args();
-			if( !empty($args) ){
+			if( !empty($argv[0]) && !empty($args) ){
 
 				if( is_array($args[0]) || is_object($args[0]) ) {
 					print_r($args[0]);
