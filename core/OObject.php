@@ -162,7 +162,7 @@
 					eval("printf(\"".$color.array_shift($args).'\033[0m","'.implode('","',$args)."\");"); 
 				} else {
 					//echo "\033[31mHello\033[0m";
-					eval("printf(\"\033[31m".array_shift($args).'\033[0m","'.implode('","',$args)."\");"); 
+					eval("printf(\"".array_shift($args).'","'.implode('","',$args)."\");"); 
 				}
 			} 
 		}
