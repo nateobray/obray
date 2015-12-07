@@ -161,7 +161,6 @@
 					$color = $colors[$args[2]];
 					eval("printf(\"".$color.array_shift($args).'\033[0m","'.implode('","',$args)."\");"); 
 				} else {
-					//echo "\033[31mHello\033[0m";
 					eval("printf(\"".array_shift($args).'","'.implode('","',$args)."\");"); 
 				}
 			} 
