@@ -128,7 +128,7 @@
 			if( $content_type == 'text/table' ){ $tmp_type = 'text/table'; $content_type = 'text/html';  }
 			if(!headers_sent()){ header('Content-Type: ' . $content_type ); }                              					// set Content-Type
 			if( !empty($tmp_type) ){ $content_type = $tmp_type; }
-			
+
 			//if(!headers_sent()){ header('Content-Type: ' . 'application/json' ); }
 			//$content_type = 'text/csv';
 			
@@ -142,6 +142,7 @@
 			*****************************************************************************************/
 
 			$obj->cleanUp();
+			if( PHP_SAPI === 'cli' ){ $content_type = 'console'; }
 
 			switch($content_type){  		                                                         // handle OObject content types
 
@@ -229,6 +230,16 @@
 						
 					}
 					
+					break;
+
+				case 'console':
+
+					$obj->runtime = (microtime(TRUE) - $start_time)*1000;
+					$this->console("%s","\n\n****************************************************\n","WhiteBold");
+					$this->console("%s","\tResponse Object\n","WhiteBold");
+					$this->console("%s","****************************************************\n\n","WhiteBold");
+					$this->console($obj);
+					$this->console("\n");
 					break;
 					
     			case 'application/xml':                                                             // Handle XML

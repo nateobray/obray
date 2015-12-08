@@ -112,8 +112,8 @@
 						"Purple" => 			"\033[35m",
 						"Cyan" =>				"\033[36m",
 						"White" => 				"\033[37m",
-						"BlackBold" => 			"\033[30m",
 						// text color bold
+						"BlackBold" => 			"\033[30m",
 						"RedBold" => 			"\033[1;31m",
 						"GreenBold" => 			"\033[1;32m",
 						"YellowBold" => 		"\033[1;33m",
