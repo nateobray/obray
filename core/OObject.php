@@ -97,7 +97,7 @@
 		public function console(){ 
 			
 			$args = func_get_args();
-			if( !empty($argv[0]) && !empty($args) ){
+			if( PHP_SAPI === 'cli' && !empty($args) ){
 
 				if( is_array($args[0]) || is_object($args[0]) ) {
 					print_r($args[0]);
