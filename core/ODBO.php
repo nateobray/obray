@@ -37,6 +37,7 @@
 	Class ODBO extends OObject {
 
 	    public $dbh;
+	    public $enable_system_columns = TRUE;
 	    
 	    public function __construct(){
 
