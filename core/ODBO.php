@@ -407,7 +407,7 @@
 
         	$original_params = $params;
 
-        	if( $this->enable_system_columns ){
+        	if( !empty($this->enable_system_columns) ){
 				$this->table_definition['OCDT'] = array('data_type'=>'datetime');
 				$this->table_definition['OMDT'] = array('data_type'=>'datetime');
 				$this->table_definition['OCU'] = array('data_type'=>'integer');
@@ -609,7 +609,7 @@
 
 		private function getWhere( &$params=array(),&$values=array(),&$original_params=array() ){
 
-			if( $this->enable_system_columns ){
+			if( !empty($this->enable_system_columns) ){
 				$this->table_definition['OCDT'] = array('data_type'=>'datetime');
 				$this->table_definition['OMDT'] = array('data_type'=>'datetime');
 			}
