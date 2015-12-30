@@ -50,8 +50,16 @@
 
 		public function route($path,$params=array(),$direct=FALSE){
 
-			$start_time = microtime(TRUE);
+			$php_input = file_get_contents("php://input");
+			if( !empty($php_input) && empty($params['data']) ){
+				if( $_SERVER["CONTENT_TYPE"] === 'application/json' ){
+					$params = (array)json_decode($php_input);
+				} else {
+					$params["data"] = $php_input;
+				}				
+			}
 
+			$start_time = microtime(TRUE);
 			if(defined('__TIMEZONE__')){ date_default_timezone_set(__TIMEZONE__); }
 			$obj = parent::route($path,$params,$direct);												// Call the parent class default route function
 
@@ -143,7 +151,6 @@
 
 			$obj->cleanUp();
 			if( PHP_SAPI === 'cli' ){ $content_type = 'console'; }
-
 			switch($content_type){  		                                                         // handle OObject content types
 
     			 case 'application/json':                                                            // Handle JSON (default)

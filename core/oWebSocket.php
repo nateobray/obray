@@ -27,6 +27,16 @@
 
 	if (!class_exists( 'OObject' )) { die(); }
 
+	class oSocketFrame {
+
+		public $FIN = FALSE;
+		public $opcode;
+		public $mask;
+		public $len;
+		public $msg = "";
+
+	}
+
 	class oClient {
 		
 	}
@@ -133,44 +143,24 @@
 
 				*************************************************************************************************/
 				
+				if( !empty($changed) ){
+					$this->console("%s","\n***********************************************\n","WhiteBold");
+					$this->console("%s","\tMessage Received: ".count($changed)."\n","WhiteBold");
+					$this->console("%s","***********************************************\n","WhiteBold");
+				}
+
 				foreach ( array_keys($changed) as $changed_key) {
 
 					$changed_socket = $changed[$changed_key];
 
 					//	1.	read from changed sockets
-					while(socket_recv($changed_socket, $buf, 1024, 0) >= 1)
-					{
-						$msg = $this->unmask($buf); //unmask data
-						//prepare data to be sent to client
-						$msg = json_decode($msg);
-						
-						if( !empty($msg) ){
+					
+					while( socket_recv($changed_socket, $buf, 1024, 0) > 0 ){
 
-							$found_socket = array_search($changed_socket, $this->sockets);
+						$this->decode($buf,$changed_socket);
 
-							switch( $msg->type ){
-								case 'subscription':
-									$this->console("Received subscription, subscribing...");
-									$this->cData[ $found_socket ]->subscriptions[ $msg->channel ] = TRUE;
-									$this->console("done\n");
-									break;
-								case 'unsubscribe':
-									$this->console("Received unsubscribe, unsubcribing...");
-									forEach( $this->cData[ $found_socket ]->subscriptions as $key => $subscription ){
-										if( $key != "all" ){ unset( $this->cData[ $found_socket ]->subscriptions[ $key ] ); }
-									}
-									$this->console("done\n");
-									break;
-								case 'broadcast': case 'navigate':
-									$this->console("Received broadcast, sending...");
-									$this->send($msg);
-									$this->console("done\n");
-									break;
+						break 2;
 
-							}
-						}
-						
-						break 2; //exits this loop
 					}
 
 					//	2.	if EOF then close connection.
@@ -178,11 +168,11 @@
 					if ($buf === false) { // check disconnected client
 						// remove client for $clients array
 						$found_socket = array_search($changed_socket, $this->sockets);
-						$this->console("%s","Attempting to disconnect index: ".$found_socket."\n");
+						$this->console("%s","Attempting to disconnect index: ".$found_socket."\n","Red");
 						socket_getpeername($changed_socket, $ip);
 						
 						$ouser = $this->cData[$found_socket];
-						$this->console($ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged off.\n");
+						$this->console("%s",$ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged off.\n","Red");
 						
 						//notify all users about disconnected connection
 						$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' disconnected.');
@@ -197,6 +187,107 @@
 
 		}
 
+		/*****************************************************************************
+			
+			1 000 0001 1 
+
+			Mask Key: 0110010 11010011 01010010 11100111
+
+			11010100 01000101 10100011 011011010100011110010110000111111101011111000111100111101000010101101101000001100011110101111010011010100011111010011001100101000001011110110001010001001111011011011000011010001100010010100001101111011100101110010011110110111101001100010110000111010011010111101110000111001011101011001011011010110111010111101010101010001111011111101011110111011111100011111101
+
+		*****************************************************************************/
+		private function decode( $msg,$changed_socket ){
+
+			$frame = new stdClass();
+			if( !is_array($msg) ){
+				$ascii_array = array_map("ord",str_split( $msg ));
+			} else {
+				$ascii_array = $msg;
+			}
+			$binary_array = array_map("decbin",$ascii_array);
+			$binary_array = str_split(implode("",$binary_array));
+
+			// FIN bit
+			$FIN_bit = array_shift($binary_array);
+			$frame->FIN = (int)$FIN_bit;
+
+			// RSV 1
+			$RSV_1 = array_shift($binary_array);
+			// RSV 2
+			$RSV_2 = array_shift($binary_array);
+			// RSV 3
+			$RSV_3 = array_shift($binary_array);
+
+			// opcode
+			$opcode_bits = implode("",array_splice($binary_array,0,4));
+			$frame->opcode =  bindec( $opcode_bits );
+
+			// MASK Bit
+			$mask_bit = array_shift($binary_array);
+			$frame->mask = (int)$mask_bit;
+
+			// Length Bits
+			$len_bits = implode("",array_splice($binary_array,0,7));
+			$frame->len = bindec( $len_bits );
+
+			$header = array_splice($ascii_array,0,2);
+
+			$mask_key_bits = array();
+			$mask_key = array_splice($ascii_array,0,4);
+			
+			$encoded_bits = array();
+			$encoded = array_splice($ascii_array,0,$frame->len);
+			
+			$frame->msg = array();
+			for( $i=0;$i<count($encoded);++$i ){
+				$frame->msg[] = chr($encoded[$i] ^ $mask_key[$i%4]);
+			}
+			$frame->msg = implode("",$frame->msg);
+
+			if( $frame->FIN === 1 && $frame->opcode = 1 ){
+				$this->onData( $frame,$changed_socket );
+			}
+
+			if( !empty($ascii_array) ){
+				$this->decode($ascii_array,$changed_socket);
+			}
+			
+		}
+
+		public function onData( $frame, $changed_socket ){
+
+			$msg = json_decode($frame->msg);
+			
+			$found_socket = array_search($changed_socket, $this->sockets);
+
+			switch( $msg->type ){
+				case 'subscription':
+					$this->console("Received subscription, subscribing...");
+					$this->cData[ $found_socket ]->subscriptions[ $msg->channel ] = TRUE;
+					$this->console("done\n");
+					break;
+				case 'unsubscribe':
+					$this->console("Received unsubscribe, unsubcribing...");
+					forEach( $this->cData[ $found_socket ]->subscriptions as $key => $subscription ){
+						if( $key != "all" ){ unset( $this->cData[ $found_socket ]->subscriptions[ $key ] ); }
+					}
+					$this->console("done\n");
+					break;
+				case 'broadcast': case 'navigate':
+					$this->console("Received broadcast, sending...");
+					$response = $this->send($msg);
+					if( $response ){
+						$this->console("%s","done\n","GreenBold");
+					} else {
+						$this->console("%s","No subscribers on ".$msg->channel."\n","RedBold");
+					}
+					
+					break;
+
+			}
+
+		}
+
 		/********************************************************************************************************************
 
 			send:  takes a message and passes though to all the connections subscribed to the specified channel
@@ -204,15 +295,18 @@
 		********************************************************************************************************************/
 
 		function send($msg){			
+			$msg_sent = FALSE;
 			foreach( array_keys($this->sockets) as $changed_key){
 				$send_socket = $this->sockets[$changed_key];
 				if( !empty($this->cData[ $changed_key ]) && !empty($this->cData[ $changed_key ]->subscriptions[$msg->channel]) ){
 					$this->console("Sending message to ".$this->cData[ $changed_key ]->ouser_first_name." ".$this->cData[ $changed_key ]->ouser_last_name."\n");
 					$message =  $this->mask( json_encode($msg) );
 					socket_write($this->sockets[$changed_key], $message, strlen($message));	
-				}				
+					$msg_sent = TRUE;
+				}
 			}
-			return true;
+			
+			return $msg_sent;
 		}
 
 		/********************************************************************************************************************

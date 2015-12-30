@@ -56,21 +56,21 @@
 		return $string;
 
 	}
-	
-	if (!function_exists('getallheaders')){ 
-        function getallheaders() 
-        { 
-               $headers = ''; 
-           foreach ($_SERVER as $name => $value) 
-           { 
-               if (substr($name, 0, 5) == 'HTTP_') 
-               { 
-                   $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value; 
-               } 
-           } 
-           return $headers; 
-        } 
-    } 
+
+	if (!function_exists('getallheaders')){
+        function getallheaders()
+        {
+               $headers = '';
+           foreach ($_SERVER as $name => $value)
+           {
+               if (substr($name, 0, 5) == 'HTTP_')
+               {
+                   $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
+               }
+           }
+           return $headers;
+        }
+    }
 
 	/********************************************************************************************************************
 
@@ -93,9 +93,9 @@
 
 		// public data members
 		public $object = '';                                                                        // stores the name of the class
-		
-		public function console(){ 
-			
+
+		public function console(){
+
 			$args = func_get_args();
 			if( PHP_SAPI === 'cli' && !empty($args) ){
 
@@ -159,28 +159,28 @@
 						"Reset"=> 				"\033[0m"
 					);
 					$color = $colors[$args[2]];
-					eval("printf(\"".$color.array_shift($args).'\033[0m","'.implode('","',$args)."\");"); 
+					eval("printf(\"".$color.array_shift($args).'\033[0m","'.implode('","',$args)."\");");
 				} else {
-					eval("printf(\"".array_shift($args).'","'.implode('","',$args)."\");"); 
+					eval("printf(\"".array_shift($args).'","'.implode('","',$args)."\");");
 				}
-			} 
+			}
 		}
-		
+
 		/***********************************************************************
 
 			ROUTE FUNCTION
 
 		***********************************************************************/
 
-		public function route( $path , $params = array(), $direct = TRUE ) {	
+		public function route( $path , $params = array(), $direct = TRUE ) {
+
 			if( !$direct ){ $params = array_merge($params,$_GET,$_POST); }
-			//$_GET = array(); $_POST = array();
 			$cmd = $path;
 			$this->params = $params;
 			$components = parse_url($path); $this->components = $components;
-			if( isSet($components['query']) ){ 
+			if( isSet($components['query']) ){
     			if( is_string($params) ){ $params = array( "body" => $params ); }
-    			parse_str($components['query'],$tmp); $params = array_merge($tmp,$params);  
+    			parse_str($components['query'],$tmp); $params = array_merge($tmp,$params);
     			if( !empty($components["scheme"]) && ( $components["scheme"] == "http" || $components["scheme"] == "https" ) ){
     				$path = $components["scheme"] ."://". $components["host"] . (!empty($components["port"])?':'.$components["port"]:'') . $components["path"];
     			}
@@ -202,12 +202,11 @@
 				curl_setopt($ch, CURLINFO_HEADER_OUT, true);
 
 				if( defined('__OBRAY_REMOTE_HOSTS__') && defined('__OBRAY_TOKEN__') && in_array($components['host'],unserialize(__OBRAY_REMOTE_HOSTS__)) ){ $headers[] = 'Obray-Token: '.__OBRAY_TOKEN__; }
-				if( !empty($params['http_content_type']) ){ $headers[] = 'Content-type: '.$params['http_content_type']; unset($params['http_content_type']); }
+				if( !empty($params['http_content_type']) ){ $headers[] = 'Content-type: '.$params['http_content_type']; $content_type = $params['http_content_type']; unset($params['http_content_type']);  }
 				if( !empty($params['http_accept']) ){ $headers[] = 'Accept: '.$params['http_accept']; unset($params['http_accept']); }
 				if( !empty($params['http_username']) && !empty($params['http_password']) ){ curl_setopt($ch, CURLOPT_USERPWD, $params['http_username'].":".$params['http_password']); unset($params['http_username']); unset($params['http_password']); }
 				if( !empty($params['http_username']) && empty($params['http_password']) ){ curl_setopt($ch, CURLOPT_USERPWD, $params['http_username'].":"); unset($params['http_username']); }
 				if( !empty($params['http_raw']) ){ $show_raw_data = TRUE; unset($params['http_raw']); }
-				if( !empty($headers) ){ curl_setopt($ch, CURLOPT_HTTPHEADER, $headers); }
 
 				if( (!empty($this->params) && empty($params['http_method'])) || (!empty($params['http_method']) && $params['http_method'] == 'post') ){
 					unset($params["http_method"]);
@@ -215,8 +214,16 @@
 						curl_setopt($ch, CURLOPT_POST, 1);
 						curl_setopt($ch, CURLOPT_POSTFIELDS, $params["body"]);
 					} else {
-						curl_setopt($ch, CURLOPT_POST, count($params));
-						curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+						if( !empty($content_type) && $content_type == "application/json" ){
+							curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+							$json = json_encode($params);
+							$headers[] = 'Content-Length: '.strlen($json);
+							curl_setopt($ch, CURLOPT_POST, 1);
+							curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
+						} else {
+							curl_setopt($ch, CURLOPT_POST, count($params));
+							curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+						}
 					}
 
 				} else {
@@ -225,6 +232,7 @@
 					}
 				}
 				
+				if( !empty($headers) ){ curl_setopt($ch, CURLOPT_HTTPHEADER, $headers); }
 				curl_setopt($ch, CURLOPT_URL, $path);
 				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 				$this->data = curl_exec($ch);
@@ -234,10 +242,9 @@
 				$data = json_decode($this->data);
 
 				$info["http_code"] =  intval($info["http_code"]);
-				
+
 				if( !( $info["http_code"] >= 200 && $info["http_code"] < 300)  ){
 
-					//print_r( $data );
 					$this->data = array();
 					//echo "HTTP CODE IS NOT 200";
 					if( !empty($data->Message) ){
@@ -253,9 +260,9 @@
 					return $this;
 				} else {
 
-					
+
 					if( !empty($data) ){ $this->data = $data; } else { return $this; }
-					
+
 					if( !empty($this->data) ){
 						if( isSet($this->data->errors) ){ $this->errors = $this->data->errors; }
 						if( isSet($this->data->html) ){ $this->html = $this->data->html; }
@@ -273,17 +280,17 @@
 				$path_array = preg_split('[/]',$components['path'],NULL,PREG_SPLIT_NO_EMPTY);
 				$base_path = $this->getBasePath($path_array);
 
-				
+
 				/*********************************
 					Validate Remote Application
 				*********************************/
 
 				$this->validateRemoteApplication($direct);
-				
+
 				/*********************************
 					SET CONTENT TYPE FROM ROUTE
 				*********************************/
-				
+
 				if( isset($params['ocsv']) ){ $this->setContentType('text/csv'); unset($params['ocsv']); }
 				if( isset($params['otsv']) ){ $this->setContentType('text/tsv'); unset($params['otsv']); }
 				if( isset($params['otable']) ){ $this->setContentType('text/table'); unset($params['otable']); }
@@ -300,7 +307,7 @@
 				/*********************************
 					CREATE OBJECT
 				*********************************/
-				
+
 				$obj = $this->createObject($path_array,$path,$base_path,$params,$direct);
 				if( empty($this->errors)  ){ return $obj; }
 
@@ -324,9 +331,9 @@
 		***********************************************************************/
 
 		public function validateRemoteApplication(&$direct){
-			
+
 			$headers = getallheaders();
-			
+
 			if( isSet($headers['Obray-Token']) ){
 				$otoken = $headers['Obray-Token']; unset($headers['Obray-Token']);
 				if( defined('__OBRAY_TOKEN__') && $otoken === __OBRAY_TOKEN__ && __OBRAY_TOKEN__ != '' ){ $direct = TRUE;  }
@@ -369,7 +376,7 @@
 					if( file_exists( __OBRAY_SITE_ROOT__ . "controllers/cRoot.php" ) ){ require_once __OBRAY_SITE_ROOT__."controllers/cRoot.php"; }
 					if( empty($path) ){ $path = "/index/"; }
 				}
-				
+
 				if ( !empty($objectType) ) {
 
 					require_once $this->path;
@@ -398,10 +405,10 @@
 
 					        return $obj;
 
-				        } catch (Exception $e){ 
-				        	$this->throwError($e->getMessage()); 
+				        } catch (Exception $e){
+				        	$this->throwError($e->getMessage());
 				       	}
-				        
+
 					}
 					break;
 				} else {
@@ -424,14 +431,14 @@
 		private function executeMethod($path,$path_array,$direct,&$params){
 
 			$path = str_replace('-','',$path_array[0]);
-			
+
 			if( method_exists($this,$path) ){
 			   try{
 					$params = array_merge($this->checkPermissions($path,$direct),$params);
 					if( !$this->isError() ){ $this->$path($params); }
 				} catch (Exception $e){ $this->throwError($e->getMessage()); }
 				return $this;
-		    } else if( method_exists($this,"index") ) {		    	
+		    } else if( method_exists($this,"index") ) {
 				try{
 					$params = array_merge($this->checkPermissions("index",$direct),$params);
 					if( !$this->isError() ){ $this->index($params); }
@@ -463,7 +470,7 @@
 
 				//This is to add greater flexibility for using custom session variable for storage of user data
 				$user_session_key = isset($this->user_session) ? $this->user_session : 'ouser';
-				
+
 	    		// restrict permissions on undefined keys
 	    		if( !isSet($perms[$object_name]) ){
 		    		$this->throwError('You cannot access this resource.',403,'Forbidden');
@@ -623,12 +630,12 @@
 		        $conn = new PDO('mysql:host='.__OBRAY_DATABASE_HOST__.';dbname='.$db.';charset=utf8',$uname,$psswd,array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'));
 		        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 		    } catch(PDOException $e) { echo 'ERROR: ' . $e->getMessage(); exit(); }
-			
+
 		    return $conn;
 		}
 
 		public function startSocketServer( $params=array() ){
-			
+
 		}
 
 	}
