@@ -251,7 +251,7 @@
 					$def = $this->table_definition[$key];
 					if( !empty($def["options"]) ){
 						$options = array_change_key_case($def["options"],CASE_LOWER);
-						if( !empty($options[strtolower($param)]) ){ $data[$key] = $options[strtolower($param)]; $option_is_set = TRUE; } else { $data[$key] = $param; }
+						if( !empty($options[strtolower($param)]) && !is_array($options[strtolower($param)]) ){ $data[$key] = $options[strtolower($param)]; $option_is_set = TRUE; } else { $data[$key] = $param; }
 					} else {
 						$data[$key] = $param;
 					}
@@ -332,7 +332,7 @@
 					$def = $this->table_definition[$key];
 					if( !empty($def["options"]) ){
 						$options = array_change_key_case($def["options"],CASE_LOWER);
-						if( !empty($options[strtolower($param)]) ){ $data[$key] = $options[strtolower($param)]; $option_is_set = TRUE; } else { $data[$key] = $param; }
+						if( !empty($options[strtolower($param)]) && !is_array($options[strtolower($param)]) ){ $data[$key] = $options[strtolower($param)]; $option_is_set = TRUE; } else { $data[$key] = $param; }
 					} else {
 						$data[$key] = $param;
 					}
@@ -458,8 +458,7 @@
 				if(!empty($params[$column]) && !empty($def["options"]) ){
 					$options = $def["options"];
 					$options = array_change_key_case($options, CASE_LOWER);
-					if( $options[ strtolower($params[$column]) ] ){
-						$params[$column] = $options[ strtolower($params[$column]) ]; }
+					if( !empty($options[ strtolower($params[$column]) ]) ){ $params[$column] = $options[ strtolower($params[$column]) ]; }
 				}
 
 	        	forEach( $withs as $i => &$with ){
