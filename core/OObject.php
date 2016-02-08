@@ -159,9 +159,9 @@
 						"Reset"=> 				"\033[0m"
 					);
 					$color = $colors[$args[2]];
-					eval("printf(\"".$color.array_shift($args).'\033[0m","'.implode('","',$args)."\");");
+					printf($color.array_shift($args)."\033[0m",array_shift($args) );
 				} else {
-					eval("printf(\"".array_shift($args).'","'.implode('","',$args)."\");");
+					printf( array_shift($args),array_shift($args) );
 				}
 			}
 		}

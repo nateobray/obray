@@ -77,6 +77,20 @@
 			$this->port = !empty($params["port"])?$params["port"]:"80";
 
 			$this->console("Binding to ".$this->host.":".$this->port."\n");
+
+			$listenstr = 	"tcp://".$this->host.":".$this->port;
+			//$context = 		stream_context_create();
+			$context = 		stream_context_create( array( "ssl" => array( "local_cert"=>__WEB_SOCKET_CERT__, "local_pk"=>__WEB_SOCKET_KEY__, "passphrase" => __WEB_SOCKET_KEY_PASS__ ) ) );
+			$this->socket = stream_socket_server($listenstr,$errno,$errstr,STREAM_SERVER_BIND|STREAM_SERVER_LISTEN,$context);
+
+			$this->console("Enabling crypto...");
+			stream_socket_enable_crypto($this->socket,TRUE,STREAM_CRYPTO_METHOD_SSLv3_SERVER);
+			$this->console("done\n");
+
+			//$conn = stream_socket_accept($s);
+			// do stuff with your new connection here 
+
+			/********
 			//Create TCP/IP sream socket
 			$this->socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 			//reuseable port
@@ -86,6 +100,7 @@
 			//listen to port
 			socket_listen($this->socket);
 			$this->console("Listening on ".$this->host.":".$this->port."\n");
+			****/
 
 			$this->sockets = array( $this->socket );
 			$this->cData = array();
@@ -94,7 +109,8 @@
 
 				$changed = $this->sockets;
 
-				socket_select( $changed, $null, $null, 0, 10 );
+				stream_select( $changed, $null, $null, 0, 10 );
+				//socket_select( $changed, $null, $null, 0, 10 );
 
 				/*************************************************************************************************
 
@@ -112,12 +128,12 @@
 				*************************************************************************************************/
 
 				if( in_array($this->socket,$changed) ){
-
+					
 					$this->console("Attempting to connect a new client.\n");
-					$new_socket = socket_accept($this->socket); 							//	1.	accpet new socket
+					$new_socket = stream_socket_accept($this->socket);						//	1.	accpet new socket
 					$this->sockets[] = $new_socket; 										//	2.	add socket to socket list
-					$request = socket_read($new_socket, 1024); 								//	3.	read data sent by the socket
-
+					$request = stream_socket_recvfrom($new_socket, 1024);					//	3.	read data sent by the socket
+					exit();
 					$this->console("Performing websocket handshake.\n");
 					$ouser = $this->handshake($request, $new_socket); 						//	4.	perform websocket handshake
 					$this->cData[ array_search($new_socket,$this->sockets) ] = $ouser;		//	5.	store the client data
@@ -131,7 +147,7 @@
 					unset($changed[$found_socket]);											//	6.	remove new socket from changed array
 
 					$this->console( (count($this->sockets)-1)." users connected.\n" );
-
+					
 				}
 
 				/*************************************************************************************************
@@ -143,10 +159,12 @@
 
 				*************************************************************************************************/
 				
+				
 				if( !empty($changed) ){
 					$this->console("%s","\n***********************************************\n","WhiteBold");
 					$this->console("%s","\tMessage Received: ".count($changed)."\n","WhiteBold");
 					$this->console("%s","***********************************************\n","WhiteBold");
+					
 				}
 
 				foreach ( array_keys($changed) as $changed_key) {
@@ -154,22 +172,18 @@
 					$changed_socket = $changed[$changed_key];
 
 					//	1.	read from changed sockets
+					$buf = stream_socket_recvfrom($changed_socket, 1024);
+					$this->decode($buf,$changed_socket);
+					break;
 					
-					while( socket_recv($changed_socket, $buf, 1024, 0) > 0 ){
-
-						$this->decode($buf,$changed_socket);
-
-						break 2;
-
-					}
-
 					//	2.	if EOF then close connection.
-					$buf = @socket_read($changed_socket, 1024, PHP_NORMAL_READ);
+					//$buf = @socket_read($changed_socket, 1024, PHP_NORMAL_READ);
+					$buf = @stream_socket_recvfrom($changed_socket, 1024);
 					if ($buf === false) { // check disconnected client
 						// remove client for $clients array
 						$found_socket = array_search($changed_socket, $this->sockets);
 						$this->console("%s","Attempting to disconnect index: ".$found_socket."\n","Red");
-						socket_getpeername($changed_socket, $ip);
+						stream_socket_shutdown($changed_socket,STREAM_SHUT_RDWR);
 						
 						$ouser = $this->cData[$found_socket];
 						$this->console("%s",$ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged off.\n","Red");
@@ -180,8 +194,11 @@
 						
 						unset($this->sockets[$found_socket]);
 					}
-
+					
 				}
+
+
+				
 
 			}
 
@@ -281,7 +298,13 @@
 					} else {
 						$this->console("%s","No subscribers on ".$msg->channel."\n","RedBold");
 					}
-					
+					break;
+
+				default:
+					$this->console("Unknown message received:\n");
+					$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
+					$this->console( $frame->msg );
+					$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
 					break;
 
 			}
@@ -300,8 +323,11 @@
 				$send_socket = $this->sockets[$changed_key];
 				if( !empty($this->cData[ $changed_key ]) && !empty($this->cData[ $changed_key ]->subscriptions[$msg->channel]) ){
 					$this->console("Sending message to ".$this->cData[ $changed_key ]->ouser_first_name." ".$this->cData[ $changed_key ]->ouser_last_name."\n");
+					$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
+					$this->console( json_encode($msg) );
+					$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
 					$message =  $this->mask( json_encode($msg) );
-					socket_write($this->sockets[$changed_key], $message, strlen($message));	
+					stream_socket_sendto($this->sockets[$changed_key], $message);
 					$msg_sent = TRUE;
 				}
 			}
@@ -352,10 +378,16 @@
 			"Upgrade: websocket\r\n" .
 			"Connection: Upgrade\r\n" .
 			"WebSocket-Origin: $this->host\r\n" .
-			"WebSocket-Location: ws://$this->host:$this->port/demo/shout.php\r\n".
+			"WebSocket-Location: ws://$this->host:$this->port/\r\n".
 			"Sec-WebSocket-Accept:$secAccept\r\n\r\n";
-			socket_write($conn,$upgrade,strlen($upgrade));
 
+			$this->console("Send upgrade request headers.\n");
+			$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
+			$this->console( $upgrade );
+			$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
+			$this->console($conn);
+			stream_socket_sendto($conn,$upgrade);
+			
 			return $ouser;
 
 		}
