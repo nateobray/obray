@@ -222,7 +222,7 @@
 							curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
 						} else {
 							curl_setopt($ch, CURLOPT_POST, count($params));
-							curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+							curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
 						}
 					}
 
