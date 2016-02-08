@@ -76,9 +76,6 @@
 			$this->host = !empty($params["host"])?$params["host"]:"localhost";
 			$this->port = !empty($params["port"])?$params["port"]:"80";
 
-			$this->console("Binding to ".$this->host.":".$this->port."\n");
-
-			
 			if( __WEB_SOCKET_PROTOCOL__ == "ws" ){
 				$protocol = "tcp";
 				$context = 		stream_context_create();	
@@ -87,26 +84,9 @@
 				$context = 		stream_context_create( array( "ssl" => array( "local_cert"=>__WEB_SOCKET_CERT__, "local_pk"=>__WEB_SOCKET_KEY__, "passphrase" => __WEB_SOCKET_KEY_PASS__ ) ) );	
 			}
 			$listenstr = 	$protocol."://".$this->host.":".$this->port;
+			$this->console("Binding to ".$this->host.":".$this->port." over ".$protocol."\n");
 			$this->socket = stream_socket_server($listenstr,$errno,$errstr,STREAM_SERVER_BIND|STREAM_SERVER_LISTEN,$context);
-
-			//$this->console("Enabling crypto...");
-			//stream_socket_enable_crypto($this->socket,TRUE,STREAM_CRYPTO_METHOD_SSLv3_SERVER);
-			//$this->console("done\n");
-
-			//$conn = stream_socket_accept($s);
-			// do stuff with your new connection here 
-
-			/********
-			//Create TCP/IP sream socket
-			$this->socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-			//reuseable port
-			socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
-			//bind socket to specified host
-			socket_bind($this->socket, $this->host, $this->port);
-			//listen to port
-			socket_listen($this->socket);
-			$this->console("Listening on ".$this->host.":".$this->port."\n");
-			****/
+			$this->console("%s","Listending...\n","GreenBold");
 
 			$this->sockets = array( $this->socket );
 			$this->cData = array();
@@ -169,25 +149,24 @@
 				
 				
 				if( !empty($changed) ){
-					$this->console("%s","\n***********************************************\n","WhiteBold");
-					$this->console("%s","\tMessage Received: ".count($changed)."\n","WhiteBold");
-					$this->console("%s","***********************************************\n","WhiteBold");
-					
+					//$this->console("%s","\n***********************************************\n","WhiteBold");
+					//$this->console("%s","\tMessage Received: ".count($changed)."\n","WhiteBold");
+					//$this->console("%s","***********************************************\n","WhiteBold");
 				}
 
 				foreach ( array_keys($changed) as $changed_key) {
 
+
 					$changed_socket = $changed[$changed_key];
 
 					//	1.	read from changed sockets
-					$buf = fread($changed_socket, 1024);
-					$this->decode($buf,$changed_socket);
-					break;
-					
-					//	2.	if EOF then close connection.
-					//$buf = @socket_read($changed_socket, 1024, PHP_NORMAL_READ);
-					$buf = @fread($changed_socket, 1024);
-					if ($buf === false) { // check disconnected client
+					$buf = fread($changed_socket, 2048);
+					if( $buf !== FALSE ){
+						$this->console("Buffer read.\n");
+						$this->decode($buf,$changed_socket);
+						break;	
+					} else if( $bug === FALSE ){
+						$this->console("Disconnecting user.\n");
 						// remove client for $clients array
 						$found_socket = array_search($changed_socket, $this->sockets);
 						$this->console("%s","Attempting to disconnect index: ".$found_socket."\n","Red");
