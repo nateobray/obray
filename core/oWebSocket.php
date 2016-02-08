@@ -78,14 +78,14 @@
 
 			$this->console("Binding to ".$this->host.":".$this->port."\n");
 
-			$listenstr = 	"tcp://".$this->host.":".$this->port;
+			$listenstr = 	"tls://".$this->host.":".$this->port;
 			//$context = 		stream_context_create();
 			$context = 		stream_context_create( array( "ssl" => array( "local_cert"=>__WEB_SOCKET_CERT__, "local_pk"=>__WEB_SOCKET_KEY__, "passphrase" => __WEB_SOCKET_KEY_PASS__ ) ) );
 			$this->socket = stream_socket_server($listenstr,$errno,$errstr,STREAM_SERVER_BIND|STREAM_SERVER_LISTEN,$context);
 
-			$this->console("Enabling crypto...");
-			stream_socket_enable_crypto($this->socket,TRUE,STREAM_CRYPTO_METHOD_SSLv3_SERVER);
-			$this->console("done\n");
+			//$this->console("Enabling crypto...");
+			//stream_socket_enable_crypto($this->socket,TRUE,STREAM_CRYPTO_METHOD_SSLv3_SERVER);
+			//$this->console("done\n");
 
 			//$conn = stream_socket_accept($s);
 			// do stuff with your new connection here 
