@@ -133,7 +133,7 @@
 					$new_socket = stream_socket_accept($this->socket);						//	1.	accpet new socket
 					$this->sockets[] = $new_socket; 										//	2.	add socket to socket list
 					$request = stream_socket_recvfrom($new_socket, 1024);					//	3.	read data sent by the socket
-					exit();
+
 					$this->console("Performing websocket handshake.\n");
 					$ouser = $this->handshake($request, $new_socket); 						//	4.	perform websocket handshake
 					$this->cData[ array_search($new_socket,$this->sockets) ] = $ouser;		//	5.	store the client data
