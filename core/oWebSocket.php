@@ -164,7 +164,7 @@
 					$this->console("%s","\n***********************************************\n","WhiteBold");
 					$this->console("%s","\tMessage Received: ".count($changed)."\n","WhiteBold");
 					$this->console("%s","***********************************************\n","WhiteBold");
-					
+					sleep(10);
 				}
 
 				foreach ( array_keys($changed) as $changed_key) {
