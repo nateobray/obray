@@ -83,7 +83,7 @@
 				$protocol = "tcp";
 				$context = 		stream_context_create();	
 			} else {
-				$protocol = "tls";
+				$protocol = "ssl";
 				$context = 		stream_context_create( array( "ssl" => array( "local_cert"=>__WEB_SOCKET_CERT__, "local_pk"=>__WEB_SOCKET_KEY__, "passphrase" => __WEB_SOCKET_KEY_PASS__ ) ) );	
 			}
 			$listenstr = 	$protocol."://".$this->host.":".$this->port;
@@ -139,6 +139,7 @@
 					$new_socket = stream_socket_accept($this->socket);						//	1.	accpet new socket
 					$this->sockets[] = $new_socket; 										//	2.	add socket to socket list
 					$request = fread($new_socket, 2046);
+					$this->console($request);
 					//$request = stream_socket_recvfrom($new_socket, 1024);					//	3.	read data sent by the socket
 
 					$this->console("Performing websocket handshake.\n");
