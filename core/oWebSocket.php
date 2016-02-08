@@ -165,7 +165,7 @@
 						$this->console("Buffer read.\n");
 						$this->decode($buf,$changed_socket);
 						break;	
-					} else if( $bug === FALSE ){
+					} else if( $buf === FALSE ){
 						$this->console("Disconnecting user.\n");
 						// remove client for $clients array
 						$found_socket = array_search($changed_socket, $this->sockets);
