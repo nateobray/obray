@@ -95,7 +95,12 @@
 
 				$changed = $this->sockets;
 
+				try{
 				stream_select( $changed, $null, $null, 0, 10 );
+				} catch( Exception $e ){
+					$this->console("%s","There was an error","RedBold");
+					$this->console($e);
+				} 
 				//socket_select( $changed, $null, $null, 0, 10 );
 
 				/*************************************************************************************************
