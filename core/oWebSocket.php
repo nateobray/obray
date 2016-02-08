@@ -155,7 +155,7 @@
 					unset($changed[$found_socket]);											//	6.	remove new socket from changed array
 
 					$this->console( (count($this->sockets)-1)." users connected.\n" );
-					exit();
+					
 				}
 
 				/*************************************************************************************************
@@ -180,13 +180,13 @@
 					$changed_socket = $changed[$changed_key];
 
 					//	1.	read from changed sockets
-					$buf = stream_socket_recvfrom($changed_socket, 1024);
+					$buf = fread($changed_socket, 1024);
 					$this->decode($buf,$changed_socket);
 					break;
 					
 					//	2.	if EOF then close connection.
 					//$buf = @socket_read($changed_socket, 1024, PHP_NORMAL_READ);
-					$buf = @stream_socket_recvfrom($changed_socket, 1024);
+					$buf = @fread($changed_socket, 1024);
 					if ($buf === false) { // check disconnected client
 						// remove client for $clients array
 						$found_socket = array_search($changed_socket, $this->sockets);
@@ -335,7 +335,7 @@
 					$this->console( json_encode($msg) );
 					$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
 					$message =  $this->mask( json_encode($msg) );
-					stream_socket_sendto($this->sockets[$changed_key], $message);
+					fwrite($this->sockets[$changed_key], $message, strlen($message));
 					$msg_sent = TRUE;
 				}
 			}
@@ -398,7 +398,7 @@
 			$this->console( $upgrade );
 			$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
 			$this->console($conn);
-			stream_socket_sendto($conn,$upgrade);
+			fwrite($conn,$upgrade,strlen($upgrade));
 			
 			return $ouser;
 
