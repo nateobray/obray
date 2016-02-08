@@ -78,9 +78,15 @@
 
 			$this->console("Binding to ".$this->host.":".$this->port."\n");
 
-			$listenstr = 	"tls://".$this->host.":".$this->port;
-			//$context = 		stream_context_create();
-			$context = 		stream_context_create( array( "ssl" => array( "local_cert"=>__WEB_SOCKET_CERT__, "local_pk"=>__WEB_SOCKET_KEY__, "passphrase" => __WEB_SOCKET_KEY_PASS__ ) ) );
+			
+			if( __WEB_SOCKET_PROTOCOL__ == "ws" ){
+				$protocol = "tcp";
+				$context = 		stream_context_create();	
+			} else {
+				$protocol = "tls";
+				$context = 		stream_context_create( array( "ssl" => array( "local_cert"=>__WEB_SOCKET_CERT__, "local_pk"=>__WEB_SOCKET_KEY__, "passphrase" => __WEB_SOCKET_KEY_PASS__ ) ) );	
+			}
+			$listenstr = 	$protocol."://".$this->host.":".$this->port;
 			$this->socket = stream_socket_server($listenstr,$errno,$errstr,STREAM_SERVER_BIND|STREAM_SERVER_LISTEN,$context);
 
 			//$this->console("Enabling crypto...");
@@ -132,7 +138,8 @@
 					$this->console("Attempting to connect a new client.\n");
 					$new_socket = stream_socket_accept($this->socket);						//	1.	accpet new socket
 					$this->sockets[] = $new_socket; 										//	2.	add socket to socket list
-					$request = stream_socket_recvfrom($new_socket, 1024);					//	3.	read data sent by the socket
+					$request = fread($new_socket, 2046);
+					//$request = stream_socket_recvfrom($new_socket, 1024);					//	3.	read data sent by the socket
 
 					$this->console("Performing websocket handshake.\n");
 					$ouser = $this->handshake($request, $new_socket); 						//	4.	perform websocket handshake
@@ -147,7 +154,7 @@
 					unset($changed[$found_socket]);											//	6.	remove new socket from changed array
 
 					$this->console( (count($this->sockets)-1)." users connected.\n" );
-					
+					exit();
 				}
 
 				/*************************************************************************************************
@@ -164,7 +171,7 @@
 					$this->console("%s","\n***********************************************\n","WhiteBold");
 					$this->console("%s","\tMessage Received: ".count($changed)."\n","WhiteBold");
 					$this->console("%s","***********************************************\n","WhiteBold");
-					exit();
+					
 				}
 
 				foreach ( array_keys($changed) as $changed_key) {
