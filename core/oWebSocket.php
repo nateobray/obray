@@ -348,6 +348,10 @@
 
 		function handshake($request,$conn){
 			
+			$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
+			$this->console($request);
+			$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
+
 			preg_match('/(?<=GET \/\?ouser_id=)([0-9]*)/',$request,$matches);
 
 			// 1.	Extract the ouser from the connection request
@@ -369,7 +373,7 @@
 					$ouser->connection->{$matches[1]} = $matches[2];
 				}
 			}
-			
+
 			// 3.	Prepare/send response			
 			$secKey = $headers['Sec-WebSocket-Key'];
 			$secAccept = base64_encode(pack('H*', sha1($secKey . '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')));
