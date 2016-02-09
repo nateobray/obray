@@ -37,10 +37,6 @@
 
 	}
 
-	class oClient {
-		
-	}
-
 	/********************************************************************************************************************
 
 		oWebSocket:
@@ -90,17 +86,14 @@
 
 			$this->sockets = array( $this->socket );
 			$this->cData = array();
+			//$changed = $this->sockets;
 
 			while(true){
 
 				$changed = $this->sockets;
 
-				try{
 				stream_select( $changed, $null, $null, 0, 10 );
-				} catch( Exception $e ){
-					$this->console("%s","There was an error","RedBold");
-					$this->console($e);
-				} 
+				
 				//socket_select( $changed, $null, $null, 0, 10 );
 
 				/*************************************************************************************************
@@ -138,7 +131,7 @@
 
 					$found_socket = array_search($this->socket, $changed);
 					unset($changed[$found_socket]);											//	6.	remove new socket from changed array
-
+					
 					$this->console( (count($this->sockets)-1)." users connected.\n" );
 					
 				}
@@ -166,25 +159,35 @@
 
 					//	1.	read from changed sockets
 					$buf = fread($changed_socket, 2048);
-					if( $buf !== FALSE ){
+					if( $buf !== FALSE && !empty($buf) ){
+
 						$this->console("Buffer read.\n");
 						$this->decode($buf,$changed_socket);
+						
 						break;	
-					} else if( $buf === FALSE ){
+					} else if( $buf === FALSE || empty($buf) ){
 						$this->console("Disconnecting user.\n");
 						// remove client for $clients array
 						$found_socket = array_search($changed_socket, $this->sockets);
+
 						$this->console("%s","Attempting to disconnect index: ".$found_socket."\n","Red");
 						stream_socket_shutdown($changed_socket,STREAM_SHUT_RDWR);
 						
 						$ouser = $this->cData[$found_socket];
 						$this->console("%s",$ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged off.\n","Red");
 						
+						unset($this->cData[$found_socket]);
+						unset($this->sockets[$found_socket]);
+
+						$found_socket = array_search($changed_socket, $changed);
+						unset($changed[$found_socket]);											//	6.	remove new socket from changed array
+
 						//notify all users about disconnected connection
 						$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' disconnected.');
 						$this->send($response);
 						
-						unset($this->sockets[$found_socket]);
+						
+						
 					}
 					
 				}
@@ -198,11 +201,9 @@
 
 		/*****************************************************************************
 			
-			1 000 0001 1 
-
-			Mask Key: 0110010 11010011 01010010 11100111
-
-			11010100 01000101 10100011 011011010100011110010110000111111101011111000111100111101000010101101101000001100011110101111010011010100011111010011001100101000001011110110001010001001111011011011000011010001100010010100001101111011100101110010011110110111101001100010110000111010011010111101110000111001011101011001011011010110111010111101010101010001111011111101011110111011111100011111101
+			Decode: We have to manipulate some bits based on the spec.  Currently
+					there is a limit to the number of bits we can send, but that
+					is easily remedied by modifying this function.
 
 		*****************************************************************************/
 		private function decode( $msg,$changed_socket ){
@@ -262,6 +263,14 @@
 			}
 			
 		}
+
+		/********************************************************************************************************************
+
+			onData: this function is called when we are done decoding a full message.  It determines how to handle
+					the incoming message.
+
+		********************************************************************************************************************/
+
 
 		public function onData( $frame, $changed_socket ){
 
