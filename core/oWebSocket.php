@@ -114,7 +114,7 @@
 				if( in_array($this->socket,$changed) ){
 					
 					$this->console("Attempting to connect a new client.\n");
-					$new_socket = stream_socket_accept($this->socket);						//	1.	accpet new socket
+					$new_socket = @stream_socket_accept($this->socket);						//	1.	accpet new socket
 					if( $new_socket !== FALSE ){
 						$this->sockets[] = $new_socket; 										//	2.	add socket to socket list
 						$request = fread($new_socket, 2046);
@@ -135,7 +135,7 @@
 						
 						$this->console( (count($this->sockets)-1)." users connected.\n" );
 					} else {
-						$this->console("%s","Connection failed, unable to connect user.","RedBold");
+						$this->console("%s","Connection failed, unable to connect user.\n","RedBold");
 						unset($changed[$found_socket]);
 					}
 					
