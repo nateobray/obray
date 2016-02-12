@@ -136,6 +136,7 @@
 						$this->console( (count($this->sockets)-1)." users connected.\n" );
 					} else {
 						$this->console("%s","Connection failed, unable to connect user.","RedBold");
+						unset($changed[$found_socket]);
 					}
 					
 				}
