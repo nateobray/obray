@@ -93,7 +93,7 @@
 				$changed = $this->sockets;
 
 				stream_select( $changed, $null, $null, 0, 10 );
-				
+				sleep(1);
 				//socket_select( $changed, $null, $null, 0, 10 );
 
 				/*************************************************************************************************
@@ -153,7 +153,6 @@
 				}
 
 				foreach ( array_keys($changed) as $changed_key) {
-
 
 					$changed_socket = $changed[$changed_key];
 

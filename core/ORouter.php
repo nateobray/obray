@@ -161,6 +161,13 @@
 					if( $json ){ echo $json; } else { echo 'There was en error encoding JSON.'; }
 					break;
 
+				case "application/msgpack":
+
+					$obj->runtime = (microtime(TRUE) - $start_time)*1000;
+					$msg = msgpack_pack($obj);
+					if( !empty($msg) ){ echo $msg; } else { echo 'There was en error encoding JSON.'; }
+					break;
+
     			 case 'text/html':                                                                   // Handle HTML
 
     			 	$obj->runtime = (microtime(TRUE) - $start_time)*1000;
