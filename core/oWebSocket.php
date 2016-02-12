@@ -93,8 +93,6 @@
 				$changed = $this->sockets;
 
 				stream_select( $changed, $null, $null, 0, 10 );
-				sleep(1);
-				//socket_select( $changed, $null, $null, 0, 10 );
 
 				/*************************************************************************************************
 
