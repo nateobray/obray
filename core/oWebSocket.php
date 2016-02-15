@@ -112,14 +112,14 @@
 				if( in_array($this->socket,$changed) ){
 					
 					$this->console("Attempting to connect a new client.\n");
-					$new_socket = @stream_socket_accept($this->socket);						//	1.	accpet new socket
+					$new_socket = @stream_socket_accept($this->socket);								//	1.	accpet new socket
 					if( $new_socket !== FALSE ){
 						
-						$this->sockets[] = $new_socket; 										//	2.	add socket to socket list
+						$this->sockets[] = $new_socket; 											//	2.	add socket to socket list
 						$request = fread($new_socket, 2046);
 						$this->console($request);
 						$this->console("Performing websocket handshake.\n");
-						$ouser = $this->handshake($request, $new_socket); 						//	4.	perform websocket handshake
+						$ouser = $this->handshake($request, $new_socket); 							//	4.	perform websocket handshake
 						if( !empty($ouser) ){
 
 							$this->cData[ array_search($new_socket,$this->sockets) ] = $ouser;		//	5.	store the client data
@@ -131,7 +131,7 @@
 							$found_socket = array_search($this->socket, $changed);
 							unset($changed[$found_socket]);											//	6.	remove new socket from changed array
 							$this->console( (count($this->sockets)-1)." users connected.\n" );
-							
+
 						} else {
 							$this->console("%s","Connection failed, unable to connect user (not found).\n","RedBold");
 							$found_socket = array_search($this->socket, $changed);
