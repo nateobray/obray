@@ -310,6 +310,7 @@
 						$this->console("Received list, sending...");
 						$msg = (object)array( 'channel'=>'all', 'type'=>'list', 'message'=>$this->cData);
 						$this->send($msg);
+						break;
 
 					default:
 						$this->console("Unknown message received:\n");
