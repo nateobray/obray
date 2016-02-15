@@ -114,24 +114,31 @@
 					$this->console("Attempting to connect a new client.\n");
 					$new_socket = @stream_socket_accept($this->socket);						//	1.	accpet new socket
 					if( $new_socket !== FALSE ){
+						
 						$this->sockets[] = $new_socket; 										//	2.	add socket to socket list
 						$request = fread($new_socket, 2046);
 						$this->console($request);
-						//$request = stream_socket_recvfrom($new_socket, 1024);					//	3.	read data sent by the socket
-
 						$this->console("Performing websocket handshake.\n");
 						$ouser = $this->handshake($request, $new_socket); 						//	4.	perform websocket handshake
-						$this->cData[ array_search($new_socket,$this->sockets) ] = $ouser;		//	5.	store the client data
+						if( !empty($ouser) ){
 
-						$this->console($ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged on.\n");
+							$this->cData[ array_search($new_socket,$this->sockets) ] = $ouser;		//	5.	store the client data
+							$this->console($ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged on.\n");
 
-						$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' connected.' ); //prepare json data
-						$this->send($response); //notify all users about new connection
+							$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' connected.' ); //prepare json data
+							$this->send($response); //notify all users about new connection
 
-						$found_socket = array_search($this->socket, $changed);
-						unset($changed[$found_socket]);											//	6.	remove new socket from changed array
-						
-						$this->console( (count($this->sockets)-1)." users connected.\n" );
+							$found_socket = array_search($this->socket, $changed);
+							unset($changed[$found_socket]);											//	6.	remove new socket from changed array
+							$this->console( (count($this->sockets)-1)." users connected.\n" );
+							
+						} else {
+							$this->console("%s","Connection failed, unable to connect user (not found).\n","RedBold");
+							$found_socket = array_search($this->socket, $changed);
+							unset($changed[$found_socket]);
+							$found_socket = array_search($this->sockets, $new_socket);
+							unset($this->sockets[$found_socket]);
+						}
 					} else {
 						$this->console("%s","Connection failed, unable to connect user.\n","RedBold");
 						$found_socket = array_search($this->socket, $changed);
