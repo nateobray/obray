@@ -281,36 +281,50 @@
 			
 			$found_socket = array_search($changed_socket, $this->sockets);
 
-			switch( $msg->type ){
-				case 'subscription':
-					$this->console("Received subscription, subscribing...");
-					$this->cData[ $found_socket ]->subscriptions[ $msg->channel ] = TRUE;
-					$this->console("done\n");
-					break;
-				case 'unsubscribe':
-					$this->console("Received unsubscribe, unsubcribing...");
-					forEach( $this->cData[ $found_socket ]->subscriptions as $key => $subscription ){
-						if( $key != "all" ){ unset( $this->cData[ $found_socket ]->subscriptions[ $key ] ); }
-					}
-					$this->console("done\n");
-					break;
-				case 'broadcast': case 'navigate':
-					$this->console("Received broadcast, sending...");
-					$response = $this->send($msg);
-					if( $response ){
-						$this->console("%s","done\n","GreenBold");
-					} else {
-						$this->console("%s","No subscribers on ".$msg->channel."\n","RedBold");
-					}
-					break;
+			if( !empty($msg->type) ){
 
-				default:
-					$this->console("Unknown message received:\n");
-					$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
-					$this->console( $frame->msg );
-					$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
-					break;
+				switch( $msg->type ){
+					case 'subscription':
+						$this->console("Received subscription, subscribing...");
+						$this->cData[ $found_socket ]->subscriptions[ $msg->channel ] = TRUE;
+						$this->console("done\n");
+						break;
+					case 'unsubscribe':
+						$this->console("Received unsubscribe, unsubcribing...");
+						forEach( $this->cData[ $found_socket ]->subscriptions as $key => $subscription ){
+							if( $key != "all" ){ unset( $this->cData[ $found_socket ]->subscriptions[ $key ] ); }
+						}
+						$this->console("done\n");
+						break;
+					case 'broadcast': case 'navigate':
+						$this->console("Received broadcast, sending...");
+						$response = $this->send($msg);
+						if( $response ){
+							$this->console("%s","done\n","GreenBold");
+						} else {
+							$this->console("%s","No subscribers on ".$msg->channel."\n","RedBold");
+						}
+						break;
 
+					case 'list':
+						$this->console("Received list, sending...");
+						$msg = (object)array( 'channel'=>'all', 'type'=>'list', 'message'=>$this->cData);
+						$this->send($msg);
+
+					default:
+						$this->console("Unknown message received:\n");
+						$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
+						$this->console( $frame->msg );
+						$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
+						break;
+
+				}
+
+			} else {
+				$this->console("Unknown message received:\n");
+				$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
+				$this->console( $frame->msg );
+				$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
 			}
 
 		}
