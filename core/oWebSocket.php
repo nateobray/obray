@@ -392,7 +392,14 @@
 			if( !empty($matches) ){
 				$ouser_id = $matches[0];
 				$this->console( 'retreiving user: /obray/OUsers/get/?ouser_id='.$ouser_id );
-				$ouser = $this->route('/obray/OUsers/get/?ouser_id='.$ouser_id)->getFirst();
+				$ouser = $this->route('/obray/OUsers/get/?ouser_id='.$ouser_id);
+				$this->console($ouser);
+				if( !empty($ouser->data[0]) ){
+					$ouser = $ouser->data[0];
+				} else {
+					$ouser = new stdClass();
+				}
+
 				$ouser->subscriptions = array( "all" => 1 );
 				$ouser->connection = new stdClass();
 			}
