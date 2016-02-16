@@ -112,7 +112,7 @@
 				if( in_array($this->socket,$changed) ){
 					
 					$this->console("Attempting to connect a new client.\n");
-					$new_socket = @stream_socket_accept($this->socket);								//	1.	accpet new socket
+					$new_socket = stream_socket_accept($this->socket);								//	1.	accpet new socket
 					if( $new_socket !== FALSE ){
 						
 						$this->sockets[] = $new_socket; 											//	2.	add socket to socket list
