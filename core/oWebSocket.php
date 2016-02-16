@@ -122,6 +122,8 @@
 						$ouser = $this->handshake($request, $new_socket); 							//	4.	perform websocket handshake
 						if( !empty($ouser) ){
 
+							$this->console($ouser);
+
 							$this->cData[ array_search($new_socket,$this->sockets) ] = $ouser;		//	5.	store the client data
 							$this->console($ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged on.\n");
 
