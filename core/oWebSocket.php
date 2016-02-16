@@ -143,6 +143,8 @@
 						}
 					} else {
 						$this->console("%s","Connection failed, unable to connect user.\n","RedBold");
+						$this->console($this->socket);
+						$this->console("\n");
 						$found_socket = array_search($this->socket, $changed);
 						unset($changed[$found_socket]);
 					}
