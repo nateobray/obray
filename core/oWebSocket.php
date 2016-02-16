@@ -197,6 +197,11 @@
 						//notify all users about disconnected connection
 						$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' disconnected.');
 						$this->send($response);
+
+						$this->console("Received list, sending...");
+						$msg = (object)array( 'channel'=>'all', 'type'=>'list', 'message'=>$this->cData);
+						$this->send($msg);
+						break;
 						
 						
 						
