@@ -909,11 +909,16 @@
 
         	if( is_array($sql) ){ $sql = $sql["sql"]; }
 	        $statement = $this->dbh->prepare($sql);
-            $statement->execute();
-            $statement->setFetchMode(PDO::FETCH_OBJ);
-            $this->data = [];
-	        try { while ($row = $statement->fetch()) { $this->data[] = $row; } } catch(Exception $e) {	$this->throwError($e); }
-	        return $this;
+            $result = $statement->execute();
+			$this->data = [];
+			if(preg_match("/^select/i",$sql)){
+				$statement->setFetchMode(PDO::FETCH_OBJ);
+				try { while ($row = $statement->fetch()) { $this->data[] = $row; } } catch(Exception $e) {	$this->throwError($e); }
+			} else {
+				$this->data = $result;
+			}
+			
+			return $this;
         }
 
         /********************************************************************
