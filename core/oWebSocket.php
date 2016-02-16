@@ -393,6 +393,7 @@
 			$ouser = new stdClass();
 			if( !empty($matches) ){
 				$ouser_id = $matches[0];
+				$this->setDatabaseConnection(getDatabaseConnection());
 				$this->console( 'retreiving user: /obray/OUsers/get/?ouser_id='.$ouser_id );
 				$ouser = $this->route('/obray/OUsers/get/?ouser_id='.$ouser_id);
 				$this->console($ouser);
