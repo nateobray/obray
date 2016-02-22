@@ -47,6 +47,7 @@
 				'ouser_last_name' => 		array('data_type'=>'varchar(128',		'required'=>FALSE,	'label'=>'Last Name',		'error_message'=>'Please enter the user\'s last name'),
 				'ouser_email' => 			array('data_type'=>'varchar(128)',		'required'=>TRUE,	'label'=>'Email Address',	'error_message'=>'Please enter the user\'s email address'),
 				'ouser_permission_level' =>	array('data_type'=>'integer',			'required'=>FALSE,	'label'=>'Permission Level','error_message'=>'Please specify the user\'s permission level'),
+				'ouser_group' =>			array('data_type'=>'integer',			'options'=> unserialize(__OBRAY_USER_GROUPS__) ),
 				'ouser_status' =>			array('data_type'=>'varchar(20)',		'required'=>FALSE,	'label'=>'Status',			'error_message'=>'Please specify the user\'s status'),
 				'ouser_password' =>			array('data_type'=>'password',			'required'=>TRUE,	'label'=>'Password',		'error_message'=>'Please specify the user\'s password'),
 				'ouser_failed_attempts' =>	array('data_type'=>'integer',			'required'=>FALSE,	'label'=>'Failed Logins'),

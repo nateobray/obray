@@ -394,8 +394,8 @@
 			if( !empty($matches) ){
 				$ouser_id = $matches[0];
 				$this->setDatabaseConnection(getDatabaseConnection(true));
-				$this->console( 'retreiving user: /obray/OUsers/get/?ouser_id='.$ouser_id );
-				$ouser = $this->route('/obray/OUsers/get/?ouser_id='.$ouser_id);
+				$this->console( 'retreiving user: /obray/OUsers/get/?ouser_id='.$ouser_id.'&with=options'."\n" );
+				$ouser = $this->route('/obray/OUsers/get/?ouser_id='.$ouser_id.'&with=options');
 				$this->console($ouser);
 				if( !empty($ouser->data[0]) ){
 					$ouser = $ouser->data[0];
