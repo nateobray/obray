@@ -201,7 +201,9 @@
 				$headers[] = "Expect: ";
 				curl_setopt($ch, CURLINFO_HEADER_OUT, true);
 
+
 				if( defined('__OBRAY_REMOTE_HOSTS__') && defined('__OBRAY_TOKEN__') && in_array($components['host'],unserialize(__OBRAY_REMOTE_HOSTS__)) ){ $headers[] = 'Obray-Token: '.__OBRAY_TOKEN__; }
+				if( !empty($params['http_headers']) ){ $headers = $params['http_headers']; }
 				if( !empty($params['http_content_type']) ){ $headers[] = 'Content-type: '.$params['http_content_type']; $content_type = $params['http_content_type']; unset($params['http_content_type']);  }
 				if( !empty($params['http_accept']) ){ $headers[] = 'Accept: '.$params['http_accept']; unset($params['http_accept']); }
 				if( !empty($params['http_username']) && !empty($params['http_password']) ){ curl_setopt($ch, CURLOPT_USERPWD, $params['http_username'].":".$params['http_password']); unset($params['http_username']); unset($params['http_password']); }
@@ -234,8 +236,10 @@
 				
 				if( !empty($headers) ){ curl_setopt($ch, CURLOPT_HTTPHEADER, $headers); }
 				curl_setopt($ch, CURLOPT_URL, $path);
-				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+				curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
 				$this->data = curl_exec($ch);
+
 				$headers = curl_getinfo($ch, CURLINFO_HEADER_OUT);
 				$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 				$info = curl_getinfo( $ch );
@@ -362,7 +366,7 @@
 				}
 
 				$obj_name = array_pop($path_array);
-				$this->controller_path = __OBRAY_SITE_ROOT__."controllers/".implode('/',$path_array).'/c'.ucfirst($obj_name).'.php';
+				$this->controller_path = __OBRAY_SITE_ROOT__."controllers/".implode('/',$path_array).'/c'.str_replace(' ','',ucWords( str_replace('-',' ',$obj_name) ) ).'.php';
 				$this->model_path = $base_path . implode('/',$path_array).'/'.$obj_name.'.php';
 
 				if( file_exists( $this->model_path ) ){
@@ -370,7 +374,7 @@
 					$this->path = $this->model_path;
 				} else if( file_exists( $this->controller_path ) ){
 					$objectType = "controller";
-					$obj_name = "c".ucfirst($obj_name);
+					$obj_name = "c".str_replace(' ','',ucWords( str_replace('-',' ',$obj_name) ) );
 					$this->path = $this->controller_path;
 					// include the root controller
 					if( file_exists( __OBRAY_SITE_ROOT__ . "controllers/cRoot.php" ) ){ require_once __OBRAY_SITE_ROOT__."controllers/cRoot.php"; }
