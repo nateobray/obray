@@ -80,6 +80,13 @@
 	    			} else {
 	    				$this->data = FALSE;
 	    			}
+	    		} else if( isset($params['value']) && strlen(trim($params['value'])) ){
+	    			$key = array_search($params["value"], $this->table_definition[$params["column"]]["options"]);
+	    			if( $key !== FALSE ){
+	    				$this->data = $key;
+	    			} else {
+	    				$this->data = FALSE;
+	    			}
 	    		} else {
 	    			$this->data = $this->table_definition[$params["column"]]["options"];
 	    		}
@@ -439,15 +446,15 @@
 	        	}
 	        	if( !empty($columns) ){ $order_by = ' ORDER BY ' . implode(',',$columns); } else { $order_by = ''; }
         	}
-
+        	
 	        $withs = array(); $original_withs = array();
-
+	        
 	        if( !empty($params['with']) ){ $withs = explode('|',$params['with']); $original_withs = $withs; }
-
+	        
 	        $columns = array();
 	        $withs_to_pass = array();
 	        $filter_columns = array();
-
+	        
 	        forEach($this->table_definition as $column => $def){
 	        	if( isSet($def['data_type']) && $def['data_type'] == "filter" ){ $filter_columns[] = $columns; continue; }
 	        	if( isSet($def['data_type']) && $def['data_type'] == 'password' && isSet($params[$column]) ){ $password_column = $column; $password_value = $params[$column]; unset($params[$column]); }
@@ -533,7 +540,7 @@
 	        			$ids_to_index[$d->$gp_column][] = (int)$i;
 	        			if( !empty($d->$gp_column) ){ $data_to_encode->Id[] = $d->$gp_column; }
 	        		}
-
+	        		
 		        	$response = $this->route(__HULK__.$GPCall->path.'?http_method=post&http_content_type=application/json&http_accept=application/json',json_encode( $data_to_encode ) )->data;
 
 		        	forEach( $data as $index => $obj ){
@@ -595,16 +602,13 @@
 
 		        	if( !empty($this->data) && !empty($withs) && in_array('children',$withs[0]) ){ $sub_params['with'] = 'children'; }
 			        $with = $this->route($with_components['path'].'get/',$sub_params)->data;
-
 			        forEach( $with as &$w ){
-
 			        	if( isSet($ids_to_index[$w->$with_key]) ){
 				        	forEach( $ids_to_index[$w->$with_key] as $index ){
 				        		if( !isSet($this->data[$index]->$with_name) ){ $this->data[$index]->$with_name = array(); }
 				        		array_push($this->data[$index]->$with_name,$w);
 				        	}
 			        	}
-
 			        }
 
 
