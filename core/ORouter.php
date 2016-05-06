@@ -28,8 +28,8 @@
 
 	require_once 'OObject.php';                                                         // the base object for all obray objects (basically everything will extend this or a class that has already extended it)
 	require_once 'ODBO.php';                                                            // object that extends OObject but includes database functionality and table definition support
-	require_once 'OUsers.php'; 															// User/Permission Manager - thanks Erfan!
-
+	require_once 'oCLI.php';															// object that provides a command line interface to obray applications
+	require_once 'OUsers.php';															// provides user authentication and permissions
 	if (!class_exists( 'OObject' )) { die(); }
 
 
@@ -257,7 +257,11 @@
 					break;
 					
     			case 'application/xml':                                                             // Handle XML
-				 
+    				break;
+    			case 'text/css';
+    				echo $obj->html;
+    			case 'image/jpeg':
+    				echo $obj->html;
     			    break;
 					
 			}

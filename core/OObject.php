@@ -351,7 +351,7 @@
 		***********************************************************************/
 
 		private function createObject($path_array,$path,$base_path,&$params,$direct){
-
+			
 			$path = '';
 			$rPath = array();
 
@@ -389,7 +389,7 @@
 						try{
 
 				    		//	CREATE OBJECT
-				    		$obj = new $obj_name($params,$direct);
+				    		$obj = new $obj_name($params,$direct,$rPath);
 				    		$obj->objectType = $objectType;
 				    		$obj->setObject(get_class($obj));
 				    		$obj->setContentType($obj->content_type);
