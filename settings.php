@@ -30,10 +30,11 @@ THE SOFTWARE.
     OBRAY CONSTANTS
 ******************************************************/
 
-define('__OBRAY_PATH_TO_CORE__','/Your/path/here/');				// The path to obray's core files
-define('__OBRAY_DEBUG_MODE__',FALSE);						// Enable Debug Mode - will script database and tables if set to TRUE
-define('__OBRAY_TOKEN__','otk_PutYourTokenHere')		 		// Obray token
+define('__OBRAY_PATH_TO_CORE__','/Your/path/here/');			// The path to obray's core files
+define('__OBRAY_DEBUG_MODE__',FALSE);						    // Enable Debug Mode - will script database and tables if set to TRUE
+define('__OBRAY_TOKEN__','otk_PutYourTokenHere');               // Obray token
 //define('__OBRAY_REMOTE_HOSTS__',serialize(array(0=>'remote.host')));		// valid remote hosts
+define('__AUTHENTICATION_HEADER__',TRUE);
 
 /******************************************************
     DEFINE AVAILABLE ROUTES

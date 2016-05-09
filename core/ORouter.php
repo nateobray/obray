@@ -129,7 +129,11 @@
 
 			);
 			
-			if( $obj->getStatusCode() == 401 ){	header('WWW-Authenticate: Basic realm="'.__APP__.'"');}
+			if( $obj->getStatusCode() == 401 && !empty(__OBRAY_AUTHENTICATION_HEADER__) ){	
+				header('WWW-Authenticate: Basic realm="'.__APP__.'"');
+			} else if( method_exists($obj, "auth") ) {
+				$obj->auth();
+			}
 			$content_type = $obj->getContentType();
 
 			if(!headers_sent()){ header('HTTP/1.1 '.$obj->getStatusCode().' ' . $status_codes[$obj->getStatusCode()] );}    // set HTTP Header
