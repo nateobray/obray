@@ -626,7 +626,7 @@
         	}
 			
 			//Restructure the result set to be keyed by the column name provided
-			if(!empty($original_params['keyed']))
+			if(!empty($original_params['keyed']) && !empty($this->data[0]->{$original_params['keyed']}))
 			{
 				$keyed_data = array();
 				foreach($this->data as $key => $data)
