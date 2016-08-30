@@ -624,6 +624,20 @@
 		        	unset($data->ouser_password);
 	        	}
         	}
+			
+			//Restructure the result set to be keyed by the column name provided
+			if(!empty($original_params['keyed']) && !empty($this->data[0]->{$original_params['keyed']}))
+			{
+				$keyed_data = array();
+				foreach($this->data as $key => $data)
+				{
+					if(isset($data->{$original_params['keyed']}))
+						$keyed_data[strtolower($data->{$original_params['keyed']})] = $data;
+				}
+				
+				if(count($keyed_data))
+					$this->data = $keyed_data;
+			}
         	$this->filter = $filter; $this->recordcount = count($this->data);
 
 	        return $this;

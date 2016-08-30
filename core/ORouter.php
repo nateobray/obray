@@ -129,10 +129,13 @@
 
 			);
 			
-			if( $obj->getStatusCode() == 401 && !empty(__OBRAY_AUTHENTICATION_HEADER__) ){	
-				header('WWW-Authenticate: Basic realm="'.__APP__.'"');
-			} else if( method_exists($obj, "auth") ) {
-				$obj->auth();
+			if( $obj->getStatusCode() == 401 ) {
+				if( !empty(__OBRAY_AUTHENTICATION_HEADER__) ) {
+					header('WWW-Authenticate: Basic realm="'.__APP__.'"');
+				}
+				else if( method_exists($obj, "auth") ) {
+					$obj->auth();
+				}
 			}
 			$content_type = $obj->getContentType();
 
