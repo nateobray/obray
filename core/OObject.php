@@ -238,6 +238,7 @@
 				curl_setopt($ch, CURLOPT_URL, $path);
 				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
 				curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
+				curl_setopt($ch, CURLOPT_TIMEOUT, 400); //timeout in seconds
 				$this->data = curl_exec($ch);
 
 				$headers = curl_getinfo($ch, CURLINFO_HEADER_OUT);
