@@ -686,7 +686,7 @@
 		        	default:
 		        		if( empty($params[$key]) ){
 		        			$array = explode('~',$key);
-		        			if( count($array) === 2 ){ $param = urldecode($array[1]); $key = $array[0]; unset($params[$key]); $operator = 'LIKE'; }
+		        			if( count($array) === 2 ){ $param = $array[1]; $key = $array[0]; unset($params[$key]); $operator = 'LIKE'; }
 		        			$array = explode('>',$key);
 		        			if( count($array) === 2 ){ $param = urldecode($array[1]); $key = $array[0]; unset($params[$key]); $operator = '>'; }
 		        			$array = explode('<',$key);
