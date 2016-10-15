@@ -62,7 +62,7 @@
 				    'integer'   	=>  array('sql'=>' int ',										'my_sql_type'=>'int(11)',			'validation_regex'=>'/^([+,-]?[0-9])*$/'),
 				    'uninteger'		=>	array('sql'=>' int(11) unsigned NOT NULL DEFAULT \'0\'  ',	'my_sql_type'=>'int(11) unsigned',	'validation_regex'=>'/^([+,-]?[0-9])*$/'),
 				    'float'     	=>  array('sql'=>' float ',										'my_sql_type'=>'float',				'validation_regex'=>'/[0-9\.]*/'),
-				    'boolean'   	=>  array('sql'=>' boolean ',									'my_sql_type'=>'boolean',			'validation_regex'=>''),
+				    'boolean'   	=>  array('sql'=>' tinyint(1) ',								'my_sql_type'=>'tinyint(1)',		'validation_regex'=>''),
 				    'datetime'  	=>  array('sql'=>' datetime ',									'my_sql_type'=>'datetime',			'validation_regex'=>''),
 				    'password'  	=>  array('sql'=>' varchar(255) ',								'my_sql_type'=>'varchar(255)',		'validation_regex'=>'')
 				)));
