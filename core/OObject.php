@@ -210,6 +210,8 @@
 				if( !empty($params['http_username']) && empty($params['http_password']) ){ curl_setopt($ch, CURLOPT_USERPWD, $params['http_username'].":"); unset($params['http_username']); }
 				if( !empty($params['http_raw']) ){ $show_raw_data = TRUE; unset($params['http_raw']); }
 
+				$this->console($params);
+
 				if( (!empty($this->params) && empty($params['http_method'])) || (!empty($params['http_method']) && $params['http_method'] == 'post') ){
 					unset($params["http_method"]);
 					if( count($params) == 1 && !empty($params["body"]) ){
@@ -241,6 +243,8 @@
 				curl_setopt($ch, CURLOPT_TIMEOUT, 400); //timeout in seconds
 				$this->data = curl_exec($ch);
 
+				$this->console($this->data);
+				
 				$headers = curl_getinfo($ch, CURLINFO_HEADER_OUT);
 				$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 				$info = curl_getinfo( $ch );
