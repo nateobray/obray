@@ -209,6 +209,7 @@
 				if( !empty($params['http_username']) && !empty($params['http_password']) ){ curl_setopt($ch, CURLOPT_USERPWD, $params['http_username'].":".$params['http_password']); unset($params['http_username']); unset($params['http_password']); }
 				if( !empty($params['http_username']) && empty($params['http_password']) ){ curl_setopt($ch, CURLOPT_USERPWD, $params['http_username'].":"); unset($params['http_username']); }
 				if( !empty($params['http_raw']) ){ $show_raw_data = TRUE; unset($params['http_raw']); }
+				if( !empty($params['http_debug']) ){ $debug = TRUE; unset($params["http_debug"]) } else { $debug = FALSE; }
 
 				$this->console($params);
 
@@ -225,6 +226,11 @@
 							curl_setopt($ch, CURLOPT_POST, 1);
 							curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
 						} else {
+							if( $debug ){
+								$this->console("\n\nPost Fields\n");
+								$this->console("Count: ".count($params)."\n");
+								$this->console($params);
+							}
 							curl_setopt($ch, CURLOPT_POST, count($params));
 							curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
 						}
@@ -242,8 +248,6 @@
 				curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
 				curl_setopt($ch, CURLOPT_TIMEOUT, 400); //timeout in seconds
 				$this->data = curl_exec($ch);
-
-				$this->console($this->data);
 				
 				$headers = curl_getinfo($ch, CURLINFO_HEADER_OUT);
 				$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
