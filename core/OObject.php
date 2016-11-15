@@ -209,7 +209,7 @@
 				if( !empty($params['http_username']) && !empty($params['http_password']) ){ curl_setopt($ch, CURLOPT_USERPWD, $params['http_username'].":".$params['http_password']); unset($params['http_username']); unset($params['http_password']); }
 				if( !empty($params['http_username']) && empty($params['http_password']) ){ curl_setopt($ch, CURLOPT_USERPWD, $params['http_username'].":"); unset($params['http_username']); }
 				if( !empty($params['http_raw']) ){ $show_raw_data = TRUE; unset($params['http_raw']); }
-				if( !empty($params['http_debug']) ){ $debug = TRUE; unset($params["http_debug"]) } else { $debug = FALSE; }
+				if( !empty($params['http_debug']) ){ $debug = TRUE; unset($params["http_debug"]); } else { $debug = FALSE; }
 
 				$this->console($params);
 
