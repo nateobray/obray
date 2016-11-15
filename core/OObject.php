@@ -210,7 +210,7 @@
 				if( !empty($params['http_username']) && empty($params['http_password']) ){ curl_setopt($ch, CURLOPT_USERPWD, $params['http_username'].":"); unset($params['http_username']); }
 				if( !empty($params['http_raw']) ){ $show_raw_data = TRUE; unset($params['http_raw']); }
 				if( !empty($params['http_debug']) ){ $debug = TRUE; unset($params["http_debug"]); } else { $debug = FALSE; }
-				if( !empty($params['http_user_agent']) ){ curl_setopt($ch,CURLOPT_USERAGENT,$params["http_user_agent"]); }
+				if( !empty($params['http_user_agent']) ){ curl_setopt($ch,CURLOPT_USERAGENT,$params["http_user_agent"]); unset($params["http_user_agent"]); }
 
 				$this->console($params);
 
