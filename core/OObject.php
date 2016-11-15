@@ -239,8 +239,8 @@
 					if( !empty($params["http_method"]) ){ unset($params["http_method"]); }
 					if( !empty($components["query"]) ){
 						$path.= "?" . $components["query"];
-						if( $debug ){ $this->console($path); }
 					}
+					if( $debug ){ $this->console($path); }
 				}
 
 				$this->console($params);
