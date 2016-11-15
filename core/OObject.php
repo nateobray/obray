@@ -212,8 +212,6 @@
 				if( !empty($params['http_debug']) ){ $debug = TRUE; unset($params["http_debug"]); } else { $debug = FALSE; }
 				if( !empty($params['http_user_agent']) ){ curl_setopt($ch,CURLOPT_USERAGENT,$params["http_user_agent"]); unset($params["http_user_agent"]); }
 
-				$this->console($params);
-
 				if( (!empty($this->params) && empty($params['http_method'])) || (!empty($params['http_method']) && $params['http_method'] == 'post') ){
 					unset($params["http_method"]);
 					if( count($params) == 1 && !empty($params["body"]) ){
@@ -244,6 +242,8 @@
 						if( $debug ){ $this->console($path); }
 					}
 				}
+
+				$this->console($params);
 				
 				if( !empty($headers) ){ 
 					if( $debug ){
