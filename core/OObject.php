@@ -242,7 +242,13 @@
 					}
 				}
 				
-				if( !empty($headers) ){ curl_setopt($ch, CURLOPT_HTTPHEADER, $headers); }
+				if( !empty($headers) ){ 
+					if( $debug ){
+						$this->console("*****HEADERS*****");
+						$this->console($headers);
+					}
+					curl_setopt($ch, CURLOPT_HTTPHEADER, $headers); 
+				}
 				curl_setopt($ch, CURLOPT_URL, $path);
 				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
 				curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
