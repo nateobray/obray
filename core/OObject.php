@@ -241,6 +241,7 @@
 						$path.= "?" . $components["query"];
 					}
 					if( $debug ){ $this->console($path); }
+					curl_setopt($ch, CURLOPT_HTTPGET, TRUE);
 					curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
 				}
 
