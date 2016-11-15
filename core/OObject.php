@@ -259,7 +259,7 @@
 				curl_setopt($ch, CURLOPT_TIMEOUT, 400); //timeout in seconds
 				$this->data = curl_exec($ch);
 
-				if( debug ){
+				if( $debug ){
 					$this->console($this->data);
 				}
 				
