@@ -248,6 +248,10 @@
 						$this->console($headers);
 					}
 					curl_setopt($ch, CURLOPT_HTTPHEADER, $headers); 
+				} else {
+					if( $debug ){
+						$this->console("NO HEADERS SET!\n");
+					}
 				}
 				curl_setopt($ch, CURLOPT_URL, $path);
 				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
