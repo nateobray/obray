@@ -203,7 +203,7 @@
 
 
 				if( defined('__OBRAY_REMOTE_HOSTS__') && defined('__OBRAY_TOKEN__') && in_array($components['host'],unserialize(__OBRAY_REMOTE_HOSTS__)) ){ $headers[] = 'Obray-Token: '.__OBRAY_TOKEN__; }
-				if( !empty($params['http_headers']) ){ $headers = $params['http_headers']; }
+				if( !empty($params['http_headers']) ){ $headers = $params['http_headers']; unset($params["http_headers"]); }
 				if( !empty($params['http_content_type']) ){ $headers[] = 'Content-type: '.$params['http_content_type']; $content_type = $params['http_content_type']; unset($params['http_content_type']);  }
 				if( !empty($params['http_accept']) ){ $headers[] = 'Accept: '.$params['http_accept']; unset($params['http_accept']); }
 				if( !empty($params['http_username']) && !empty($params['http_password']) ){ curl_setopt($ch, CURLOPT_USERPWD, $params['http_username'].":".$params['http_password']); unset($params['http_username']); unset($params['http_password']); }
