@@ -241,9 +241,10 @@
 						$path.= "?" . $components["query"];
 					}
 					if( $debug ){ $this->console($path); }
+					curl_setopt($curl_handle, CURLOPT_CUSTOMREQUEST, 'GET');
 				}
 
-				$this->console($params);
+				if( $debug ){ $this->console($params); }
 				
 				if( !empty($headers) ){ 
 					if( $debug ){
