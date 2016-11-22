@@ -439,6 +439,7 @@
 
 				        } catch (Exception $e){
 				        	$this->throwError($e->getMessage());
+							$this->logError(oProjectEnum::OOBJECT,$e);
 				       	}
 
 					}
@@ -460,25 +461,35 @@
 
 		***********************************************************************/
 
-		private function executeMethod($path,$path_array,$direct,&$params){
+		private function executeMethod($path,$path_array,$direct,&$params) {
 
-			$path = str_replace('-','',$path_array[0]);
+			$path = str_replace('-', '', $path_array[0]);
 
-			if( method_exists($this,$path) ){
-			   try{
-					$params = array_merge($this->checkPermissions($path,$direct),$params);
-					if( !$this->isError() ){ $this->$path($params); }
-				} catch (Exception $e){ $this->throwError($e->getMessage()); }
+			if (method_exists($this, $path)) {
+				try {
+					$params = array_merge($this->checkPermissions($path, $direct), $params);
+					if (!$this->isError()) {
+						$this->$path($params);
+					}
+				} catch (Exception $e) {
+					$this->throwError($e->getMessage());
+					$this->logError(oProjectEnum::ODBO,$e);
+				}
 				return $this;
-		    } else if( method_exists($this,"index") ) {
-				try{
-					$params = array_merge($this->checkPermissions("index",$direct),$params);
-					if( !$this->isError() ){ $this->index($params); }
-				} catch (Exception $e){ $this->throwError($e->getMessage()); }
-		    	return $this;
-		    } else {
-		    	return $this->findMissingRoute($path,$params);
-		    }
+			} else if (method_exists($this, "index")) {
+				try {
+					$params = array_merge($this->checkPermissions("index", $direct), $params);
+					if (!$this->isError()) {
+						$this->index($params);
+					}
+				} catch (Exception $e) {
+					$this->throwError($e->getMessage());
+					$this->logError(oProjectEnum::ODBO,$e);
+				}
+				return $this;
+			} else {
+				return $this->findMissingRoute($path, $params);
+			}
 		}
 
 		/***********************************************************************
@@ -640,6 +651,43 @@
 	    }
 		public function isError(){ return $this->is_error; }
 
+		public function getStackTrace($exception) {
+			$stackTrace = "";
+			$count = 0;
+			foreach ($exception->getTrace() as $frame) {
+				$args = "";
+				if (isset($frame['args'])) {
+					$args = array();
+					foreach ($frame['args'] as $arg) {
+						if (is_string($arg)) {
+							$args[] = "'" . $arg . "'";
+						} elseif (is_array($arg)) {
+							$args[] = "Array";
+						} elseif (is_null($arg)) {
+							$args[] = 'NULL';
+						} elseif (is_bool($arg)) {
+							$args[] = ($arg) ? "true" : "false";
+						} elseif (is_object($arg)) {
+							$args[] = get_class($arg);
+						} elseif (is_resource($arg)) {
+							$args[] = get_resource_type($arg);
+						} else {
+							$args[] = $arg;
+						}
+					}
+					$args = join(", ", $args);
+				}
+				$stackTrace .= sprintf( "#%s %s(%s): %s(%s)\n",
+					$count,
+					$frame['file'],
+					$frame['line'],
+					$frame['function'],
+					$args );
+				$count++;
+			}
+			return $stackTrace;
+		}
+
 		/***********************************************************************
 
 			GETTER AND SETTER FUNCTIONS
@@ -668,6 +716,30 @@
 
 		public function startSocketServer( $params=array() ){
 
+		}
+
+		/***********************************************************************
+
+		LOGGING FUNCTIONS
+
+		 ***********************************************************************/
+
+		public function logError($oProjectEnum, Exception $exception, $customMessage="") {
+			$logger = new oLog();
+			$logger->logError($oProjectEnum, $exception, $customMessage);
+			return;
+		}
+
+		public function logInfo($oProjectEnum, $message) {
+			$logger = new oLog();
+			$logger->logInfo($oProjectEnum, $message);
+			return;
+		}
+
+		public function logDebug($oProjectEnum, $message) {
+			$logger = new oLog();
+			$logger->logInfo($oProjectEnum, $message);
+			return;
 		}
 
 	}

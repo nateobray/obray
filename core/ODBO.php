@@ -923,21 +923,30 @@
 
         ********************************************************************/
 
-        public function run( $sql ){
+        public function run( $sql ) {
 
-        	if( is_array($sql) ){ $sql = $sql["sql"]; }
-	        $statement = $this->dbh->prepare($sql);
-            $result = $statement->execute();
+			if (is_array($sql)) {
+				$sql = $sql["sql"];
+			}
+			$statement = $this->dbh->prepare($sql);
+			$result = $statement->execute();
 			$this->data = [];
-			if(preg_match("/^select/i",$sql)){
+			if (preg_match("/^select/i", $sql)) {
 				$statement->setFetchMode(PDO::FETCH_OBJ);
-				try { while ($row = $statement->fetch()) { $this->data[] = $row; } } catch(Exception $e) {	$this->throwError($e); }
+				try {
+					while ($row = $statement->fetch()) {
+						$this->data[] = $row;
+					}
+				} catch (Exception $e) {
+					$this->throwError($e);
+					$this->logError(oProjectEnum::ODBO,$e);
+				}
 			} else {
 				$this->data = $result;
 			}
-			
+
 			return $this;
-        }
+		}
 
         /********************************************************************
 
