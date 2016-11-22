@@ -416,6 +416,7 @@
 
 				        } catch (Exception $e){
 				        	$this->throwError($e->getMessage());
+							$this->logError(oProjectEnum::OOBJECT,$e);
 				       	}
 
 					}
@@ -437,25 +438,35 @@
 
 		***********************************************************************/
 
-		private function executeMethod($path,$path_array,$direct,&$params){
+		private function executeMethod($path,$path_array,$direct,&$params) {
 
-			$path = str_replace('-','',$path_array[0]);
+			$path = str_replace('-', '', $path_array[0]);
 
-			if( method_exists($this,$path) ){
-			   try{
-					$params = array_merge($this->checkPermissions($path,$direct),$params);
-					if( !$this->isError() ){ $this->$path($params); }
-				} catch (Exception $e){ $this->throwError($e->getMessage()); }
+			if (method_exists($this, $path)) {
+				try {
+					$params = array_merge($this->checkPermissions($path, $direct), $params);
+					if (!$this->isError()) {
+						$this->$path($params);
+					}
+				} catch (Exception $e) {
+					$this->throwError($e->getMessage());
+					$this->logError(oProjectEnum::ODBO,$e);
+				}
 				return $this;
-		    } else if( method_exists($this,"index") ) {
-				try{
-					$params = array_merge($this->checkPermissions("index",$direct),$params);
-					if( !$this->isError() ){ $this->index($params); }
-				} catch (Exception $e){ $this->throwError($e->getMessage()); }
-		    	return $this;
-		    } else {
-		    	return $this->findMissingRoute($path,$params);
-		    }
+			} else if (method_exists($this, "index")) {
+				try {
+					$params = array_merge($this->checkPermissions("index", $direct), $params);
+					if (!$this->isError()) {
+						$this->index($params);
+					}
+				} catch (Exception $e) {
+					$this->throwError($e->getMessage());
+					$this->logError(oProjectEnum::ODBO,$e);
+				}
+				return $this;
+			} else {
+				return $this->findMissingRoute($path, $params);
+			}
 		}
 
 		/***********************************************************************
@@ -682,6 +693,30 @@
 
 		public function startSocketServer( $params=array() ){
 
+		}
+
+		/***********************************************************************
+
+		LOGGING FUNCTIONS
+
+		 ***********************************************************************/
+
+		public function logError($oProjectEnum, Exception $exception, $customMessage="") {
+			$logger = new oLog();
+			$logger->logError($oProjectEnum, $exception, $customMessage);
+			return;
+		}
+
+		public function logInfo($oProjectEnum, $message) {
+			$logger = new oLog();
+			$logger->logInfo($oProjectEnum, $message);
+			return;
+		}
+
+		public function logDebug($oProjectEnum, $message) {
+			$logger = new oLog();
+			$logger->logInfo($oProjectEnum, $message);
+			return;
 		}
 
 	}
