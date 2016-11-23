@@ -738,7 +738,7 @@
 
 		public function logDebug($oProjectEnum, $message) {
 			$logger = new oLog();
-			$logger->logInfo($oProjectEnum, $message);
+			$logger->logDebug($oProjectEnum, $message);
 			return;
 		}
 
