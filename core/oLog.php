@@ -53,10 +53,10 @@ class oLog extends OObject {
     }
 
     private function writeLog($filepath, $message) {
-        if(!file_exists(dirname($filepath))) {
-            mkdir(dirname($filepath),0755, true);
-        }
-        //file_put_contents($filepath, $message.PHP_EOL, FILE_APPEND | LOCK_EX);
+//        if(!file_exists(dirname($filepath))) {
+//            mkdir(dirname($filepath),0755, true);
+//        }
+//        file_put_contents($filepath, $message.PHP_EOL, FILE_APPEND | LOCK_EX);
 
     }
 }
