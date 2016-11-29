@@ -57,5 +57,6 @@ class oLog extends OObject {
             mkdir(dirname($filepath),0755, true);
         }
         file_put_contents($filepath, $message.PHP_EOL, FILE_APPEND | LOCK_EX);
+        chmod($filepath, 0666);
     }
 }
