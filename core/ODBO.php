@@ -939,7 +939,7 @@
 					}
 				} catch (Exception $e) {
 					$this->throwError($e);
-					$this->logError(oProjectEnum::ODBO,$e);
+					$this->logError(oCoreProjectEnum::ODBO,$e);
 				}
 			} else {
 				$this->data = $result;
