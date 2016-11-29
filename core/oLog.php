@@ -2,12 +2,9 @@
 
 if (!class_exists( 'OObject' )) { die(); }
 
-class oProjectEnum {
-    const ANALYTICS = 'Analytics';
-    const INVENTORY = 'Inventory';
-    Const ODBO = 'ODBO';
-    Const OOBJECT = 'OObject';
-    const REPORTS = 'Reports';
+class oCoreProjectEnum {
+    const ODBO = 'ODBO';
+    const OOBJECT = 'OObject';
 }
 
 class oLogTypeEnum {
@@ -28,7 +25,11 @@ class oLog extends OObject {
     }
 
     public function logError($oProjectEnum, Exception $exception, $customMessage=""){
-        $message = $exception->getMessage().PHP_EOL.$this->getStackTrace($exception);
+        $message = $exception->getMessage().PHP_EOL;
+        if($customMessage != "") {
+            $message .= "Custom Message: ".$customMessage.PHP_EOL;
+        }
+        $message .= $this->getStackTrace($exception);
         $filepath = $this->getFilePath($oProjectEnum, oLogTypeEnum::ERROR);
         $message = date('Y-m-d h:i:s', time()).' '.$message.PHP_EOL;
         $this->writeLog($filepath, $message);
@@ -47,7 +48,7 @@ class oLog extends OObject {
     }
 
     private function getFilePath($oProjectEnum, $oLogTypeEnum) {
-        $filepath = __LOGS__.__APP__.'/'.$oProjectEnum.'/'.$oLogTypeEnum.'/'.Date('Y-m-d').'_'.$oProjectEnum.'.log';
+        $filepath = __LOGS__.__APP__.'/'.$oProjectEnum.'/'.$oLogTypeEnum.'/'.Date('Y-m-d').'_'.$oProjectEnum.'_'.$oLogTypeEnum.'.log';
         return $filepath;
     }
 
