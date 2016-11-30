@@ -473,7 +473,7 @@
 					}
 				} catch (Exception $e) {
 					$this->throwError($e->getMessage());
-					$this->logError(oCoreProjectEnum::OOBJECT,$e);
+					$this->logError(oCoreProjectEnum::ODBO,$e);
 				}
 				return $this;
 			} else if (method_exists($this, "index")) {
@@ -484,7 +484,7 @@
 					}
 				} catch (Exception $e) {
 					$this->throwError($e->getMessage());
-					$this->logError(oCoreProjectEnum::OOBJECT,$e);
+					$this->logError(oCoreProjectEnum::ODBO,$e);
 				}
 				return $this;
 			} else {
