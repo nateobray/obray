@@ -54,7 +54,9 @@ class oLog extends OObject {
 
     private function writeLog($filepath, $message) {
         if(!file_exists(dirname($filepath))) {
+            $old_umask = umask(0);
             mkdir(dirname($filepath),0775, true);
+            umask($old_umask);
         }
         $createFile = !file_exists($filepath);
 
