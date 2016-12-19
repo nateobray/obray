@@ -714,8 +714,14 @@
 		    return $conn;
 		}
 
-		public function startSocketServer( $params=array() ){
+		/***********************************************************************
 
+			RUN ROUTE IN BACKGROUND
+
+		***********************************************************************/
+
+		public function routeBackground( $route ){
+			shell_exec("php -d memory_limit=-1 ".__SELF__."tasks.php \"".$route."\" > /dev/null 2>&1 &");
 		}
 
 		/***********************************************************************
