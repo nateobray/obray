@@ -73,7 +73,7 @@
 
 	    public function startTransaction(){
 	    	$this->dbh->beginTransaction();
-	    	$this->is_tranaction = TRUE;
+	    	$this->is_transaction = TRUE;
 	    }
 
 	    public function commitTransaction(){
@@ -321,11 +321,11 @@
         		}
         	}
         	$this->script = $statement->execute();
-        	
+        	if( empty($this->is_transaction) ){
 				$get_params = array( $this->primary_key_column => $this->dbh->lastInsertId() );
 				if( !empty($option_is_set) ){ $get_params["with"] = "options"; }
 				$this->get( $get_params );
-			
+			}
 
         }
 
