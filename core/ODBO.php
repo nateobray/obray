@@ -71,6 +71,21 @@
 
 	    }
 
+	    public function startTransaction(){
+	    	$this->dbh->beginTransaction();
+	    	$this->is_tranaction = TRUE;
+	    }
+
+	    public function commitTransaction(){
+	    	$this->dbh->commit();
+	    	$this->is_transaction = FALSE;
+	    }
+
+	    public function rollbackTransaction(){
+	    	$this->dbh->rollBack();
+	    	$this->is_transaction = FALSE;
+	    }
+
 	    public function getOptions( $params=array() ){
 	    	$this->data = FALSE;
 	    	if( !empty($this->table_definition[$params["column"]]["options"]) ){
@@ -306,9 +321,11 @@
         		}
         	}
         	$this->script = $statement->execute();
-			$get_params = array( $this->primary_key_column => $this->dbh->lastInsertId() );
-			if( !empty($option_is_set) ){ $get_params["with"] = "options"; }
-			$this->get( $get_params );
+        	//if( empty($this->is_transaction) ){
+			//	$get_params = array( $this->primary_key_column => $this->dbh->lastInsertId() );
+			//	if( !empty($option_is_set) ){ $get_params["with"] = "options"; }
+			//	$this->get( $get_params );
+			//}
 
         }
 
@@ -385,9 +402,13 @@
         		}
         	}
         	$this->script = $statement->execute();
-			$get_params = array($this->primary_key_column=>$params[$this->primary_key_column]);
-			if( !empty($option_is_set) ){ $get_params["with"] = "options"; }
-			$this->get( $get_params );
+
+        	if( empty($this->is_transaction) ){
+				$get_params = array($this->primary_key_column=>$params[$this->primary_key_column]);
+				if( !empty($option_is_set) ){ $get_params["with"] = "options"; }
+				$this->get( $get_params );
+			}
+			
 
         }
 
