@@ -971,6 +971,43 @@
 
         /********************************************************************
 
+        runStoredProc
+
+         ********************************************************************/
+
+        public function runStoredProc($proc, $params=array()) {
+            $this->data = [];
+            $paramString = "";
+            $paramCount = 0;
+            foreach ($params as $paramName => $paramValue) {
+                if ($paramCount > 0) {
+                    $paramString .= ",";
+                }
+                $paramString .= ":" . $paramName;
+                $paramCount++;
+            }
+
+            $procString = "CALL " . $proc . "(" . $paramString . ")";
+            $statement = $this->dbh->prepare($procString);
+            if ($paramCount > 0) {
+                foreach ($params as $paramName => $paramValue) {
+                    $statement->bindValue(':' . $paramName, $paramValue);
+                }
+            }
+
+            try {
+                $statement->execute();
+                $statement->setFetchMode(PDO::FETCH_OBJ);
+                $this->data = $statement->fetchAll();
+            } catch (Exception $e) {
+                $this->throwError($e);
+                $this->logError(oCoreProjectEnum::ODBO, $e);
+            }
+            return $this->data;
+        }
+
+        /********************************************************************
+
 			COUNT
 
         ********************************************************************/
