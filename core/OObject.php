@@ -394,7 +394,7 @@
 				}
 
 				$obj_name = array_pop($path_array);
-				$this->controller_path = __OBRAY_SITE_ROOT__."controllers/".implode('/',$path_array).'/c'.str_replace(' ','',ucWords( str_replace('-',' ',$obj_name) ) ).'.php';
+				$this->controller_path = __OBRAY_SITE_ROOT__."controllers/".implode('/',$path_array).'/c'.str_replace(' ','',ucWords( str_replace('-',' ',strtolower($obj_name)) ) ).'.php';
 				$this->model_path = $base_path . implode('/',$path_array).'/'.$obj_name.'.php';
 
 				if( file_exists( $this->model_path ) ){
@@ -402,7 +402,7 @@
 					$this->path = $this->model_path;
 				} else if( file_exists( $this->controller_path ) ){
 					$objectType = "controller";
-					$obj_name = "c".str_replace(' ','',ucWords( str_replace('-',' ',$obj_name) ) );
+					$obj_name = "c".str_replace(' ','',ucWords( str_replace('-',' ',strtolower($obj_name)) ) );
 					$this->path = $this->controller_path;
 					// include the root controller
 					if( file_exists( __OBRAY_SITE_ROOT__ . "controllers/cRoot.php" ) ){ require_once __OBRAY_SITE_ROOT__."controllers/cRoot.php"; }
