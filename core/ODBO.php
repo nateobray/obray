@@ -77,6 +77,9 @@
 	    }
 
 	    public function commitTransaction(){
+	    	if(!$this->is_transaction){
+	    		return;  //This likely means that the transaction was rolled back and should therefore not be committed. (that or there was never a transaction to begin with).
+			}
 	    	$this->dbh->commit();
 	    	$this->is_transaction = FALSE;
 	    }
@@ -944,30 +947,37 @@
 
         ********************************************************************/
 
-        public function run( $sql ) {
+        public function run( $sql )
+        {
 
-			if (is_array($sql)) {
-				$sql = $sql["sql"];
-			}
-			$statement = $this->dbh->prepare($sql);
-			$result = $statement->execute();
-			$this->data = [];
-			if (preg_match("/^select/i", $sql)) {
-				$statement->setFetchMode(PDO::FETCH_OBJ);
-				try {
-					while ($row = $statement->fetch()) {
-						$this->data[] = $row;
-					}
-				} catch (Exception $e) {
-					$this->throwError($e);
-					$this->logError(oCoreProjectEnum::ODBO,$e);
-				}
-			} else {
-				$this->data = $result;
-			}
+            if (is_array($sql)) {
+                $sql = $sql["sql"];
+            }
+            try {
+                $statement = $this->dbh->prepare($sql);
+                $result = $statement->execute();
+                $this->data = [];
+                if (preg_match("/^select/i", $sql)) {
+                    $statement->setFetchMode(PDO::FETCH_OBJ);
 
-			return $this;
-		}
+                    while ($row = $statement->fetch()) {
+                        $this->data[] = $row;
+                    }
+                }
+                else {
+                    $this->data = $result;
+                }
+            }
+            catch (Exception $e) {
+                if (isset($this->is_transaction) && $this->is_transaction) {
+                    $this->rollbackTransaction();
+                }
+                $this->throwError($e);
+                $this->logError(oCoreProjectEnum::ODBO, $e);
+            }
+
+            return $this;
+        }
 
         /********************************************************************
 
@@ -1000,6 +1010,9 @@
                 $statement->setFetchMode(PDO::FETCH_OBJ);
                 $this->data = $statement->fetchAll();
             } catch (Exception $e) {
+            	if(isset($this->is_transaction) && $this->is_transaction){
+            		$this->rollbackTransaction();
+				}
                 $this->throwError($e);
                 $this->logError(oCoreProjectEnum::ODBO, $e);
             }
