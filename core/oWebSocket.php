@@ -64,29 +64,40 @@
 		public function __construct($params){
 
 			/*************************************************************************************************
-				
+
 				1.  Establish a connection on specified host and port
 
 			*************************************************************************************************/
 
 			$this->host = !empty($params["host"])?$params["host"]:"localhost";
 			$this->port = !empty($params["port"])?$params["port"]:"80";
+			$this->debug = FALSE;
+			if( !empty($params["debug"]) ){
+				$this->debug = TRUE;
+			}
 
 			if( __WEB_SOCKET_PROTOCOL__ == "ws" ){
 				$protocol = "tcp";
-				$context = 		stream_context_create();	
+				$context = 		stream_context_create();
 			} else {
 				$protocol = "ssl";
-				$context = 		stream_context_create( array( "ssl" => array( "local_cert"=>__WEB_SOCKET_CERT__, "local_pk"=>__WEB_SOCKET_KEY__, "passphrase" => __WEB_SOCKET_KEY_PASS__ ) ) );	
+				$context = 		stream_context_create( array( "ssl" => array( "local_cert"=>__WEB_SOCKET_CERT__, "local_pk"=>__WEB_SOCKET_KEY__, "passphrase" => __WEB_SOCKET_KEY_PASS__ ) ) );
 			}
+
 			$listenstr = 	$protocol."://".$this->host.":".$this->port;
 			$this->console("Binding to ".$this->host.":".$this->port." over ".$protocol."\n");
-			$this->socket = stream_socket_server($listenstr,$errno,$errstr,STREAM_SERVER_BIND|STREAM_SERVER_LISTEN,$context);
-			$this->console("%s","Listending...\n","GreenBold");
+			$this->socket = @stream_socket_server($listenstr,$errno,$errstr,STREAM_SERVER_BIND|STREAM_SERVER_LISTEN,$context);
+
+			if( !is_resource($this->socket) ){
+				$this->console("%s",$errstr."\n","RedBold");
+				$this->throwError($errstr);
+				return;
+			}
+
+			$this->console("%s","Listening...\n","GreenBold");
 
 			$this->sockets = array( $this->socket );
 			$this->cData = array();
-			//$changed = $this->sockets;
 
 			while(true){
 
@@ -96,8 +107,8 @@
 
 				/*************************************************************************************************
 
-					2.	Check for new connections: Basically we're checking to see if our original socket has 
-						been added to the changed array and if so we now it has a new connection waiting to be 
+					2.	Check for new connections: Basically we're checking to see if our original socket has
+						been added to the changed array and if so we now it has a new connection waiting to be
 						handled.
 
 						//	1.	accpet new socket
@@ -110,19 +121,17 @@
 				*************************************************************************************************/
 
 				if( in_array($this->socket,$changed) ){
-					
+
 					$this->console("Attempting to connect a new client.\n");
 					$new_socket = @stream_socket_accept($this->socket);								//	1.	accpet new socket
 					if( $new_socket !== FALSE ){
-						
+
 						$this->sockets[] = $new_socket; 											//	2.	add socket to socket list
 						$request = fread($new_socket, 2046);
-						$this->console($request);
+						//$this->console($request);
 						$this->console("Performing websocket handshake.\n");
 						$ouser = $this->handshake($request, $new_socket); 							//	4.	perform websocket handshake
 						if( !empty($ouser) ){
-
-							$this->console($ouser);
 
 							$this->cData[ array_search($new_socket,$this->sockets) ] = $ouser;		//	5.	store the client data
 							$this->console($ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged on.\n");
@@ -148,7 +157,7 @@
 						$found_socket = array_search($this->socket, $changed);
 						unset($changed[$found_socket]);
 					}
-					
+
 				}
 
 				/*************************************************************************************************
@@ -159,8 +168,8 @@
 						//	2.	if EOF then close connection.
 
 				*************************************************************************************************/
-				
-				
+
+
 				if( !empty($changed) ){
 					//$this->console("%s","\n***********************************************\n","WhiteBold");
 					//$this->console("%s","\tMessage Received: ".count($changed)."\n","WhiteBold");
@@ -177,8 +186,8 @@
 
 						$this->console("Buffer read.\n");
 						$this->decode($buf,$changed_socket);
-						
-						break;	
+
+						break;
 					} else if( $buf === FALSE || empty($buf) ){
 						$this->console("Disconnecting user.\n");
 						// remove client for $clients array
@@ -186,10 +195,10 @@
 
 						$this->console("%s","Attempting to disconnect index: ".$found_socket."\n","Red");
 						stream_socket_shutdown($changed_socket,STREAM_SHUT_RDWR);
-						
+
 						$ouser = $this->cData[$found_socket];
 						$this->console("%s",$ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged off.\n","Red");
-						
+
 						unset($this->cData[$found_socket]);
 						unset($this->sockets[$found_socket]);
 
@@ -204,22 +213,22 @@
 						$msg = (object)array( 'channel'=>'all', 'type'=>'list', 'message'=>$this->cData);
 						$this->send($msg);
 						break;
-						
-						
-						
+
+
+
 					}
-					
+
 				}
 
 
-				
+
 
 			}
 
 		}
 
 		/*****************************************************************************
-			
+
 			Decode: We have to manipulate some bits based on the spec.  Currently
 					there is a limit to the number of bits we can send, but that
 					is easily remedied by modifying this function.
@@ -263,10 +272,10 @@
 
 			$mask_key_bits = array();
 			$mask_key = array_splice($ascii_array,0,4);
-			
+
 			$encoded_bits = array();
 			$encoded = array_splice($ascii_array,0,$frame->len);
-			
+
 			$frame->msg = array();
 			for( $i=0;$i<count($encoded);++$i ){
 				$frame->msg[] = chr($encoded[$i] ^ $mask_key[$i%4]);
@@ -280,7 +289,7 @@
 			if( !empty($ascii_array) ){
 				$this->decode($ascii_array,$changed_socket);
 			}
-			
+
 		}
 
 		/********************************************************************************************************************
@@ -294,7 +303,7 @@
 		public function onData( $frame, $changed_socket ){
 
 			$msg = json_decode($frame->msg);
-			
+
 			$found_socket = array_search($changed_socket, $this->sockets);
 
 			if( !empty($msg->type) ){
@@ -305,6 +314,7 @@
 						$this->cData[ $found_socket ]->subscriptions[ $msg->channel ] = TRUE;
 						$this->console("done\n");
 						break;
+						
 					case 'unsubscribe':
 						$this->console("Received unsubscribe, unsubcribing...");
 						forEach( $this->cData[ $found_socket ]->subscriptions as $key => $subscription ){
@@ -312,6 +322,7 @@
 						}
 						$this->console("done\n");
 						break;
+
 					case 'broadcast': case 'navigate':
 						$this->console("Received broadcast, sending...");
 						$response = $this->send($msg);
@@ -352,21 +363,23 @@
 
 		********************************************************************************************************************/
 
-		function send($msg){			
+		function send($msg){
 			$msg_sent = FALSE;
 			foreach( array_keys($this->sockets) as $changed_key){
 				$send_socket = $this->sockets[$changed_key];
 				if( !empty($this->cData[ $changed_key ]) && !empty($this->cData[ $changed_key ]->subscriptions[$msg->channel]) ){
-					$this->console("Sending message to ".$this->cData[ $changed_key ]->ouser_first_name." ".$this->cData[ $changed_key ]->ouser_last_name."\n");
-					$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
-					$this->console( json_encode($msg) );
-					$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
+					if( $this->debug ){
+						$this->console("Sending message to ".$this->cData[ $changed_key ]->ouser_first_name." ".$this->cData[ $changed_key ]->ouser_last_name."\n");
+						$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
+						$this->console( json_encode($msg) );
+						$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
+					}
 					$message =  $this->mask( json_encode($msg) );
 					fwrite($this->sockets[$changed_key], $message, strlen($message));
 					$msg_sent = TRUE;
 				}
 			}
-			
+
 			return $msg_sent;
 		}
 
@@ -382,10 +395,12 @@
 		********************************************************************************************************************/
 
 		function handshake($request,$conn){
-			
-			$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
-			$this->console($request);
-			$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
+
+			if( $this->debug ){
+				$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
+				$this->console($request);
+				$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
+			}
 
 			preg_match('/(?<=GET \/\?ouser_id=)([0-9]*)/',$request,$matches);
 
@@ -396,7 +411,7 @@
 				$this->setDatabaseConnection(getDatabaseConnection(true));
 				$this->console( 'retreiving user: /obray/OUsers/get/?ouser_id='.$ouser_id.'&with=options'."\n" );
 				$ouser = $this->route('/obray/OUsers/get/?ouser_id='.$ouser_id.'&with=options');
-				$this->console($ouser);
+
 				if( !empty($ouser->data[0]) ){
 					$ouser = $ouser->data[0];
 				} else {
@@ -412,13 +427,13 @@
 			$headers = array();
 			foreach($lines as $line){
 				$line = chop($line);
-				if(preg_match('/\A(\S+): (.*)\z/', $line, $matches)){  
-					$headers[$matches[1]] = $matches[2];  
+				if(preg_match('/\A(\S+): (.*)\z/', $line, $matches)){
+					$headers[$matches[1]] = $matches[2];
 					$ouser->connection->{$matches[1]} = $matches[2];
 				}
 			}
 
-			// 3.	Prepare/send response			
+			// 3.	Prepare/send response
 			$secKey = $headers['Sec-WebSocket-Key'];
 			$secAccept = base64_encode(pack('H*', sha1($secKey . '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')));
 			//hand shaking header
@@ -429,13 +444,15 @@
 			"WebSocket-Location: ws://$this->host:$this->port/\r\n".
 			"Sec-WebSocket-Accept:$secAccept\r\n\r\n";
 
-			$this->console("Send upgrade request headers.\n");
-			$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
-			$this->console( $upgrade );
-			$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
-			$this->console($conn);
+			if( $this->debug ){
+				$this->console("Send upgrade request headers.\n");
+				$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
+				$this->console( $upgrade );
+				$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
+				$this->console($conn);
+			}
 			fwrite($conn,$upgrade,strlen($upgrade));
-			
+
 			return $ouser;
 
 		}
@@ -479,7 +496,7 @@
 
 			$b1 = 0x80 | (0x1 & 0x0f);
 			$length = strlen($text);
-			
+
 			if($length <= 125)
 				$header = pack('CC', $b1, $length);
 			elseif($length > 125 && $length < 65536)
