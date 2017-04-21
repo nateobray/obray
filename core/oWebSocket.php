@@ -340,19 +340,24 @@
 						break;
 
 					default:
-						$this->console("Unknown message received:\n");
-						$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
-						$this->console( $frame->msg );
-						$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
+						$this->console("Unknown message received:".$msg->type."\n");
+						if( $this->debug ){
+							$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
+							$this->console( $frame->msg );
+							$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
+						}
 						break;
+
 
 				}
 
 			} else {
 				$this->console("Unknown message received:\n");
-				$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
-				$this->console( $frame->msg );
-				$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
+				if( $this->debug ){
+					$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
+					$this->console( $frame->msg );
+					$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
+				}
 			}
 
 		}
@@ -370,9 +375,11 @@
 				if( !empty($this->cData[ $changed_key ]) && !empty($this->cData[ $changed_key ]->subscriptions[$msg->channel]) ){
 					if( $this->debug ){
 						$this->console("Sending message to ".$this->cData[ $changed_key ]->ouser_first_name." ".$this->cData[ $changed_key ]->ouser_last_name."\n");
-						$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
-						$this->console( json_encode($msg) );
-						$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
+						if( $this->debug ){
+							$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
+							$this->console( json_encode($msg) );
+							$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
+						}
 					}
 					$message =  $this->mask( json_encode($msg) );
 					fwrite($this->sockets[$changed_key], $message, strlen($message));
