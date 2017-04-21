@@ -184,12 +184,9 @@
 					$buf = fread($changed_socket, 2048);
 					if( $buf !== FALSE && !empty($buf) ){
 
-						$this->console("Buffer read.\n");
-						$this->console($buf);
-						$this->console("\n");
 						$this->decode($buf,$changed_socket);
-
 						break;
+						
 					} else if( $buf === FALSE || empty($buf) ){
 						$this->console("Disconnecting user.\n");
 						// remove client for $clients array
@@ -222,9 +219,6 @@
 					}
 
 				}
-
-
-
 
 			}
 
@@ -305,9 +299,8 @@
 
 		public function onData( $frame, $changed_socket ){
 
-			$this->console($frame);
+			if( $frame->len == 0 ){ return; }
 			$msg = json_decode($frame->msg);
-
 			$found_socket = array_search($changed_socket, $this->sockets);
 
 			if( !empty($msg->type) ){
@@ -340,7 +333,12 @@
 					case 'list':
 						$this->console("Received list, sending...");
 						$msg = (object)array( 'channel'=>'all', 'type'=>'list', 'message'=>$this->cData);
-						$this->send($msg);
+						$response = $this->send($msg);
+						if( $response ){
+							$this->console("%s","done\n","GreenBold");
+						} else {
+							$this->console("%s","unabel to deliver message.\n","RedBold");
+						}
 						break;
 
 					default:
