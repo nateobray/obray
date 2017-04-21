@@ -182,12 +182,12 @@
 
 					//	1.	read from changed sockets
 					$buf = fread($changed_socket, 2048);
-					if( $buf !== FALSE && !empty($buf) ){
+					if( $buf !== FALSE && !empty($buf) && !feof($changed_socket) ){
 
 						$this->decode($buf,$changed_socket);
 						break;
-						
-					} else if( $buf === FALSE || empty($buf) ){
+
+					} else if( $buf === FALSE || empty($buf) || feof($changed_socket) ){
 						$this->console("Disconnecting user.\n");
 						// remove client for $clients array
 						$found_socket = array_search($changed_socket, $this->sockets);
