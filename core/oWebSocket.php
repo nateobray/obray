@@ -186,6 +186,7 @@
 
 						$this->console("Buffer read.\n");
 						$this->console($buf);
+						$this->console("\n");
 						$this->decode($buf,$changed_socket);
 
 						break;
@@ -213,7 +214,7 @@
 						$this->console("Received list, sending...");
 						$msg = (object)array( 'channel'=>'all', 'type'=>'list', 'message'=>$this->cData);
 						$this->send($msg);
-						$this->console("%s","done","GreenBold");
+						$this->console("%s","done\n","GreenBold");
 						break;
 
 
@@ -304,6 +305,7 @@
 
 		public function onData( $frame, $changed_socket ){
 
+			$this->console($frame);
 			$msg = json_decode($frame->msg);
 
 			$found_socket = array_search($changed_socket, $this->sockets);
