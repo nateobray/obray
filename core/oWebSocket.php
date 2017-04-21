@@ -314,7 +314,7 @@
 						$this->cData[ $found_socket ]->subscriptions[ $msg->channel ] = TRUE;
 						$this->console("done\n");
 						break;
-						
+
 					case 'unsubscribe':
 						$this->console("Received unsubscribe, unsubcribing...");
 						forEach( $this->cData[ $found_socket ]->subscriptions as $key => $subscription ){
@@ -434,6 +434,7 @@
 			}
 
 			// 3.	Prepare/send response
+			if( empty(Sec-WebSocket-Key) ){ $headers['Sec-WebSocket-Key']; return; }
 			$secKey = $headers['Sec-WebSocket-Key'];
 			$secAccept = base64_encode(pack('H*', sha1($secKey . '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')));
 			//hand shaking header
