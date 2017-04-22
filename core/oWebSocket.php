@@ -187,7 +187,7 @@
 
 						// this prevent possible endless loops
 						$stream_meta_data = stream_get_meta_data($changed_socket);
-         				if($stream_meta_data['unread_bytes'] <= 0){ break };
+         				if( $stream_meta_data['unread_bytes'] <= 0 ){ break; }
 
 						break;
 
