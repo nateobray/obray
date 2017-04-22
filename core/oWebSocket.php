@@ -169,22 +169,26 @@
 
 				*************************************************************************************************/
 
-
-				if( !empty($changed) ){
-					//$this->console("%s","\n***********************************************\n","WhiteBold");
-					//$this->console("%s","\tMessage Received: ".count($changed)."\n","WhiteBold");
-					//$this->console("%s","***********************************************\n","WhiteBold");
-				}
-
 				foreach ( array_keys($changed) as $changed_key) {
 
 					$changed_socket = $changed[$changed_key];
 
-					//	1.	read from changed sockets
-					$buf = fread($changed_socket, 2048);
 					if( !feof($changed_socket) ){
 
+						//	1.	read from changed sockets
+						try{
+							$buf = fread($changed_socket, 2048);
+						} catch(Exception $err) {
+							$this->console("%s","Unable to read form socket...".$err->getMessage()."\n","RedBold");
+							break;
+						}
+
 						$this->decode($buf,$changed_socket);
+
+						// this prevent possible endless loops
+						$stream_meta_data = stream_get_meta_data($changed_socket);
+         				if($stream_meta_data['unread_bytes'] <= 0){ break };
+
 						break;
 
 					} else if( feof($changed_socket) ){
@@ -224,78 +228,12 @@
 
 		}
 
-		/*****************************************************************************
-
-			Decode: We have to manipulate some bits based on the spec.  Currently
-					there is a limit to the number of bits we can send, but that
-					is easily remedied by modifying this function.
-
-		*****************************************************************************/
-		private function decode( $msg,$changed_socket ){
-
-			$frame = new stdClass();
-			if( !is_array($msg) ){
-				$ascii_array = array_map("ord",str_split( $msg ));
-			} else {
-				$ascii_array = $msg;
-			}
-			$binary_array = array_map("decbin",$ascii_array);
-			$binary_array = str_split(implode("",$binary_array));
-
-			// FIN bit
-			$FIN_bit = array_shift($binary_array);
-			$frame->FIN = (int)$FIN_bit;
-
-			// RSV 1
-			$RSV_1 = array_shift($binary_array);
-			// RSV 2
-			$RSV_2 = array_shift($binary_array);
-			// RSV 3
-			$RSV_3 = array_shift($binary_array);
-
-			// opcode
-			$opcode_bits = implode("",array_splice($binary_array,0,4));
-			$frame->opcode =  bindec( $opcode_bits );
-
-			// MASK Bit
-			$mask_bit = array_shift($binary_array);
-			$frame->mask = (int)$mask_bit;
-
-			// Length Bits
-			$len_bits = implode("",array_splice($binary_array,0,7));
-			$frame->len = bindec( $len_bits );
-
-			$header = array_splice($ascii_array,0,2);
-
-			$mask_key_bits = array();
-			$mask_key = array_splice($ascii_array,0,4);
-
-			$encoded_bits = array();
-			$encoded = array_splice($ascii_array,0,$frame->len);
-
-			$frame->msg = array();
-			for( $i=0;$i<count($encoded);++$i ){
-				$frame->msg[] = chr($encoded[$i] ^ $mask_key[$i%4]);
-			}
-			$frame->msg = implode("",$frame->msg);
-
-			if( $frame->FIN === 1 && $frame->opcode = 1 ){
-				$this->onData( $frame,$changed_socket );
-			}
-
-			if( !empty($ascii_array) ){
-				$this->decode($ascii_array,$changed_socket);
-			}
-
-		}
-
 		/********************************************************************************************************************
 
 			onData: this function is called when we are done decoding a full message.  It determines how to handle
 					the incoming message.
 
 		********************************************************************************************************************/
-
 
 		public function onData( $frame, $changed_socket ){
 
@@ -462,6 +400,71 @@
 
 		/********************************************************************************************************************
 
+			Decode: We have to manipulate some bits based on the spec.  Currently there is a limit to the number of
+			 		bits we can send, but that is easily remedied by modifying this function.
+
+		********************************************************************************************************************/
+
+		private function decode( $msg,$changed_socket ){
+
+			$frame = new stdClass();
+			if( !is_array($msg) ){
+				$ascii_array = array_map("ord",str_split( $msg ));
+			} else {
+				$ascii_array = $msg;
+			}
+			$binary_array = array_map("decbin",$ascii_array);
+			$binary_array = str_split(implode("",$binary_array));
+
+			// FIN bit
+			$FIN_bit = array_shift($binary_array);
+			$frame->FIN = (int)$FIN_bit;
+
+			// RSV 1
+			$RSV_1 = array_shift($binary_array);
+			// RSV 2
+			$RSV_2 = array_shift($binary_array);
+			// RSV 3
+			$RSV_3 = array_shift($binary_array);
+
+			// opcode
+			$opcode_bits = implode("",array_splice($binary_array,0,4));
+			$frame->opcode =  bindec( $opcode_bits );
+
+			// MASK Bit
+			$mask_bit = array_shift($binary_array);
+			$frame->mask = (int)$mask_bit;
+
+			// Length Bits
+			$len_bits = implode("",array_splice($binary_array,0,7));
+			$frame->len = bindec( $len_bits );
+
+			$header = array_splice($ascii_array,0,2);
+
+			$mask_key_bits = array();
+			$mask_key = array_splice($ascii_array,0,4);
+
+			$encoded_bits = array();
+			$encoded = array_splice($ascii_array,0,$frame->len);
+
+			$frame->msg = array();
+			for( $i=0;$i<count($encoded);++$i ){
+				$frame->msg[] = chr($encoded[$i] ^ $mask_key[$i%4]);
+			}
+			$frame->msg = implode("",$frame->msg);
+
+			if( $frame->FIN === 1 && $frame->opcode = 1 ){
+				$this->onData( $frame,$changed_socket );
+			}
+
+			if( !empty($ascii_array) ){
+				$this->decode($ascii_array,$changed_socket);
+			}
+
+		}
+
+		/********************************************************************************************************************
+
 			unmask: data received from the websocket connection is obfuscated. This fixes that.
 
 		********************************************************************************************************************/
@@ -513,4 +516,4 @@
 
 	}
 ?>
-                                                                   
+                                                                                                                                                                                                                                                                                                                        
