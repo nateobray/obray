@@ -386,29 +386,30 @@
 				$send_socket = $this->sockets[$changed_key];
 
 				//	2.	determine if socket is subscribed to channel
-				if( !empty($this->cData[ $changed_key ]) && !empty($this->cData[ $changed_key ]->subscriptions[$msg->channel]) ){
+				if( empty($this->cData[ $changed_key ]) || empty($this->cData[ $changed_key ]->subscriptions[$msg->channel]) ){ continue; }
 
-					//	3.	make sure the socket has not timed out or lost it's connections
-					$info = stream_get_meta_data($send_socket);
-					if( feof($send_socket) || $info['timed_out'] ){
-						// disconnect socket if it's no longer connected or has timed out
-						$this->disconnect($changed_key);
-						continue;
-					}
-
-					if( $this->debug ){
-						$this->console("Sending message to ".$this->cData[ $changed_key ]->ouser_first_name." ".$this->cData[ $changed_key ]->ouser_last_name."\n");
-						if( $this->debug ){
-							$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
-							$this->console( json_encode($msg) );
-							$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
-						}
-					}
-					$message =  $this->mask( json_encode($msg) );
-					fwrite($send_socket, $message, strlen($message));
-					$msg_sent = TRUE;
-
+				//	3.	make sure the socket has not timed out or lost it's connections
+				$info = stream_get_meta_data($send_socket);
+				if( feof($send_socket) || $info['timed_out'] ){
+					$this->disconnect($changed_key);
+					continue;
 				}
+
+				if( $this->debug ){
+					$this->console("Sending message to ".$this->cData[ $changed_key ]->ouser_first_name." ".$this->cData[ $changed_key ]->ouser_last_name."\n");
+					if( $this->debug ){
+						$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
+						$this->console( json_encode($msg) );
+						$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
+					}
+				}
+
+				//	4.	send message
+				$message =  $this->mask( json_encode($msg) );
+				fwrite($send_socket, $message, strlen($message));
+				$msg_sent = TRUE;
+
+
 			}
 
 			return $msg_sent;
