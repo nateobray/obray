@@ -237,7 +237,7 @@
 					//	3.	if EOF then close connection.
 					} else if( feof($changed_socket) ){
 
-						$this->disconnect($changed_socket);
+						$this->disconnect($changed_socket, $changed);
 						break;
 
 					}
@@ -248,7 +248,7 @@
 
 		}
 
-		private function disconnect( $changed_socket ){
+		private function disconnect( $changed_socket, $changed ){
 
 			// remove client for $clients array
 			$this->console("Disconnecting user.\n");
