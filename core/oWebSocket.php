@@ -382,9 +382,9 @@
 				$send_socket = $this->sockets[$changed_key];
 
 				//	2.	determine if socket is subscribed to channel
-				if( empty($this->cData[ $changed_key ]->subscriptions[$msg->channel]) ){
-					$this->console( $this->cData[ $changed_key ] );
-					$this->console("%s",$this->cData[ $changed_key ]->ouser_first_name . " " . $this->cData[ $changed_key ]->ouser_last_name . " is not in channel " . $msg->channel."\n","RedBold");
+				if( empty($this->cData[ $send_socket ]->subscriptions[$msg->channel]) ){
+					$this->console( $this->cData[ $send_socket ] );
+					$this->console("%s",$this->cData[ $send_socket ]->ouser_first_name . " " . $this->cData[ $send_socket ]->ouser_last_name . " is not in channel " . $msg->channel."\n","RedBold");
 					continue;
 				}
 
@@ -408,7 +408,7 @@
 				//	4.	send message
 				$this->console("sending...");
 				$message =  $this->mask( json_encode($msg) );
-				fwrite($this->sockets[$changed_key], $message, strlen($message));
+				fwrite($send_socket, $message, strlen($message));
 				$this->console("%s","done\n","GreenBold");
 				return TRUE;
 
