@@ -165,7 +165,7 @@
 							//	5.	store the user data
 							$ouser->websocket_login_datetime = strtotime('now');
 							$this->cData[ array_search($new_socket,$this->sockets) ] = $ouser;
-							$this->console($ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged on.\n");
+							$this->console("%s",$ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged on.\n","GreenBold");
 
 							//	6.	notify all users of newely connected user
 							$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' connected.' );
@@ -311,55 +311,52 @@
 			$msg = json_decode($frame->msg);
 			$found_socket = array_search($changed_socket, $this->sockets);
 
-			if( !empty($msg->type) ){
+			if( empty($msg->type) || empty($msg) ){ return; }
 
-				switch( $msg->type ){
-					case 'subscription':
-						$this->console("Received subscription, subscribing...");
-						$this->cData[ $found_socket ]->subscriptions[ $msg->channel ] = TRUE;
-						$this->console("done\n");
-						break;
+			switch( $msg->type ){
+				case 'subscription':
+					$this->console("Received subscription, subscribing...");
+					$this->cData[ $found_socket ]->subscriptions[ $msg->channel ] = TRUE;
+					$this->console("done\n");
+					break;
 
-					case 'unsubscribe':
-						$this->console("Received unsubscribe, unsubcribing...");
-						forEach( $this->cData[ $found_socket ]->subscriptions as $key => $subscription ){
-							if( $key != "all" ){ unset( $this->cData[ $found_socket ]->subscriptions[ $key ] ); }
-						}
-						$this->console("done\n");
-						break;
+				case 'unsubscribe':
+					$this->console("Received unsubscribe, unsubcribing...");
+					forEach( $this->cData[ $found_socket ]->subscriptions as $key => $subscription ){
+						if( $key != "all" ){ unset( $this->cData[ $found_socket ]->subscriptions[ $key ] ); }
+					}
+					$this->console("done\n");
+					break;
 
-					case 'broadcast': case 'navigate':
-						$this->console("Received broadcast, sending...");
-						$response = $this->send($msg);
-						if( $response ){
-							$this->console("%s","done\n","GreenBold");
-						} else {
-							$this->console("%s","No subscribers on ".$msg->channel."\n","RedBold");
-						}
-						break;
+				case 'broadcast': case 'navigate':
+					$this->console("Received broadcast, sending...");
+					$response = $this->send($msg);
+					if( $response ){
+						$this->console("%s","done\n","GreenBold");
+					} else {
+						$this->console("%s","No subscribers on ".$msg->channel."\n","RedBold");
+					}
+					break;
 
-					case 'list':
-						$this->console("Received list, sending...");
-						$msg = (object)array( 'channel'=>'all', 'type'=>'list', 'message'=>$this->cData);
-						$response = $this->send($msg);
-						if( $response ){
-							$this->console("%s","done\n","GreenBold");
-						} else {
-							$this->console("%s","unabel to deliver message.\n","RedBold");
-						}
-						break;
+				case 'list':
+					$this->console("Received list, sending...");
+					$msg = (object)array( 'channel'=>'all', 'type'=>'list', 'message'=>$this->cData);
+					$response = $this->send($msg);
+					if( $response ){
+						$this->console("%s","done\n","GreenBold");
+					} else {
+						$this->console("%s","unabel to deliver message.\n","RedBold");
+					}
+					break;
 
-					default:
-						$this->console("Unknown message received:".$msg->type."\n");
-						if( $this->debug ){
-							$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
-							$this->console( $frame->msg );
-							$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
-						}
-						break;
-
-
-				}
+				default:
+					$this->console("Unknown message received:".$msg->type."\n");
+					if( $this->debug ){
+						$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
+						$this->console( $frame->msg );
+						$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
+					}
+					break;
 
 			}
 
