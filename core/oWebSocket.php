@@ -165,10 +165,9 @@
 
 							//	5.	store the user data
 							$ouser->websocket_login_datetime = strtotime('now');
-							$ouser->subscriptions = array( "all" => TRUE );
-							if( empty($this->subscriptions["all"]) ){ $this->subscriptions["all"] = array(); }
-							$this->subscriptions["all"][ array_search($new_socket,$this->sockets) ] = TRUE;
+							$ouser->subscriptions = array();
 							$this->cData[ array_search($new_socket,$this->sockets) ] = $ouser;
+							$this->subscribe(array_search($new_socket,$this->sockets),md5("all"));
 							$this->console("%s",$ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged on.\n","GreenBold");
 
 							//	6.	notify all users of newely connected user
@@ -277,7 +276,6 @@
 		private function disconnect( $changed_socket, $changed ){
 
 			//	1.	remove the changes socket from the list of sockets
-			$this->console("Disconnecting user.\n");
 			$found_socket = array_search($changed_socket, $this->sockets);
 			unset($this->sockets[$found_socket]);
 
@@ -300,10 +298,7 @@
 			$this->send($response);
 
 			//	6.	broadcasting list of users
-			$this->console("Received list, sending...");
-			$msg = (object)array( 'channel'=>'all', 'type'=>'list', 'message'=>$this->cData);
-			$this->send($msg);
-			$this->console("%s","done\n","GreenBold");
+			$this->sendList();
 
 		}
 
@@ -321,31 +316,21 @@
 			$found_socket = array_search($changed_socket, $this->sockets);
 
 			if( empty($msg->type) || empty($msg) ){ return; }
+			$channel_hash = FALSE;
 			if( !empty($msg->channel) ){ $channel_hash = md5($msg->channel); }
 
 			switch( $msg->type ){
 
 				// subscribe to channel if not already subscribed
-				case 'subscription':
+				case 'subscribe':
 
-					$this->console("Received subscription, subscribing...");
-					if( empty($channel_hash) ){
-						$this->console("%s","failed","RedBold"); break;
-					}
-					if( empty($this->subscriptions[$channel_hash]) ){
-						$this->subscriptions[$channel_hash] = array();
-					}
-					$this->subscriptions[ $channel_hash ][ $found_socket ] = TRUE;
-					$this->cData[ $found_socket ]->subscriptions[$channel_hash] = TRUE;
-					$this->console("done\n");
+					$this->subscribe($found_socket,$channel_hash);
 					break;
 
 				// unsubscribe from channel if not already subscribed
 				case 'unsubscribe':
 
-					$this->console("Received unsubscribe, unsubcribing...");
 					$this->unsubscribe($found_socket,$channel_hash);
-
 					break;
 
 				// broadcast or navigate to specified channel
@@ -364,18 +349,13 @@
 					}
 					break;
 
+				// send list of users logged in
 				case 'list':
 
-					$this->console("Received list, sending...");
-					$msg = (object)array('channel'=>'all', 'type'=>'list', 'message'=>$this->cData);
-					$response = $this->send($msg);
-					if( $response ){
-						$this->console("%s","done\n","GreenBold");
-					} else {
-						$this->console("%s","Unable to deliver message.\n","RedBold");
-					}
+					$this->sendList();
 					break;
 
+				// handle an unknown message type
 				default:
 					$this->console("Unknown message received:".$msg->type."\n");
 					if( $this->debug ){
@@ -389,11 +369,27 @@
 
 		}
 
+		private function subscribe($found_socket,$channel_hash){
+
+			$this->console("Received subscription, subscribing...");
+			if( empty($channel_hash) ){
+				$this->console("%s","failed","RedBold"); break;
+			}
+			if( empty($this->subscriptions[$channel_hash]) ){
+				$this->subscriptions[$channel_hash] = array();
+			}
+			$this->subscriptions[ $channel_hash ][ $found_socket ] = TRUE;
+			$this->cData[ $found_socket ]->subscriptions[$channel_hash] = TRUE;
+			$this->console("%s","done\n","GreenBold");
+
+		}
+
 		private function unsubscribe($found_socket,$channel_hash){
 
+			$this->console("Received unsubscribe, unsubcribing...");
 			if( !empty($channel_hash) && !empty($this->subscriptions[ $channel_hash ][ $found_socket ]) ){
 				unset($this->subscriptions[ $channel_hash ][ $found_socket ]);
-				$this->console("done\n");
+				$this->console("%s","done\n","GreenBold");
 			} else {
 				$this->console("%s","failed","RedBold");
 			}
@@ -405,6 +401,18 @@
 			if( count($this->subscriptions[ $channel_hash ]) === 0 ){ unset($this->subscriptions[ $channel_hash ]); }
 
 		}
+
+		private function sendList(){
+			$this->console("Received list, sending...");
+			$msg = (object)array('channel'=>'all', 'type'=>'list', 'message'=>$this->cData);
+			$response = $this->send($msg);
+			if( $response ){
+				$this->console("%s","done\n","GreenBold");
+			} else {
+				$this->console("%s","Unable to deliver message.\n","RedBold");
+			}
+		}
+
 
 		/********************************************************************************************************************
 
@@ -427,7 +435,7 @@
 				$send_socket = $this->sockets[ $changed_key ];
 
 				//	2.	determine if socket is subscribed to channel
-				if( empty($this->subscriptions[ $msg->channel ]) || empty($this->subscriptions[ $msg->channel ][ $changed_key ]) ){ continue; }
+				if( empty($this->subscriptions[ md5($msg->channel) ]) || empty($this->subscriptions[ md5($msg->channel) ][ $changed_key ]) ){ continue; }
 
 				//	3.	make sure the socket has not timed out or lost it's connections
 				$info = stream_get_meta_data($send_socket);
