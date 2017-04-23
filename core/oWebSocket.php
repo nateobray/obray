@@ -383,6 +383,7 @@
 
 				//	2.	determine if socket is subscribed to channel
 				if( empty($this->cData[ $changed_key ]->subscriptions[$msg->channel]) ){
+					$this->console( $this->cData[ $changed_key ] );
 					$this->console("%s",$this->cData[ $changed_key ]->ouser_first_name . " " . $this->cData[ $changed_key ]->ouser_last_name . " is not in channel " . $msg->channel."\n","RedBold");
 					continue;
 				}
