@@ -165,7 +165,7 @@
 							//	5.	store the user data
 							$ouser->websocket_login_datetime = strtotime('now');
 							$this->cData[ array_search($new_socket,$this->sockets) ] = $ouser;
-							$this->console($ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged on.\n");
+							$this->console("%s",$ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged on.\n","GreenBold");
 
 							//	6.	notify all users of newely connected user
 							$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' connected.' );
@@ -382,7 +382,10 @@
 				$send_socket = $this->sockets[$changed_key];
 
 				//	2.	determine if socket is subscribed to channel
-				if( empty($this->cData[ $changed_key ]) || empty($this->cData[ $changed_key ]->subscriptions[$msg->channel]) ){ continue; }
+				if( empty($this->cData[ $changed_key ]->subscriptions[$msg->channel]) ){
+					$this->console("%s",$this->cData[ $changed_key ]->ouser_first_name . " " . $this->cData[ $changed_key ]->ouser_last_name . " is not in channel " . $msg->channel."\n","RedBold");
+					continue;
+				}
 
 				//	3.	make sure the socket has not timed out or lost it's connections
 				$info = stream_get_meta_data($send_socket);
@@ -402,8 +405,10 @@
 				}
 
 				//	4.	send message
+				$this->console("sending...");
 				$message =  $this->mask( json_encode($msg) );
-				fwrite($send_socket, $message, strlen($message));
+				fwrite($this->sockets[$changed_key], $message, strlen($message));
+				$this->console("%s","done\n","GreenBold");
 				return TRUE;
 
 			}
