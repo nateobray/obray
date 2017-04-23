@@ -58,6 +58,8 @@
 				//	2.	Read from changed socket
 				//	3.	if EOF then close connection.
 
+			4.	Cleanup old connects
+
 	********************************************************************************************************************/
 
 	Class oWebSocket extends ODBO {
@@ -129,7 +131,7 @@
 				/*************************************************************************************************
 
 					2.	Check for new connections: Basically we're checking to see if our original socket has
-						been added to the changed array and if so we now it has a new connection waiting to be
+						been added to the changed array and if so we know it has a new connection waiting to be
 						handled.
 
 						//	1.	accpet new socket
@@ -161,6 +163,7 @@
 						if( !empty($ouser) ){
 
 							//	5.	store the user data
+							$ouser->websocket_login_datetime = strtotime('now');
 							$this->cData[ array_search($new_socket,$this->sockets) ] = $ouser;
 							$this->console($ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged on.\n");
 
@@ -213,6 +216,7 @@
 
 					//	1.	Get changed socket
 					$changed_socket = $changed[$changed_key];
+					$info = stream_get_meta_data($changed_socket);
 
 					//	2.	Read from changed socket
 					if( !feof($changed_socket) ){
@@ -235,7 +239,7 @@
 						break;
 
 					//	3.	if EOF then close connection.
-					} else if( feof($changed_socket) ){
+				} else if( feof($changed_socket) || !$info['timed_out'] ){
 
 						$this->disconnect($changed_socket, $changed);
 						break;
@@ -248,31 +252,45 @@
 
 		}
 
+		/********************************************************************************************************************
+
+			disconnect: takes the changed socket and the changed socket array, disconnects the user, the removes user data
+						and the socket from the sockets array.
+
+			//	1.	remove the changes socket from the list of sockets
+			//	2.	shutdown the socket connection
+			//	3.	remove the connection data and socket
+			//	4.	remove socket from the changed socket array
+			//	5.	notify all users about disconnected connection
+			//	6.	broadcasting list of users
+
+		********************************************************************************************************************/
+
 		private function disconnect( $changed_socket, $changed ){
 
-			// remove client for $clients array
+			//	1.	remove the changes socket from the list of sockets
 			$this->console("Disconnecting user.\n");
 			$found_socket = array_search($changed_socket, $this->sockets);
+			unset($this->sockets[$found_socket]);
 
-			// shutdown the socket connection
+			//	2.	shutdown the socket connection
 			$this->console("%s","Attempting to disconnect index: ".$found_socket."\n","Red");
 			stream_socket_shutdown($changed_socket,STREAM_SHUT_RDWR);
 
-			// remove the connection data and socket
+			//	3.	remove the connection data and socket
 			$ouser = $this->cData[$found_socket];
 			$this->console("%s",$ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged off.\n","Red");
 			unset($this->cData[$found_socket]);
-			unset($this->sockets[$found_socket]);
 
-			// remove socket from the changed socket array
+			//	4.	remove socket from the changed socket array
 			$found_socket = array_search($changed_socket, $changed);
 			unset($changed[$found_socket]);
 
-			//notify all users about disconnected connection
+			//	5.	notify all users about disconnected connection
 			$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' disconnected.');
 			$this->send($response);
 
-			// broadcasting list of users
+			//	6.	broadcasting list of users
 			$this->console("Received list, sending...");
 			$msg = (object)array( 'channel'=>'all', 'type'=>'list', 'message'=>$this->cData);
 			$this->send($msg);
