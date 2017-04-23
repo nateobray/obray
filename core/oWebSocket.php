@@ -398,8 +398,8 @@
 				$this->console("%s","failed","RedBold");
 			}
 
-			if( !empty($this->cData[ $found_socket ][$channel_hash]) ){
-				unset($this->cData[ $found_socket ][$channel_hash]);
+			if( !empty($this->cData[ $found_socket ]->subscriptions[$channel_hash]) ){
+				unset($this->cData[ $found_socket ]->subscriptions[$channel_hash]);
 			}
 
 			if( count($this->subscriptions[ $channel_hash ]) === 0 ){ unset($this->subscriptions[ $channel_hash ]); }
