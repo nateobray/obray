@@ -277,7 +277,7 @@
 					} else if( feof($changed_socket) || $info['timed_out'] ){
 
 						// disconnect socket
-						$this->disconnect($changed_socket, $changed);
+						$this->disconnect($changed_socket);
 
 						// remove from changed socket array
 						$found_socket = array_search($changed_socket, $changed);
@@ -308,7 +308,7 @@
 
 		********************************************************************************************************************/
 
-		private function disconnect( $changed_socket, $changed ){
+		private function disconnect( $changed_socket ){
 
 			//	1.	remove the changes socket from the list of sockets
 			$found_socket = array_search($changed_socket, $this->sockets);
@@ -488,7 +488,7 @@
 					//	3.	make sure the socket has not timed out or lost it's connections
 					$info = stream_get_meta_data($send_socket);
 					if( feof($send_socket) || $info['timed_out'] ){
-						$this->disconnect($key);
+						$this->disconnect($send_socket);
 						continue;
 					}
 
