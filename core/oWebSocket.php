@@ -387,6 +387,7 @@
 				//	3.	make sure the socket has not timed out or lost it's connections
 				$info = stream_get_meta_data($send_socket);
 				if( feof($send_socket) || $info['timed_out'] ){
+					$this->console("%s","Socket disconnected or timed out.","RedBold");
 					$this->disconnect($changed_key);
 					continue;
 				}
