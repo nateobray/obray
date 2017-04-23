@@ -54,8 +54,9 @@
 
 			3.	Loop through all the changed sockets
 
-				//	1.	read from changed sockets
-				//	2.	if EOF then close connection.
+				//	1.	Get changed socket
+				//	2.	Read from changed socket
+				//	3.	if EOF then close connection.
 
 	********************************************************************************************************************/
 
@@ -67,8 +68,15 @@
 
 				1.  Establish a connection on specified host and port
 
+				//	1.	retreive host and ports or set them to defaults
+				//	2.	determine the protocol to connect (essentially on client side ws or wss) and create
+				//		context.
+				//	3.	establish connection or abort on error
+				//	4.	listen for data on our connections
+
 			*************************************************************************************************/
 
+			//	1.	retreive host and ports or set them to defaults
 			$this->host = !empty($params["host"])?$params["host"]:"localhost";
 			$this->port = !empty($params["port"])?$params["port"]:"80";
 			$this->debug = FALSE;
@@ -76,14 +84,27 @@
 				$this->debug = TRUE;
 			}
 
+			//	2.	determine the protocol to connect (essentially on client side ws or wss) and create
+			//		context.
 			if( __WEB_SOCKET_PROTOCOL__ == "ws" ){
+
 				$protocol = "tcp";
 				$context = 		stream_context_create();
+
 			} else {
+
 				$protocol = "ssl";
-				$context = 		stream_context_create( array( "ssl" => array( "local_cert"=>__WEB_SOCKET_CERT__, "local_pk"=>__WEB_SOCKET_KEY__, "passphrase" => __WEB_SOCKET_KEY_PASS__ ) ) );
+				try{
+					$context = 	stream_context_create( array( "ssl" => array( "local_cert"=>__WEB_SOCKET_CERT__, "local_pk"=>__WEB_SOCKET_KEY__, "passphrase" => __WEB_SOCKET_KEY_PASS__ ) ) );
+				} catch( Exception $err ){
+					$this->console("Unable to create stream context: ".$err->getMessage()."\n");
+					$this->throwError("Unable to create stream context: ".$err->getMessage());
+					return;
+				}
+
 			}
 
+			//	3.	establish connection or abort on error
 			$listenstr = 	$protocol."://".$this->host.":".$this->port;
 			$this->console("Binding to ".$this->host.":".$this->port." over ".$protocol."\n");
 			$this->socket = @stream_socket_server($listenstr,$errno,$errstr,STREAM_SERVER_BIND|STREAM_SERVER_LISTEN,$context);
@@ -99,11 +120,11 @@
 			$this->sockets = array( $this->socket );
 			$this->cData = array();
 
+			//	4.	listen for data on our connections
 			while(true){
 
-				$changed = $this->sockets;
-
-				stream_select( $changed, $null, $null, 0, 10 );
+				$changed = $this->sockets; $null = NULL;
+				stream_select( $changed, $null, $null, NULL, 200000 );
 
 				/*************************************************************************************************
 
@@ -116,46 +137,64 @@
 						//	3.	read data sent by the socket
 						//	4.	perform websocket handshake
 						//	5.	store the client data
-						//	6.	remove new socket from changed array
+						//	6.	notify all users of newely connected user
+						//	7.	remove new socket from changed array
+
 
 				*************************************************************************************************/
 
 				if( in_array($this->socket,$changed) ){
 
+					//	1.	accpet new socket
 					$this->console("Attempting to connect a new client.\n");
-					$new_socket = @stream_socket_accept($this->socket);								//	1.	accpet new socket
+					$new_socket = @stream_socket_accept($this->socket);
+
 					if( $new_socket !== FALSE ){
 
-						$this->sockets[] = $new_socket; 											//	2.	add socket to socket list
+						//	2.	add socket to socket list
+						$this->sockets[] = $new_socket;
 						$request = fread($new_socket, 2046);
-						//$this->console($request);
+
+						//	4.	perform websocket handshake and retreive user data
 						$this->console("Performing websocket handshake.\n");
-						$ouser = $this->handshake($request, $new_socket); 							//	4.	perform websocket handshake
+						$ouser = $this->handshake($request, $new_socket);
 						if( !empty($ouser) ){
 
-							$this->cData[ array_search($new_socket,$this->sockets) ] = $ouser;		//	5.	store the client data
+							//	5.	store the user data
+							$this->cData[ array_search($new_socket,$this->sockets) ] = $ouser;
 							$this->console($ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged on.\n");
 
-							$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' connected.' ); //prepare json data
-							$this->send($response); //notify all users about new connection
+							//	6.	notify all users of newely connected user
+							$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' connected.' );
+							$this->send($response);
 
+							//	7.	remove new socket from changed array
+							// removes original socket from changed array (so we don't keep looking for a new connections)
 							$found_socket = array_search($this->socket, $changed);
-							unset($changed[$found_socket]);											//	6.	remove new socket from changed array
+							unset($changed[$found_socket]);
 							$this->console( (count($this->sockets)-1)." users connected.\n" );
 
 						} else {
+
+							// abort if unable to find user
 							$this->console("%s","Connection failed, unable to connect user (not found).\n","RedBold");
+							// removes original socket from the changed array (so we don't keep looking for a new connections)
 							$found_socket = array_search($this->socket, $changed);
 							unset($changed[$found_socket]);
-							$found_socket = array_search($this->sockets, $new_socket);
+							// removes our newely connected socket from our sockets array (aborting the connection)
+							$found_socket = array_search($new_socket, $this->sockets);
 							unset($this->sockets[$found_socket]);
+
 						}
+
 					} else {
+
+						// if connection failed, remove socket from changed list
 						$this->console("%s","Connection failed, unable to connect user.\n","RedBold");
-						$this->console($this->socket);
-						$this->console("\n");
+						// removes original socket from changed array (so we don't keep looking for a new connections)
 						$found_socket = array_search($this->socket, $changed);
 						unset($changed[$found_socket]);
+
 					}
 
 				}
@@ -164,22 +203,26 @@
 
 					3.	Loop through all the changed sockets
 
-						//	1.	read from changed sockets
-						//	2.	if EOF then close connection.
+						//	1.	Get changed socket
+						//	2.	Read from changed socket
+						//	3.	if EOF then close connection.
 
 				*************************************************************************************************/
 
 				foreach ( array_keys($changed) as $changed_key) {
 
+					//	1.	Get changed socket
 					$changed_socket = $changed[$changed_key];
 
+					//	2.	Read from changed socket
 					if( !feof($changed_socket) ){
 
-						//	1.	read from changed sockets
+
 						try{
 							$buf = fread($changed_socket, 2048);
 						} catch(Exception $err) {
-							$this->console("%s","Unable to read form socket...".$err->getMessage()."\n","RedBold");
+							$this->console("%s","Unable to read form socket: ".$err->getMessage()."\n","RedBold");
+							$this->disconnect($changed_socket);
 							break;
 						}
 
@@ -191,40 +234,49 @@
 
 						break;
 
+					//	3.	if EOF then close connection.
 					} else if( feof($changed_socket) ){
-						$this->console("Disconnecting user.\n");
-						// remove client for $clients array
-						$found_socket = array_search($changed_socket, $this->sockets);
 
-						$this->console("%s","Attempting to disconnect index: ".$found_socket."\n","Red");
-						stream_socket_shutdown($changed_socket,STREAM_SHUT_RDWR);
-
-						$ouser = $this->cData[$found_socket];
-						$this->console("%s",$ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged off.\n","Red");
-
-						unset($this->cData[$found_socket]);
-						unset($this->sockets[$found_socket]);
-
-						$found_socket = array_search($changed_socket, $changed);
-						unset($changed[$found_socket]);											//	6.	remove new socket from changed array
-
-						//notify all users about disconnected connection
-						$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' disconnected.');
-						$this->send($response);
-
-						$this->console("Received list, sending...");
-						$msg = (object)array( 'channel'=>'all', 'type'=>'list', 'message'=>$this->cData);
-						$this->send($msg);
-						$this->console("%s","done\n","GreenBold");
+						$this->disconnect($changed_socket);
 						break;
-
-
 
 					}
 
 				}
 
 			}
+
+		}
+
+		private function disconnect( $changed_socket ){
+
+			// remove client for $clients array
+			$this->console("Disconnecting user.\n");
+			$found_socket = array_search($changed_socket, $this->sockets);
+
+			// shutdown the socket connection
+			$this->console("%s","Attempting to disconnect index: ".$found_socket."\n","Red");
+			stream_socket_shutdown($changed_socket,STREAM_SHUT_RDWR);
+
+			// remove the connection data and socket
+			$ouser = $this->cData[$found_socket];
+			$this->console("%s",$ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged off.\n","Red");
+			unset($this->cData[$found_socket]);
+			unset($this->sockets[$found_socket]);
+
+			// remove socket from the changed socket array
+			$found_socket = array_search($changed_socket, $changed);
+			unset($changed[$found_socket]);
+
+			//notify all users about disconnected connection
+			$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' disconnected.');
+			$this->send($response);
+
+			// broadcasting list of users
+			$this->console("Received list, sending...");
+			$msg = (object)array( 'channel'=>'all', 'type'=>'list', 'message'=>$this->cData);
+			$this->send($msg);
+			$this->console("%s","done\n","GreenBold");
 
 		}
 
