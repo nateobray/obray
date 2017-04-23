@@ -233,15 +233,20 @@
 						$this->decode($buf,$changed_socket);
 
 						// this prevent possible endless loops
-						$stream_meta_data = stream_get_meta_data($changed_socket);
-         				if( $stream_meta_data['unread_bytes'] <= 0 ){ break; }
+         				if( $info['unread_bytes'] <= 0 ){ break; }
 
 						break;
 
 					//	3.	if EOF then close connection.
-				} else if( feof($changed_socket) || !$info['timed_out'] ){
+					} else if( feof($changed_socket) || $info['timed_out'] ){
 
+						// disconnect socket
 						$this->disconnect($changed_socket, $changed);
+
+						// remove from changed socket array
+						$found_socket = array_search($changed_socket, $changed);
+						unset($changed[$found_socket]);
+
 						break;
 
 					}
@@ -260,9 +265,8 @@
 			//	1.	remove the changes socket from the list of sockets
 			//	2.	shutdown the socket connection
 			//	3.	remove the connection data and socket
-			//	4.	remove socket from the changed socket array
-			//	5.	notify all users about disconnected connection
-			//	6.	broadcasting list of users
+			//	4.	notify all users about disconnected connection
+			//	5.	broadcasting list of users
 
 		********************************************************************************************************************/
 
@@ -282,15 +286,11 @@
 			$this->console("%s",$ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged off.\n","Red");
 			unset($this->cData[$found_socket]);
 
-			//	4.	remove socket from the changed socket array
-			$found_socket = array_search($changed_socket, $changed);
-			unset($changed[$found_socket]);
-
-			//	5.	notify all users about disconnected connection
+			//	4.	notify all users about disconnected connection
 			$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' disconnected.');
 			$this->send($response);
 
-			//	6.	broadcasting list of users
+			//	5.	broadcasting list of users
 			$this->console("Received list, sending...");
 			$msg = (object)array( 'channel'=>'all', 'type'=>'list', 'message'=>$this->cData);
 			$this->send($msg);
@@ -311,55 +311,52 @@
 			$msg = json_decode($frame->msg);
 			$found_socket = array_search($changed_socket, $this->sockets);
 
-			if( !empty($msg->type) ){
+			if( empty($msg->type) || empty($msg) ){ return; }
 
-				switch( $msg->type ){
-					case 'subscription':
-						$this->console("Received subscription, subscribing...");
-						$this->cData[ $found_socket ]->subscriptions[ $msg->channel ] = TRUE;
-						$this->console("done\n");
-						break;
+			switch( $msg->type ){
+				case 'subscription':
+					$this->console("Received subscription, subscribing...");
+					$this->cData[ $found_socket ]->subscriptions[ $msg->channel ] = TRUE;
+					$this->console("done\n");
+					break;
 
-					case 'unsubscribe':
-						$this->console("Received unsubscribe, unsubcribing...");
-						forEach( $this->cData[ $found_socket ]->subscriptions as $key => $subscription ){
-							if( $key != "all" ){ unset( $this->cData[ $found_socket ]->subscriptions[ $key ] ); }
-						}
-						$this->console("done\n");
-						break;
+				case 'unsubscribe':
+					$this->console("Received unsubscribe, unsubcribing...");
+					forEach( $this->cData[ $found_socket ]->subscriptions as $key => $subscription ){
+						if( $key != "all" ){ unset( $this->cData[ $found_socket ]->subscriptions[ $key ] ); }
+					}
+					$this->console("done\n");
+					break;
 
-					case 'broadcast': case 'navigate':
-						$this->console("Received broadcast, sending...");
-						$response = $this->send($msg);
-						if( $response ){
-							$this->console("%s","done\n","GreenBold");
-						} else {
-							$this->console("%s","No subscribers on ".$msg->channel."\n","RedBold");
-						}
-						break;
+				case 'broadcast': case 'navigate':
+					$this->console("Received broadcast, sending...");
+					$response = $this->send($msg);
+					if( $response ){
+						$this->console("%s","done\n","GreenBold");
+					} else {
+						$this->console("%s","No subscribers on ".$msg->channel."\n","RedBold");
+					}
+					break;
 
-					case 'list':
-						$this->console("Received list, sending...");
-						$msg = (object)array( 'channel'=>'all', 'type'=>'list', 'message'=>$this->cData);
-						$response = $this->send($msg);
-						if( $response ){
-							$this->console("%s","done\n","GreenBold");
-						} else {
-							$this->console("%s","unabel to deliver message.\n","RedBold");
-						}
-						break;
+				case 'list':
+					$this->console("Received list, sending...");
+					$msg = (object)array( 'channel'=>'all', 'type'=>'list', 'message'=>$this->cData);
+					$response = $this->send($msg);
+					if( $response ){
+						$this->console("%s","done\n","GreenBold");
+					} else {
+						$this->console("%s","unabel to deliver message.\n","RedBold");
+					}
+					break;
 
-					default:
-						$this->console("Unknown message received:".$msg->type."\n");
-						if( $this->debug ){
-							$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
-							$this->console( $frame->msg );
-							$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
-						}
-						break;
-
-
-				}
+				default:
+					$this->console("Unknown message received:".$msg->type."\n");
+					if( $this->debug ){
+						$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
+						$this->console( $frame->msg );
+						$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
+					}
+					break;
 
 			}
 
@@ -369,28 +366,48 @@
 
 			send:  takes a message and passes though to all the connections subscribed to the specified channel
 
+			//	1.	Loop through all sockets
+			//	2.	determine if socket is subscribed to channel
+			//	3.	make sure the socket has not timed out or lost it's connections
+			//	4.	send message
+
+				NOTE: this is inefficient, needs to be re-written to send messages more effectively
+
 		********************************************************************************************************************/
 
 		function send($msg){
-			$msg_sent = FALSE;
+
+			//	1.	Loop through all sockets
 			foreach( array_keys($this->sockets) as $changed_key){
 				$send_socket = $this->sockets[$changed_key];
-				if( !empty($this->cData[ $changed_key ]) && !empty($this->cData[ $changed_key ]->subscriptions[$msg->channel]) ){
-					if( $this->debug ){
-						$this->console("Sending message to ".$this->cData[ $changed_key ]->ouser_first_name." ".$this->cData[ $changed_key ]->ouser_last_name."\n");
-						if( $this->debug ){
-							$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
-							$this->console( json_encode($msg) );
-							$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
-						}
-					}
-					$message =  $this->mask( json_encode($msg) );
-					fwrite($this->sockets[$changed_key], $message, strlen($message));
-					$msg_sent = TRUE;
+
+				//	2.	determine if socket is subscribed to channel
+				if( empty($this->cData[ $changed_key ]) || empty($this->cData[ $changed_key ]->subscriptions[$msg->channel]) ){ continue; }
+
+				//	3.	make sure the socket has not timed out or lost it's connections
+				$info = stream_get_meta_data($send_socket);
+				if( feof($send_socket) || $info['timed_out'] ){
+					$this->disconnect($changed_key);
+					continue;
 				}
+
+				if( $this->debug ){
+					$this->console("Sending message to ".$this->cData[ $changed_key ]->ouser_first_name." ".$this->cData[ $changed_key ]->ouser_last_name."\n");
+					if( $this->debug ){
+						$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
+						$this->console( json_encode($msg) );
+						$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
+					}
+				}
+
+				//	4.	send message
+				$message =  $this->mask( json_encode($msg) );
+				fwrite($send_socket, $message, strlen($message));
+				return TRUE;
+
 			}
 
-			return $msg_sent;
+			return FALSE;
 		}
 
 		/********************************************************************************************************************
