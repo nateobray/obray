@@ -151,7 +151,7 @@
 
 					//	1.	accpet new socket
 					$this->console("Attempting to connect a new client.\n");
-					$new_socket = @stream_socket_accept($this->socket);
+					$new_socket = @stream_socket_accept($this->socket,30);
 
 					if( $new_socket !== FALSE ){
 
