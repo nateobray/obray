@@ -130,6 +130,8 @@
 				$changed = $this->sockets; $null = NULL;
 				stream_select( $changed, $null, $null, 0, 200000 );
 
+
+
 				/*************************************************************************************************
 
 					2.	Check for new connections: Basically we're checking to see if our original socket has
@@ -160,6 +162,7 @@
 						continue;
 					}
 
+					stream_set_timeout($new_socket,5);
 					//socket_set_option($new_socket, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>5, 'usec'=>0));
 					//socket_set_option($new_socket, SOL_SOCKET, SO_SNDTIMEO, array('sec'=>5, 'usec'=>0));
 
