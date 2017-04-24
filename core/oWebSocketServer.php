@@ -169,13 +169,7 @@
 						//	2.	add socket to socket list
 						$this->console("Reading from socket.\n");
 
-						$request = ''; $iterations = 0; $max_iterations = 10; $read_success = TRUE;
-						while( !feof($new_socket) && empty($request) ){
-							usleep(100000);
-							 $request .= fread($new_socket, 8*1024);
-							 if( $iterations > $max_iterations ){ $this->console("%s","failed max iterations\n","RedBold"); $read_success = FALSE; break; }
-							 ++ $iterations;
-						}
+						$read_success = $this->fread_stream($new_socket,8*1024);
 						if( $read_success ){
 							$this->sockets[] = $new_socket;
 						} else {
@@ -261,7 +255,7 @@
 					if( !feof($changed_socket) ){
 
 						try{
-							$buf = fread($changed_socket, 2048);
+							$this->fread_stream($changed_socket,8*1024)
 						} catch(Exception $err) {
 							$this->console("%s","Unable to read form socket: ".$err->getMessage()."\n","RedBold");
 							$this->disconnect($changed_socket);
@@ -284,7 +278,7 @@
 							 $obj->type = 'delivery-receipt';
 							 $message = json_encode($obj);
 
-							 @fwrite( $this->sockets[ array_search($changed_socket,$this->sockets) ] , $message, strlen($message));
+							 $this->fwrite_stream( $this->sockets[ array_search($changed_socket,$this->sockets) ] , $message, strlen($message));
 
 						} else {
 							$this->decode($buf,$changed_socket);
@@ -507,6 +501,17 @@
 		    return $written;
 		}
 
+		private function fread_stream($socket,$length){
+			$request = ''; $iterations = 0; $max_iterations = 10; $read_success = TRUE;
+			while( !feof($new_socket) && empty($request) ){
+				usleep(50000);
+				 $request .= fread($socket, $length);
+				 if( $iterations > $max_iterations ){ $this->console("%s","failed max iterations\n","RedBold"); $read_success = FALSE; break; }
+				 ++ $iterations;
+			}
+			return $read_success;
+		}
+
 
 		/********************************************************************************************************************
 
@@ -638,7 +643,7 @@
 				$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
 				$this->console($conn);
 			}
-			fwrite($conn,$upgrade,strlen($upgrade));
+			$this->fwrite_stream($conn,$upgrade,strlen($upgrade));
 
 			return $ouser;
 
