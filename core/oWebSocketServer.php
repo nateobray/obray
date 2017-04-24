@@ -187,6 +187,7 @@
 						//	4.	perform websocket handshake and retreive user data
 						$this->console("Performing websocket handshake.\n");
 						$ouser = $this->handshake($request, $new_socket);
+						$this->console($ouser);
 						if( is_object($ouser)  ){
 
 							//	5.	store the user data
@@ -225,6 +226,7 @@
 							// removes our newely connected socket from our sockets array (aborting the connection)
 							$found_socket = array_search($new_socket, $this->sockets);
 							unset($this->sockets[$found_socket]);
+							exit();
 
 						}
 
