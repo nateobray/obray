@@ -152,7 +152,7 @@
 				if( in_array($this->socket,$changed) ){
 
 					//	1.	accpet new socket
-					$this->console("Attempting to connect a new client.\n");
+					$this->console("\nAttempting to connect a new client.\n");
 					$new_socket = stream_socket_accept($this->socket,5);
 
 					if( !$new_socket ){
@@ -169,19 +169,17 @@
 						//	2.	add socket to socket list
 						$this->console("Reading from socket.\n");
 
-						$read_success = $this->fread_stream($new_socket,8*1024);
-						if( $read_success ){
-							$this->sockets[] = $new_socket;
-						} else {
+						$request = $this->fread_stream($new_socket,8*1024);
+						if( !$request ){
 							$found_socket = array_search($this->socket, $changed);
 							unset($changed[$found_socket]);
 							continue;
 						}
+						$this->sockets[] = $new_socket;
 
 						//	4.	perform websocket handshake and retreive user data
 						$this->console("Performing websocket handshake.\n");
 						$ouser = $this->handshake($request, $new_socket);
-						$this->console($ouser);
 						if( is_object($ouser)  ){
 
 							//	5.	store the user data
@@ -255,7 +253,7 @@
 					if( !feof($changed_socket) ){
 
 						try{
-							$this->fread_stream($changed_socket,8*1024);
+							$buff = $this->fread_stream($changed_socket,8*1024);
 						} catch(Exception $err) {
 							$this->console("%s","Unable to read form socket: ".$err->getMessage()."\n","RedBold");
 							$this->disconnect($changed_socket);
@@ -506,10 +504,10 @@
 			while( !feof($socket) && empty($request) ){
 				usleep(50000);
 				 $request .= fread($socket, $length);
-				 if( $iterations > $max_iterations ){ $this->console("%s","failed max iterations\n","RedBold"); $read_success = FALSE; break; }
+				 if( $iterations > $max_iterations ){ $this->console("%s","failed max iterations\n","RedBold"); return FALSE; }
 				 ++ $iterations;
 			}
-			return $read_success;
+			return $request;
 		}
 
 
