@@ -558,13 +558,12 @@
 				$this->setDatabaseConnection(getDatabaseConnection(true));
 				$this->console( 'retreiving user: /obray/OUsers/get/?ouser_id='.$ouser_id.'&with=options'."\n" );
 				$new_user = $this->route('/obray/OUsers/get/?ouser_id='.$ouser_id.'&with=options');
-				$ouser = new stdClass();
-				$ouser->ouser_first_name = $new_user->ouser_first_name;
-				$ouser->ouser_last_name = $new_user->ouser_last_name;
-				$ouser->ouser_group = $new_user->ouser_group;
 
-				if( !empty($ouser->data[0]) ){
-					$ouser = $ouser->data[0];
+				if( !empty($new_user->data[0]) ){
+					$ouser = new stdClass();
+					$ouser->ouser_first_name = $new_user->ouser_first_name;
+					$ouser->ouser_last_name = $new_user->ouser_last_name;
+					$ouser->ouser_group = $new_user->ouser_group;
 				} else {
 					$ouser = new stdClass();
 				}
