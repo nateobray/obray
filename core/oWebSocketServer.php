@@ -434,7 +434,7 @@
 
 		private function subscribe($found_socket,$channel_hash){
 
-			$this->console("Received subscription, subscribing...");
+			$this->console("\tReceived subscription, subscribing...");
 			if( empty($channel_hash) ){
 				$this->console("%s","failed","RedBold"); break;
 			}
@@ -449,7 +449,7 @@
 
 		private function unsubscribe($found_socket,$channel_hash){
 
-			$this->console("%s","Received unsubscribe, unsubcribing...","RedBold");
+			$this->console("%s","\tReceived unsubscribe, unsubcribing...","RedBold");
 			if( !empty($channel_hash) && !empty($this->subscriptions[ $channel_hash ][ $found_socket ]) ){
 				unset($this->subscriptions[ $channel_hash ][ $found_socket ]);
 				$this->console("%s","done\n","GreenBold");
@@ -591,7 +591,7 @@
 			if( !empty($matches) ){
 				$ouser_id = $matches[0];
 				$this->setDatabaseConnection(getDatabaseConnection(true));
-				$this->console( 'retreiving user: /obray/OUsers/get/?ouser_id='.$ouser_id.'&with=options'."\n" );
+				$this->console( "\tretreiving user: /obray/OUsers/get/?ouser_id=".$ouser_id.'&with=options'."\n" );
 				$new_user = $this->route('/obray/OUsers/get/?ouser_id='.$ouser_id.'&with=options');
 
 				if( !empty($new_user->data[0]) ){
