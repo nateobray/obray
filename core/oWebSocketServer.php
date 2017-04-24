@@ -308,10 +308,10 @@
 
 		private function disconnect( $changed_socket ){
 
+			$found_socket = array_search($changed_socket, $this->sockets);
 			$this->console("%s","Attempting to disconnect index: ".$found_socket."\n","RedBold");
 
 			//	1.	remove the changes socket from the list of sockets
-			$found_socket = array_search($changed_socket, $this->sockets);
 			unset($this->sockets[$found_socket]);
 
 			//	2.	shutdown the socket connection
