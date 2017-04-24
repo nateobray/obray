@@ -176,7 +176,7 @@
 						if( !empty($this->obray_clients[ array_search($changed_socket,$this->sockets) ]) ){
 
 							 $msg = json_decode(trim($buf,"\x00\xff"));
-							 $this->console("%s","obray-client sending message...");
+							 $this->console("%s","\tobray-client sending message...");
 							 $response = $this->send($msg);
 							 if( !empty($response) ){
 								 $this->console("%s","done.\n","GreenBold");
