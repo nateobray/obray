@@ -163,13 +163,16 @@
 					}
 
 					stream_set_blocking($new_socket, false);
-					
+
 					if( $new_socket !== FALSE ){
 
 						//	2.	add socket to socket list
 						$this->console("Reading from socket.\n");
 						$this->sockets[] = $new_socket;
-						$request = fread($new_socket, 8184);
+						$request = '';
+						while( !feof($new_socket) ){
+							 $request .= fread($new_socket, 8*1024);
+						}
 
 						//	4.	perform websocket handshake and retreive user data
 						$this->console("Performing websocket handshake.\n");
