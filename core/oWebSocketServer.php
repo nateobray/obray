@@ -134,108 +134,22 @@
 
 				/*************************************************************************************************
 
-					2.	Check for new connections: Basically we're checking to see if our original socket has
-						been added to the changed array and if so we know it has a new connection waiting to be
-						handled.
-
-						//	1.	accpet new socket
-						//	2.	add socket to socket list
-						//	3.	read data sent by the socket
-						//	4.	perform websocket handshake
-						//	5.	store the client data
-						//	6.	notify all users of newely connected user
-						//	7.	remove new socket from changed array
-
+					2. Handle new connections
 
 				*************************************************************************************************/
 
 				if( in_array($this->socket,$changed) ){
 
-					//	1.	accpet new socket
-					$this->console("\nAttempting to connect a new client.\n");
-					$new_socket = stream_socket_accept($this->socket,5);
-
-					if( !$new_socket ){
-						$this->console("%s","Unable to connect.\n","RedBold");
-						$found_socket = array_search($this->socket, $changed);
-						unset($changed[$found_socket]);
-						continue;
-					}
-
-					stream_set_blocking($new_socket, false);
-
-					if( $new_socket !== FALSE ){
-
-						//	2.	add socket to socket list
-						$this->console("Reading from socket.\n");
-
-						$request = $this->fread_stream($new_socket,8*1024);
-						if( !$request ){
-							$found_socket = array_search($this->socket, $changed);
-							unset($changed[$found_socket]);
-							continue;
-						}
-						$this->sockets[] = $new_socket;
-
-						//	4.	perform websocket handshake and retreive user data
-						$this->console("Performing websocket handshake.\n");
-						$ouser = $this->handshake($request, $new_socket);
-						if( is_object($ouser)  ){
-
-							//	5.	store the user data
-							$ouser->websocket_login_datetime = strtotime('now');
-							$ouser->subscriptions = array();
-							$found_socket = array_search($new_socket,$this->sockets);
-							$this->cData[ $found_socket ] = $ouser;
-							$this->subscribe($found_socket,md5("all"));
-							$this->subscribe($found_socket,md5($ouser->ouser_id));
-							$this->console("%s",$ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged on.\n","GreenBold");
-
-							//	6.	notify all users of newely connected user
-							$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' connected.' );
-							$this->send($response);
-
-							//	7.	remove new socket from changed array
-							// removes original socket from changed array (so we don't keep looking for a new connections)
-							$found_socket = array_search($this->socket, $changed);
-							unset($changed[$found_socket]);
-							$this->console( (count($this->sockets)-1)." users connected.\n" );
-						} else if ( is_string($ouser) ){
-
-							// do nothing
-							$this->console("%s","Connected obray-client\n","GreenBold");
-							$found_socket = array_search($this->socket, $changed);
-							unset($changed[ $found_socket ]);
-							$this->obray_clients[array_search($new_socket,$this->sockets)] = TRUE;
-
-						} else {
-
-							// abort if unable to find user
-							$this->console("%s","Connection failed, unable to connect user (not found).\n","RedBold");
-							// removes original socket from the changed array (so we don't keep looking for a new connections)
-							$found_socket = array_search($this->socket, $changed);
-							unset($changed[$found_socket]);
-							// removes our newely connected socket from our sockets array (aborting the connection)
-							$found_socket = array_search($new_socket, $this->sockets);
-							unset($this->sockets[$found_socket]);
-
-						}
-
-					} else {
-
-						// if connection failed, remove socket from changed list
-						$this->console("%s","Connection failed, unable to connect user.\n","RedBold");
-						// removes original socket from changed array (so we don't keep looking for a new connections)
-						$found_socket = array_search($this->socket, $changed);
-						unset($changed[$found_socket]);
-
-					}
+					$new_socket = $this->connect($this->socket, $changed);
+					// removes original socket from the changed array (so we don't keep looking for a new connections)
+					$found_socket = array_search($this->socket, $changed);
+					unset($changed[$found_socket]);
 
 				}
 
 				/*************************************************************************************************
 
-					3.	Loop through all the changed sockets
+					3.	Handle changes to existing sockets
 
 						//	1.	Get changed socket
 						//	2.	Read from changed socket
@@ -252,10 +166,9 @@
 					//	2.	Read from changed socket
 					if( !feof($changed_socket) ){
 
-						try{
-							$buf = $this->fread_stream($changed_socket,8*1024);
-						} catch(Exception $err) {
-							$this->console("%s","Unable to read form socket: ".$err->getMessage()."\n","RedBold");
+						$buf = $this->fread_stream($changed_socket,8*1024);
+						if( $buf == FALSE ){
+							$this->console("%s","Unable to read form socket\n","RedBold");
 							$this->disconnect($changed_socket);
 							break;
 						}
@@ -282,11 +195,8 @@
 							$this->decode($buf,$changed_socket);
 						}
 
-
-
-						// this prevent possible endless loops
+						// this prevents possible endless loop
          				if( $info['unread_bytes'] <= 0 ){ break; }
-
 						break;
 
 					//	3.	if EOF then close connection.
@@ -298,12 +208,100 @@
 						// remove from changed socket array
 						$found_socket = array_search($changed_socket, $changed);
 						unset($changed[$found_socket]);
-
 						break;
 
 					}
 
 				}
+
+			}
+
+		}
+
+		/********************************************************************************************************************
+
+			connect:
+
+				Check for new connections: Basically we're checking to see if our original socket has
+				been added to the changed array and if so we know it has a new connection waiting to be
+				handled.
+
+				//	1.	accpet new socket
+				//	2.	add socket to socket list
+				//	3.	read data sent by the socket
+				//	4.	perform websocket handshake
+				//	5.	store the client data
+				//	6.	notify all users of newely connected user
+				//	7.	remove new socket from changed array
+
+		********************************************************************************************************************/
+
+		private function connect( &$socket, &$changed ){
+
+			//	1.	accpet new socket
+			$this->console("\nAttempting to connect a new client.\n");
+			$new_socket = stream_socket_accept($socket,5);
+
+			if( !$new_socket ){
+				$this->console("%s","Unable to connect.\n","RedBold");
+				$found_socket = array_search($socket, $changed);
+				unset($changed[$found_socket]);
+				continue;
+			}
+
+			stream_set_blocking($new_socket, false);
+
+			//	2.	add socket to socket list
+			$this->console("Reading from socket.\n");
+
+			$request = $this->fread_stream($new_socket,8*1024);
+			if( !$request ){
+				$found_socket = array_search($socket, $changed);
+				unset($changed[$found_socket]);
+				continue;
+			}
+			$this->sockets[] = $new_socket;
+
+			//	4.	perform websocket handshake and retreive user data
+			$this->console("Performing websocket handshake.\n");
+			$ouser = $this->handshake($request, $new_socket);
+			if( is_object($ouser)  ){
+
+				//	5.	store the user data
+				$ouser->websocket_login_datetime = strtotime('now');
+				$ouser->subscriptions = array();
+				$found_socket = array_search($new_socket,$this->sockets);
+				$this->cData[ $found_socket ] = $ouser;
+				$this->subscribe($found_socket,md5("all"));
+				$this->subscribe($found_socket,md5($ouser->ouser_id));
+				$this->console("%s",$ouser->ouser_first_name." ".$ouser->ouser_last_name,"BlueBold");
+				$this->console("%s"," has logged on.\n","GreenBold");
+
+				//	6.	notify all users of newely connected user
+				$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' connected.' );
+				$this->send($response);
+
+				//	7.	remove new socket from changed array
+				// removes original socket from changed array (so we don't keep looking for a new connections)
+				$found_socket = array_search($socket, $changed);
+				unset($changed[$found_socket]);
+				$this->console( (count($this->sockets)-1)." users connected.\n" );
+				return $new_socket;
+
+			} else if ( is_string($ouser) ){
+
+				// keep track of obray client connections
+				$this->console("%s","Connected obray-client\n","GreenBold");
+				$this->obray_clients[array_search($new_socket,$this->sockets)] = TRUE;
+
+			} else {
+
+				// abort if unable to find user
+				$this->console("%s","Connection failed, unable to connect user (not found).\n","RedBold");
+				// removes our newely connected socket from our sockets array (aborting the connection)
+				$found_socket = array_search($new_socket, $this->sockets);
+				unset($this->sockets[$found_socket]);
+				return FALSE;
 
 			}
 
@@ -352,7 +350,8 @@
 
 				//	5.	remove the connection data and socket
 				$ouser = $this->cData[$found_socket];
-				$this->console("%s",$ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged off.\n","Red");
+				$this->console("%s",$ouser->ouser_first_name." ".$ouser->ouser_last_name,"BlueBold");
+				$this->console("%s"," has logged off.\n","RedBold");
 				unset($this->cData[$found_socket]);
 
 				//	6.	notify all users about disconnected connection
