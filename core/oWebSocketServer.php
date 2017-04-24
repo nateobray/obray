@@ -128,7 +128,7 @@
 			while(true){
 
 				$changed = $this->sockets; $null = NULL;
-				stream_select( $changed, $null, $null, NULL, 200000 );
+				stream_select( $changed, $null, $null, 0, 200000 );
 
 				/*************************************************************************************************
 
@@ -151,7 +151,7 @@
 
 					//	1.	accpet new socket
 					$this->console("Attempting to connect a new client.\n");
-					$new_socket = @stream_socket_accept($this->socket,5);
+					$new_socket = stream_socket_accept($this->socket,5);
 
 					if( !$new_socket ){
 						$this->console("%s","Unable to connect.\n","RedBold");
@@ -160,8 +160,8 @@
 						continue;
 					}
 
-					socket_set_option($new_socket, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>5, 'usec'=>0));
-					socket_set_option($new_socket, SOL_SOCKET, SO_SNDTIMEO, array('sec'=>5, 'usec'=>0));
+					//socket_set_option($new_socket, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>5, 'usec'=>0));
+					//socket_set_option($new_socket, SOL_SOCKET, SO_SNDTIMEO, array('sec'=>5, 'usec'=>0));
 
 					if( $new_socket !== FALSE ){
 
