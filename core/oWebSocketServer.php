@@ -526,7 +526,7 @@
 						$msg_sent[$channel] = FALSE;
 					} else {
 
-						$this->console("%s"," succeeded ""GreenBold");
+						$this->console("%s"," succeeded ","GreenBold");
 						$msg_sent[$channel] = TRUE;
 					}
 
