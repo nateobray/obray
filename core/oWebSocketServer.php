@@ -162,7 +162,7 @@
 						continue;
 					}
 
-					stream_set_blocking($new_socket, false);
+					//stream_set_blocking($new_socket, false);
 
 					if( $new_socket !== FALSE ){
 
