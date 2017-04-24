@@ -172,6 +172,8 @@
 
 						$request = stream_get_contents($new_socket, 8*1024);
 
+						$this->console($request);
+
 						//	4.	perform websocket handshake and retreive user data
 						$this->console("Performing websocket handshake.\n");
 						$ouser = $this->handshake($request, $new_socket);
