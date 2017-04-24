@@ -561,9 +561,10 @@
 
 				if( !empty($new_user->data[0]) ){
 					$ouser = new stdClass();
-					$ouser->ouser_first_name = $new_user->ouser_first_name;
-					$ouser->ouser_last_name = $new_user->ouser_last_name;
-					$ouser->ouser_group = $new_user->ouser_group;
+					$ouser->ouser_id = new_user->data[0]->ouser_id;
+					$ouser->ouser_first_name = new_user->data[0]->ouser_first_name;
+					$ouser->ouser_last_name = new_user->data[0]->ouser_last_name;
+					$ouser->ouser_group = new_user->data[0]->ouser_group;
 				} else {
 					$ouser = new stdClass();
 				}
