@@ -170,10 +170,8 @@
 						$this->console("Reading from socket.\n");
 						$this->sockets[] = $new_socket;
 						$request = '';
-						while( !feof($new_socket) ){
+						while( !feof($new_socket) && empty($request) ){
 							 $request .= fread($new_socket, 8*1024);
-							 $this->console($request);
-							 $this->console("\n");
 						}
 
 						//	4.	perform websocket handshake and retreive user data
