@@ -141,6 +141,7 @@
 				if( in_array($this->socket,$changed) ){
 
 					$new_socket = $this->connect($this->socket, $changed);
+					if( !$new_socket ){	continue; }
 					// removes original socket from the changed array (so we don't keep looking for a new connections)
 					$found_socket = array_search($this->socket, $changed);
 					unset($changed[$found_socket]);
@@ -246,7 +247,7 @@
 				$this->console("%s","\tUnable to connect.\n","RedBold");
 				$found_socket = array_search($socket, $changed);
 				unset($changed[$found_socket]);
-				continue;
+				return FALSE;
 			}
 
 			stream_set_blocking($new_socket, false);
@@ -258,7 +259,7 @@
 			if( !$request ){
 				$found_socket = array_search($socket, $changed);
 				unset($changed[$found_socket]);
-				continue;
+				return FALSE;
 			}
 			$this->sockets[] = $new_socket;
 
