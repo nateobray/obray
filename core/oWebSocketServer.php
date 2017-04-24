@@ -459,8 +459,8 @@
 				} catch (Exception $err){
 					return FALSE;
 				}
-				if ($fwrite === false) {
-		            return $written;
+				if ($fwrite === FALSE) {
+		            return FALSE;
 		        }
 
 		    }
