@@ -459,7 +459,7 @@
 				} catch (Exception $err){
 					return FALSE;
 				}
-				if ($fwrite === FALSE) {
+				if ($fwrite == FALSE) {
 		            return FALSE;
 		        }
 
@@ -510,7 +510,7 @@
 					$msg->channel = $channel;
 					$message =  $this->mask( json_encode($msg) );
 					$this->console("%s"," writing ","YellowBold");
-					if( $this->fwrite_stream($send_socket,$message) === FALSE ){
+					if( $this->fwrite_stream($send_socket,$message) == FALSE ){
 						$this->disconnect($send_socket);
 						$msg_sent[$channel] = FALSE;
 					} else {
