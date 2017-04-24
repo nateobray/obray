@@ -156,9 +156,9 @@
 					if( $new_socket !== FALSE ){
 
 						if( count($this->sockets) > 25 ){
-							$found_socket = array_search($this->socket, $changed);
-							unset($changed[$found_socket]);
-							continue;
+							//$found_socket = array_search($this->socket, $changed);
+							//unset($changed[$found_socket]);
+							//continue;
 						}
 
 						//	2.	add socket to socket list
