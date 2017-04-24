@@ -172,7 +172,7 @@
 						$request = ''; $iterations = 0; $max_iterations = 20; $read_success = TRUE;
 						while( !feof($new_socket) && empty($request) ){
 							 $request .= fread($new_socket, 8*1024);
-							 if( $iterations > $max_iterations ){ $read_success = FALSE; break; }
+							 if( $iterations > $max_iterations ){ $this->console("%s","failed max iterations\n","RedBold"); $read_success = FALSE; break; }
 							 ++ $iterations;
 						}
 						if( $read_success ){
