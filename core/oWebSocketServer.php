@@ -549,15 +549,10 @@
 					//	4.	send message
 					$msg->channel = $channel;
 					$message =  $this->mask( json_encode($msg) );
-					$this->console("%s"," writing ","YellowBold");
 					if( $this->fwrite_stream($send_socket,$message) == FALSE ){
-						$this->console("%s"," failed ","RedBold");
 						$this->disconnect($send_socket);
-						$this->console("%s"," failed ","RedBold");
 						$msg_sent[$channel] = FALSE;
 					} else {
-
-						$this->console("%s"," succeeded ","GreenBold");
 						$msg_sent[$channel] = TRUE;
 					}
 
