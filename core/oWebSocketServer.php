@@ -164,7 +164,9 @@
 
 					if( $new_socket !== FALSE ){
 
+
 						//	2.	add socket to socket list
+						$this->console("Reading from socket.\n");
 						$this->sockets[] = $new_socket;
 						$request = fread($new_socket, 2046);
 
