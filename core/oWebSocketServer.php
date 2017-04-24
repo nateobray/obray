@@ -172,7 +172,7 @@
 
 						//	4.	perform websocket handshake and retreive user data
 						$this->console("Performing websocket handshake.\n");
-						$ouser = $this->han	dshake($request, $new_socket);
+						$ouser = $this->handshake($request, $new_socket);
 						if( is_object($ouser)  ){
 
 							//	5.	store the user data
