@@ -155,6 +155,10 @@
 
 					if( $new_socket !== FALSE ){
 
+						if( count($this->sockets) > 25 ){
+							continue;
+						}
+
 						//	2.	add socket to socket list
 						$this->sockets[] = $new_socket;
 						$request = fread($new_socket, 2046);
