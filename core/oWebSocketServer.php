@@ -503,7 +503,7 @@
 
 		private function fread_stream($socket,$length){
 			$request = ''; $iterations = 0; $max_iterations = 10; $read_success = TRUE;
-			while( !feof($new_socket) && empty($request) ){
+			while( !feof($socket) && empty($request) ){
 				usleep(50000);
 				 $request .= fread($socket, $length);
 				 if( $iterations > $max_iterations ){ $this->console("%s","failed max iterations\n","RedBold"); $read_success = FALSE; break; }
