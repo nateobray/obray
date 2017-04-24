@@ -248,8 +248,6 @@
 							 $this->console("%s","obray-client sending message...");
 							 $response = $this->send($msg);
 							 if( !empty($response) ){
-
-
 								 $this->console("%s","done.\n","GreenBold");
 							 } else {
 								 $this->console("%s","No one listening.\n","RedBold");
@@ -310,12 +308,13 @@
 
 		private function disconnect( $changed_socket ){
 
+			$this->console("%s","Attempting to disconnect index: ".$found_socket."\n","RedBold");
+
 			//	1.	remove the changes socket from the list of sockets
 			$found_socket = array_search($changed_socket, $this->sockets);
 			unset($this->sockets[$found_socket]);
 
 			//	2.	shutdown the socket connection
-			$this->console("%s","Attempting to disconnect index: ".$found_socket."\n","RedBold");
 			stream_socket_shutdown($changed_socket,STREAM_SHUT_RDWR);
 
 			//	3.	if client is obray disconnect and return
@@ -495,6 +494,7 @@
 					//	4.	send message
 					$msg->channel = $channel;
 					$message =  $this->mask( json_encode($msg) );
+					$this->console("%s"," writing ","YellowBold");
 					@fwrite($send_socket, $message, strlen($message));
 					$msg_sent[$channel] = TRUE;
 
