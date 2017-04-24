@@ -239,7 +239,7 @@
 		private function connect( &$socket, &$changed ){
 
 			//	1.	accpet new socket
-			$this->console("\nAttempting to connect a new client.\n");
+			$this->console("%s","\nAttempting to connect a new client.\n","YellowBold");
 			$new_socket = stream_socket_accept($socket,5);
 
 			if( !$new_socket ){
@@ -327,7 +327,7 @@
 			$found_socket = array_search($changed_socket, $this->sockets);
 			if( !empty($found_socket) ){
 
-				$this->console("%s","\nAttempting to disconnect index: ".$found_socket."\n","RedBold");
+				$this->console("%s","\nAttempting to disconnect index: ".$found_socket."\n","YellowBold");
 
 
 				//	1.	remove the changes socket from the list of sockets
