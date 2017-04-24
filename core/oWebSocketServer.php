@@ -169,9 +169,11 @@
 						//	2.	add socket to socket list
 						$this->console("Reading from socket.\n");
 						$this->sockets[] = $new_socket;
-						$request = '';
+						$request = ''; $iterations = 0; $max_iterations = 20;
 						while( !feof($new_socket) && empty($request) ){
 							 $request .= fread($new_socket, 8*1024);
+							 if( $iterations > $max_iterations ){ break; }
+							 ++ $iterations;
 						}
 
 						//	4.	perform websocket handshake and retreive user data
