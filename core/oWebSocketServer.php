@@ -171,6 +171,7 @@
 
 						$request = ''; $iterations = 0; $max_iterations = 1000; $read_success = TRUE;
 						while( !feof($new_socket) && empty($request) ){
+							usleep(100000);
 							 $request .= fread($new_socket, 8*1024);
 							 if( $iterations > $max_iterations ){ $this->console("%s","failed max iterations\n","RedBold"); $read_success = FALSE; break; }
 							 ++ $iterations;
