@@ -162,7 +162,7 @@
 						continue;
 					}
 
-					//stream_set_blocking($new_socket, false);
+					stream_set_blocking($new_socket, false);
 
 					if( $new_socket !== FALSE ){
 
@@ -170,13 +170,11 @@
 						$this->console("Reading from socket.\n");
 						$request = fread($new_socket, 8*1024);
 
-						/***
 						$request = ''; $iterations = 0; $max_iterations = 1000; $read_success = TRUE;
 						while( !feof($new_socket) && empty($request) ){
 							usleep(100000);
-
-							 if( $iterations > $max_iterations ){ $this->console("%s","failed max iterations\n","RedBold"); $read_success = FALSE; break; }
-							 ++ $iterations;
+							if( $iterations > $max_iterations ){ $this->console("%s","failed max iterations\n","RedBold"); $read_success = FALSE; break; }
+							++ $iterations;
 						}
 						if( $read_success ){
 							$this->sockets[] = $new_socket;
@@ -185,7 +183,6 @@
 							unset($changed[$found_socket]);
 							continue;
 						}
-						**/
 
 						//	4.	perform websocket handshake and retreive user data
 						$this->console("Performing websocket handshake.\n");
