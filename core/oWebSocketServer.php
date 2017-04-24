@@ -153,6 +153,15 @@
 					$this->console("Attempting to connect a new client.\n");
 					$new_socket = @stream_socket_accept($this->socket,5);
 
+					if( !$new_socket ){
+
+						$this->console("%s","Unable to connect.\n","RedBold");
+						$found_socket = array_search($this->socket, $changed);
+						unset($changed[$found_socket]);
+						continue;
+
+					}
+
 					if( $new_socket !== FALSE ){
 
 						//	2.	add socket to socket list
@@ -450,7 +459,12 @@
 
 		private function sendList(){
 			$this->console("Received list, sending...");
-			$msg = (object)array('channel'=>'all', 'type'=>'list', 'message'=>$this->cData);
+			$data = array();
+			forEach( $this->cData as $user ){
+				if( count($data) > 50 ){ break; }
+				$data[] = $user;
+			}
+			$msg = (object)array('channel'=>'all', 'type'=>'list', 'message'=>$data);
 			$response = $this->send($msg);
 			if( !empty($response) ){
 				$this->console("%s","done\n","GreenBold");
