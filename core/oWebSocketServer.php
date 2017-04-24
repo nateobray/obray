@@ -159,7 +159,6 @@
 							$found_socket = array_search($this->socket, $changed);
 							unset($changed[$found_socket]);
 							continue;
-
 						}
 
 						//	2.	add socket to socket list
@@ -558,7 +557,11 @@
 				$ouser_id = $matches[0];
 				$this->setDatabaseConnection(getDatabaseConnection(true));
 				$this->console( 'retreiving user: /obray/OUsers/get/?ouser_id='.$ouser_id.'&with=options'."\n" );
-				$ouser = $this->route('/obray/OUsers/get/?ouser_id='.$ouser_id.'&with=options');
+				$new_user = $this->route('/obray/OUsers/get/?ouser_id='.$ouser_id.'&with=options');
+				$ouser = new stdClass();
+				$ouser->ouser_first_name = $new_user->ouser_first_name;
+				$ouser->ouser_last_name = $new_user->ouser_last_name;
+				$ouser->ouser_group = $new_user->ouser_group;
 
 				if( !empty($ouser->data[0]) ){
 					$ouser = $ouser->data[0];
