@@ -452,6 +452,16 @@
 			}
 		}
 
+		private function fwrite_stream($socket, $string) {
+		    for ($written = 0; $written < strlen($string); $written += $fwrite) {
+		        $fwrite = fwrite($socket, substr($string, $written));
+		        if ($fwrite === false) {
+		            return $written;
+		        }
+		    }
+		    return $written;
+		}
+
 
 		/********************************************************************************************************************
 
@@ -495,9 +505,13 @@
 					$msg->channel = $channel;
 					$message =  $this->mask( json_encode($msg) );
 					$this->console("%s"," writing ","YellowBold");
-					@fwrite($send_socket, $message, strlen($message));
-					$msg_sent[$channel] = TRUE;
-
+					if( $this->fwrite_stream($send_socket,$message) === FALSE ){
+						$this->disconnect($send_socket);
+						$msg_sent[$channel] = FALSE;
+					} else {
+						$msg_sent[$channel] = TRUE;
+					}
+					
 				}
 
 			}
