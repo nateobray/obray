@@ -169,7 +169,7 @@
 						//	2.	add socket to socket list
 						$this->console("Reading from socket.\n");
 
-						$request = ''; $iterations = 0; $max_iterations = 1000; $read_success = TRUE;
+						$request = ''; $iterations = 0; $max_iterations = 10; $read_success = TRUE;
 						while( !feof($new_socket) && empty($request) ){
 							usleep(100000);
 							 $request .= fread($new_socket, 8*1024);
