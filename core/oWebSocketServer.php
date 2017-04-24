@@ -464,11 +464,11 @@
 				try {
 		        	$fwrite = fwrite($socket, substr($string, $written));
 				} catch (Exception $err){
-					$this->conosole("%s","Write failed (try/catch).","RedBold");
+					$this->console("%s","Write failed (try/catch).","RedBold");
 					return FALSE;
 				}
 				if ($fwrite == FALSE) {
-					$this->conosole("%s","Write failed.","RedBold");
+					$this->console("%s","Write failed.","RedBold");
 		            return FALSE;
 		        }
 
