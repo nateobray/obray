@@ -162,10 +162,8 @@
 						continue;
 					}
 
-					stream_set_timeout($new_socket,5);
-					//socket_set_option($new_socket, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>5, 'usec'=>0));
-					//socket_set_option($new_socket, SOL_SOCKET, SO_SNDTIMEO, array('sec'=>5, 'usec'=>0));
-
+					stream_set_blocking($new_socket, false);
+					
 					if( $new_socket !== FALSE ){
 
 						//	2.	add socket to socket list
