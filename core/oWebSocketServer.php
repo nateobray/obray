@@ -226,7 +226,6 @@
 							// removes our newely connected socket from our sockets array (aborting the connection)
 							$found_socket = array_search($new_socket, $this->sockets);
 							unset($this->sockets[$found_socket]);
-							exit();
 
 						}
 
