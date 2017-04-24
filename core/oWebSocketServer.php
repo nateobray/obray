@@ -464,9 +464,11 @@
 				try {
 		        	$fwrite = fwrite($socket, substr($string, $written));
 				} catch (Exception $err){
+					$this->conosole("%s","Write failed (try/catch).","RedBold");
 					return FALSE;
 				}
 				if ($fwrite == FALSE) {
+					$this->conosole("%s","Write failed.","RedBold");
 		            return FALSE;
 		        }
 
@@ -519,8 +521,10 @@
 					$this->console("%s"," writing ","YellowBold");
 					if( $this->fwrite_stream($send_socket,$message) == FALSE ){
 						$this->disconnect($send_socket);
+						$this->console("%s"," succeeded "."GreenBold");
 						$msg_sent[$channel] = FALSE;
 					} else {
+						$this->console("%s"," failed "."RedBold");
 						$msg_sent[$channel] = TRUE;
 					}
 
