@@ -151,29 +151,28 @@
 
 					//	1.	accpet new socket
 					$this->console("Attempting to connect a new client.\n");
-
 					$new_socket = @stream_socket_accept($this->socket,5);
-					stream_set_timeout($new_socket,5);
 
 					if( !$new_socket ){
-
 						$this->console("%s","Unable to connect.\n","RedBold");
 						$found_socket = array_search($this->socket, $changed);
 						unset($changed[$found_socket]);
 						continue;
-
 					}
+
+					socket_set_option($new_socket, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>5, 'usec'=>0));
+					socket_set_option($new_socket, SOL_SOCKET, SO_SNDTIMEO, array('sec'=>5, 'usec'=>0));
 
 					if( $new_socket !== FALSE ){
 
 						//	2.	add socket to socket list
 						$this->console("Reading from socket.\n");
 						$this->sockets[] = $new_socket;
-						$request = fread($new_socket, 2046);
+						$request = fread($new_socket, 8184);
 
 						//	4.	perform websocket handshake and retreive user data
 						$this->console("Performing websocket handshake.\n");
-						$ouser = $this->handshake($request, $new_socket);
+						$ouser = $this->han	dshake($request, $new_socket);
 						if( is_object($ouser)  ){
 
 							//	5.	store the user data
