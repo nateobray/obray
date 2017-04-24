@@ -151,8 +151,9 @@
 
 					//	1.	accpet new socket
 					$this->console("Attempting to connect a new client.\n");
-					stream_set_timeout($this->socket,5);
+
 					$new_socket = @stream_socket_accept($this->socket,5);
+					stream_set_timeout($new_socket,5);
 
 					if( !$new_socket ){
 
