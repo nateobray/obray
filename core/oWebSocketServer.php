@@ -151,15 +151,9 @@
 
 					//	1.	accpet new socket
 					$this->console("Attempting to connect a new client.\n");
-					$new_socket = @stream_socket_accept($this->socket,30);
+					$new_socket = @stream_socket_accept($this->socket,5);
 
 					if( $new_socket !== FALSE ){
-
-						if( count($this->sockets) > 25 ){
-							//$found_socket = array_search($this->socket, $changed);
-							//unset($changed[$found_socket]);
-							//continue;
-						}
 
 						//	2.	add socket to socket list
 						$this->sockets[] = $new_socket;
@@ -315,37 +309,44 @@
 		private function disconnect( $changed_socket ){
 
 			$found_socket = array_search($changed_socket, $this->sockets);
-			$this->console("%s","Attempting to disconnect index: ".$found_socket."\n","RedBold");
+			if( !empty($found_socket) ){
 
-			//	1.	remove the changes socket from the list of sockets
-			unset($this->sockets[$found_socket]);
+				$this->console("%s","Attempting to disconnect index: ".$found_socket."\n","RedBold");
 
-			//	2.	shutdown the socket connection
-			stream_socket_shutdown($changed_socket,STREAM_SHUT_RDWR);
 
-			//	3.	if client is obray disconnect and return
-			if( !empty($this->obray_clients[ $found_socket ]) ){
-				$this->console("%s","obray-client disconnected.\n","RedBold");
-				unset($this->obray_clients[ $found_socket ]);
-				return;
+				//	1.	remove the changes socket from the list of sockets
+				unset($this->sockets[$found_socket]);
+
+				//	2.	shutdown the socket connection
+				stream_socket_shutdown($changed_socket,STREAM_SHUT_RDWR);
+
+				//	3.	if client is obray disconnect and return
+				if( !empty($this->obray_clients[ $found_socket ]) ){
+					$this->console("%s","obray-client disconnected.\n","RedBold");
+					unset($this->obray_clients[ $found_socket ]);
+					return;
+				}
+
+				//	4.	remove all subscriptions
+				forEach( $this->cData[ $found_socket ]->subscriptions as $key => $value ){
+					$this->unsubscribe($found_socket,$key);
+				}
+
+				//	5.	remove the connection data and socket
+				$ouser = $this->cData[$found_socket];
+				$this->console("%s",$ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged off.\n","Red");
+				unset($this->cData[$found_socket]);
+
+				//	6.	notify all users about disconnected connection
+				$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' disconnected.');
+				$this->send($response);
+
+				//	7.	broadcasting list of users
+				$this->sendList();
+
+			} else {
+				$this->console("%s","Socket not found, unable to disconnect.\n","RedBold");
 			}
-
-			//	4.	remove all subscriptions
-			forEach( $this->cData[ $found_socket ]->subscriptions as $key => $value ){
-				$this->unsubscribe($found_socket,$key);
-			}
-
-			//	5.	remove the connection data and socket
-			$ouser = $this->cData[$found_socket];
-			$this->console("%s",$ouser->ouser_first_name." ".$ouser->ouser_last_name." has logged off.\n","Red");
-			unset($this->cData[$found_socket]);
-
-			//	6.	notify all users about disconnected connection
-			$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' disconnected.');
-			$this->send($response);
-
-			//	7.	broadcasting list of users
-			$this->sendList();
 
 		}
 
