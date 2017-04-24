@@ -141,10 +141,11 @@
 				if( in_array($this->socket,$changed) ){
 
 					$new_socket = $this->connect($this->socket, $changed);
-					if( !$new_socket ){	continue; }
+
 					// removes original socket from the changed array (so we don't keep looking for a new connections)
 					$found_socket = array_search($this->socket, $changed);
 					unset($changed[$found_socket]);
+					if( !$new_socket ){	continue; }
 
 				}
 
