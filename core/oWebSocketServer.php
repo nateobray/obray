@@ -609,7 +609,7 @@
 				}
 
 				$ouser->subscriptions = array( "all" => 1 );
-				$ouser->connection = new stdClass();
+				//$ouser->connection = new stdClass();
 			}
 
 			// 2.	Extract header information from request
@@ -620,7 +620,7 @@
 				if(preg_match('/\A(\S+): (.*)\z/', $line, $matches)){
 					$headers[$matches[1]] = $matches[2];
 					if( is_object($ouser) && !empty($ouser->connection) ){
-						$ouser->connection->{$matches[1]} = $matches[2];
+						//$ouser->connection->{$matches[1]} = $matches[2];
 					}
 				}
 			}
