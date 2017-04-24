@@ -255,7 +255,7 @@
 					if( !feof($changed_socket) ){
 
 						try{
-							$this->fread_stream($changed_socket,8*1024)
+							$this->fread_stream($changed_socket,8*1024);
 						} catch(Exception $err) {
 							$this->console("%s","Unable to read form socket: ".$err->getMessage()."\n","RedBold");
 							$this->disconnect($changed_socket);
