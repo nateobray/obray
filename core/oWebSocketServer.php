@@ -466,7 +466,7 @@
 		}
 
 		private function sendList(){
-			$this->console("Received list, sending...");
+			$this->console("\tReceived list, sending...");
 			$data = array();
 			forEach( $this->cData as $user ){
 				if( count($data) > 50 ){ break; }
