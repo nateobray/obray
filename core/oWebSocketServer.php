@@ -454,10 +454,15 @@
 
 		private function fwrite_stream($socket, $string) {
 		    for ($written = 0; $written < strlen($string); $written += $fwrite) {
-		        $fwrite = fwrite($socket, substr($string, $written));
-		        if ($fwrite === false) {
+				try {
+		        	$fwrite = fwrite($socket, substr($string, $written));
+				} catch (Exception $err){
+					return FALSE;
+				}
+				if ($fwrite === false) {
 		            return $written;
 		        }
+
 		    }
 		    return $written;
 		}
@@ -511,7 +516,7 @@
 					} else {
 						$msg_sent[$channel] = TRUE;
 					}
-					
+
 				}
 
 			}
