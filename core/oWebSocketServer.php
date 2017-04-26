@@ -42,23 +42,12 @@
 		oWebSocketServer:
 
 			1.  Establish a connection on specified host and port
-			2.	Check for new connections: Basically we're checking to see if our original socket has been added to the
-				changed array and if so we now it has a new connection waiting to be handled.
-
-				//	1.	accpet new socket
-				//	2.	add socket to socket list
-				//	3.	read data sent by the socket
-				//	4.	perform websocket handshake
-				//	5.	store the client data
-				//	6.	remove new socket from changed array
-
+			2.	Handle new connections
 			3.	Loop through all the changed sockets
 
 				//	1.	Get changed socket
 				//	2.	Read from changed socket
 				//	3.	if EOF then close connection.
-
-			4.	Cleanup old connects
 
 	********************************************************************************************************************/
 
@@ -130,8 +119,6 @@
 				$changed = $this->sockets; $null = NULL;
 				stream_select( $changed, $null, $null, 0, 200000 );
 
-
-
 				/*************************************************************************************************
 
 					2. Handle new connections
@@ -141,9 +128,11 @@
 				if( in_array($this->socket,$changed) ){
 
 					$new_socket = $this->connect($this->socket, $changed);
+
 					// removes original socket from the changed array (so we don't keep looking for a new connections)
 					$found_socket = array_search($this->socket, $changed);
 					unset($changed[$found_socket]);
+					if( !$new_socket ){	continue; }
 
 				}
 
@@ -246,7 +235,7 @@
 				$this->console("%s","\tUnable to connect.\n","RedBold");
 				$found_socket = array_search($socket, $changed);
 				unset($changed[$found_socket]);
-				continue;
+				return FALSE;
 			}
 
 			stream_set_blocking($new_socket, false);
@@ -258,7 +247,7 @@
 			if( !$request ){
 				$found_socket = array_search($socket, $changed);
 				unset($changed[$found_socket]);
-				continue;
+				return FALSE;
 			}
 			$this->sockets[] = $new_socket;
 
@@ -469,7 +458,7 @@
 			$this->console("\tReceived list, sending...");
 			$data = array();
 			forEach( $this->cData as $user ){
-				if( count($data) > 50 ){ break; }
+				if( count($data) > 100 ){ break; }
 				$data[] = $user;
 			}
 			$msg = (object)array('channel'=>'all', 'type'=>'list', 'message'=>$data);
