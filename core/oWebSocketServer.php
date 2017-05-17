@@ -155,7 +155,7 @@
 					//	2.	Read from changed socket
 					if( !feof($changed_socket) ){
 
-						$buf = $this->fread_stream($changed_socket,8*1024);
+						$buf = $this->fread_stream($changed_socket,100000*1024);
 						if( $buf == FALSE ){
 							$this->console("%s","Unable to read form socket\n","RedBold");
 							$this->disconnect($changed_socket);
@@ -239,11 +239,13 @@
 			}
 
 			stream_set_blocking($new_socket, false);
+			stream_set_read_buffer($new_socket,0);
+			stream_set_write_buffer($new_socket,0);
 
 			//	2.	add socket to socket list
 			$this->console("\tReading from socket.\n");
 
-			$request = $this->fread_stream($new_socket,8*1024);
+			$request = $this->fread_stream($new_socket,100000*1024);
 			if( !$request ){
 				$found_socket = array_search($socket, $changed);
 				unset($changed[$found_socket]);
@@ -253,21 +255,22 @@
 
 			//	4.	perform websocket handshake and retreive user data
 			$this->console("\tPerforming websocket handshake.\n");
-			$ouser = $this->handshake($request, $new_socket);
-			if( is_object($ouser)  ){
+			$client = $this->handshake($request, $new_socket);
+			$this->console($client);
+			if( !empty($client->type) && $client->type == 'Browser' && !empty($client->ouser)  ){
 
 				//	5.	store the user data
-				$ouser->websocket_login_datetime = strtotime('now');
-				$ouser->subscriptions = array();
+				$client->websocket_login_datetime = strtotime('now');
+				$client->subscriptions = array();
 				$found_socket = array_search($new_socket,$this->sockets);
-				$this->cData[ $found_socket ] = $ouser;
+				$this->cData[ $found_socket ] = $client;
 				$this->subscribe($found_socket,md5("all"));
-				$this->subscribe($found_socket,md5($ouser->ouser_id));
-				$this->console("%s","\t".$ouser->ouser_first_name." ".$ouser->ouser_last_name,"BlueBold");
+				$this->subscribe($found_socket,md5($client->ouser->ouser_id));
+				$this->console("%s","\t".$client->ouser->ouser_first_name." ".$client->ouser->ouser_last_name,"BlueBold");
 				$this->console("%s"," has logged on.\n","GreenBold");
 
 				//	6.	notify all users of newely connected user
-				$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' connected.' );
+				$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$client->ouser->ouser_first_name.' '.$client->ouser->ouser_last_name.' connected.' );
 				$this->send($response);
 
 				//	7.	remove new socket from changed array
@@ -277,13 +280,42 @@
 				$this->console( "\t".(count($this->sockets)-1)." users connected.\n" );
 				return $new_socket;
 
-			} else if ( is_string($ouser) ){
+			} else if ( !empty($client->type) && $client->type == 'Device' && !empty($client->odevice) ) {
+
+				//	5.	store the user data
+				$client->websocket_login_datetime = strtotime('now');
+				$client->subscriptions = array();
+				$found_socket = array_search($new_socket,$this->sockets);
+				$this->cData[ $found_socket ] = $client;
+				$this->subscribe($found_socket,md5("devices"));
+				$this->subscribe($found_socket,md5($client->odevice->odevice_UUID));
+				$this->console("%s","\t".$client->odevice->odevice_name,"BlueBold");
+				$this->console("%s"," has logged on.\n","GreenBold");
+
+				//	6.	notify all users of newely connected user
+				$response = (object)array( 'channel'=>'devices', 'type'=>'broadcast', 'message'=>$client->odevice->odevice_name.' connected.' );
+				$this->send($response);
+
+				//	7.	remove new socket from changed array
+				// removes original socket from changed array (so we don't keep looking for a new connections)
+				$found_socket = array_search($socket, $changed);
+				unset($changed[$found_socket]);
+				$this->console( "\t".(count($this->sockets)-1)." users/devices connected.\n" );
+				return $new_socket;
+
+			} else if ( !empty($client->type) && $client->type == 'obray-client' ){
 
 				// keep track of obray client connections
 				$this->console("%s","\tConnected obray-client\n","GreenBold");
 				$this->obray_clients[array_search($new_socket,$this->sockets)] = TRUE;
 
 			} else {
+
+				$new_headers = array( 0 => "HTTP/1.1 403 Forbidden" );
+				$new_headers[] = "Sec-WebSocket-Version: 13";
+				$new_headers[] = "\r\n";
+				$request = implode("\r\n",$new_headers);
+				$this->fwrite_stream($new_socket,$request,strlen($request));
 
 				// abort if unable to find user
 				$this->console("%s","\tConnection failed, unable to connect user (not found).\n","RedBold");
@@ -473,7 +505,7 @@
 		private function fwrite_stream($socket, $string) {
 		    for ($written = 0; $written < strlen($string); $written += $fwrite) {
 				try {
-		        	$fwrite = fwrite($socket, substr($string, $written));
+		        	$fwrite = fwrite($socket, substr($string, $written),8192*10);
 				} catch (Exception $err){
 					$this->console("%s","Write failed (try/catch).","RedBold");
 					return FALSE;
@@ -488,16 +520,27 @@
 		}
 
 		private function fread_stream($socket,$length){
-			$request = ''; $iterations = 0; $max_iterations = 10; $read_success = TRUE;
-			while( !feof($socket) && empty($request) ){
+
+			$request = ''; $start = microtime(TRUE); $timeout = 2;
+			while( !feof($socket) ){
+				$new_content = fread($socket, $length);
+
+				if( !empty($new_content) ){
+					$fields = unpack( 'Cheader/Csize' , substr($new_content, 0, 16) );
+					$fields["size"] -= 128;
+					$this->console($fields);
+				}
+
+				$request .= $new_content;
+				$this->console("%s", "Content :".strlen($new_content)."/".strlen($request)."\n", "GreenBold" );
+				if( strlen($new_content) === 0 && strlen($request) !== 0 ){ return $request; }
+				$current = microtime(TRUE);
+				if( $timeout <= $current-$start ){ $this->console("%s","\tSocket read timed out.\n","RedBold"); return FALSE; }
 				usleep(50000);
-				 $request .= fread($socket, $length);
-				 if( $iterations > $max_iterations ){ $this->console("%s","failed max iterations\n","RedBold"); return FALSE; }
-				 ++ $iterations;
 			}
 			return $request;
+			
 		}
-
 
 		/********************************************************************************************************************
 
@@ -554,14 +597,303 @@
 
 		}
 
+		private function parseRequestHeader( $request ){
+
+			$headers = new stdClass();
+
+			$header_lines = explode("\n",$request);
+			if( empty($header_lines) ){ return $headers; }
+
+			$request_info = explode(" ", array_shift($header_lines) );
+
+			//	1.	retreive method and validate
+			if( empty($request_info) ){ return $headers; }
+			if( trim($request_info[0]) !== 'GET' ){ return $headers; }
+			$headers->method = trim($request_info[0]);
+
+			//	2.	retreive path and validate
+			if( empty(trim($request_info[1])) ){ return $headers; }
+			$headers->uri = trim($request_info[1]);
+			
+			//	3.	retreive HTTP version major
+			if( empty($request_info[2]) ){ return $headers; }
+			$http_version = explode(".",str_replace(["HTTPS/","HTTP/"],"",$request_info[2]) );
+			if( empty($http_version[0]) ){ return $headers; }
+			$headers->http_version_major = intval($http_version[0]);
+			if( empty($http_version[1]) ){ return $headers; }
+			$headers->http_version_minor =  intval($http_version[1]);
+
+			//	4.	retreive all other headers
+			forEach( $header_lines as $header_line ){
+				$line = explode(":",$header_line,2);
+				if( empty($line) || empty(trim($line[0])) ){ continue; }
+				$key = trim($line[0]);
+				$headers->$key = !empty($line[1])?trim($line[1]):'';
+			}
+
+			return $headers;
+
+		}
+
+		/********************************************************************************************************************
+
+			readHandshake:	
+
+				4.2.1.  Reading the Client's Opening Handshake
+
+				When a client starts a WebSocket connection, it sends its part of the
+				opening handshake.  The server must parse at least part of this
+				handshake in order to obtain the necessary information to generate
+				the server part of the handshake.
+
+				The client's opening handshake consists of the following parts.  If
+				the server, while reading the handshake, finds that the client did
+				not send a handshake that matches the description below (note that as
+				per [RFC2616], the order of the header fields is not important),
+				including but not limited to any violations of the ABNF grammar
+				specified for the components of the handshake, the server MUST stop
+				processing the client's handshake and return an HTTP response with an
+				appropriate error code (such as 400 Bad Request).
+
+				//	PARSE HEADER
+			
+				//	1.  An HTTP/1.1 or higher GET request, including a "Request-URI"
+			    //    	[RFC2616] that should be interpreted as a /resource name/
+			    //    	defined in Section 3 (or an absolute HTTP/HTTPS URI containing
+			    //    	the /resource name/).				
+			    //	2.  A |Host| header field containing the server's authority.
+			    //	3.  An |Upgrade| header field containing the value "websocket",
+        		//		treated as an ASCII case-insensitive value.
+        		//	4.  A |Connection| header field that includes the token "Upgrade",
+        		//		treated as an ASCII case-insensitive value.
+        		//	5.  A |Sec-WebSocket-Key| header field with a base64-encoded (see
+        		//		Section 4 of [RFC4648]) value that, when decoded, is 16 bytes in
+        		//		length.
+        		//	6.   A |Sec-WebSocket-Version| header field, with a value of 13.
+
+        		
+
+		********************************************************************************************************************/
+
+		private function readHandshake( $request ){
+
+			//	PARSE HEADER
+			$headers = $this->parseRequestHeader( $request );
+
+			if( 
+
+				//	1.  An HTTP/1.1 or higher GET request, including a "Request-URI"
+			    //    	[RFC2616] that should be interpreted as a /resource name/
+			    //    	defined in Section 3 (or an absolute HTTP/HTTPS URI containing
+			    //    	the /resource name/).
+				
+				empty($headers->method) || $headers->method !== 'GET' ||
+				empty($headers->http_version_major) || $headers->http_version_major < 1 ||
+				empty($headers->http_version_minor) || $headers->http_version_minor < 1 ||
+				empty($headers->uri) ||
+
+				//	2.  A |Host| header field containing the server's authority.
+				
+				empty($headers->Host || $headers->Host === __WEB_SOCKET_HOST__.':'.__WEB_SOCKET_PORT__) ||
+
+				//	3.  An |Upgrade| header field containing the value "websocket",
+        		//		treated as an ASCII case-insensitive value.
+        		
+        		empty($headers->Upgrade) || strcasecmp($headers->Upgrade,"websocket") !== 0 ||
+
+        		//	4.  A |Connection| header field that includes the token "Upgrade",
+        		//		treated as an ASCII case-insensitive value.
+        		
+        		empty($headers->Connection) || strcasecmp($headers->Connection,"Upgrade") !== 0 ||
+
+        		//	5.  A |Sec-WebSocket-Key| header field with a base64-encoded (see
+        		//		Section 4 of [RFC4648]) value that, when decoded, is 16 bytes in
+        		//		length.
+
+        		empty($headers->{'Sec-WebSocket-Key'}) || strlen(base64_decode($headers->{'Sec-WebSocket-Key'})) !== 16 ||
+
+        		//	6.   A |Sec-WebSocket-Version| header field, with a value of 13.
+				empty($headers->{'Sec-WebSocket-Version'}) || intval($headers->{'Sec-WebSocket-Version'}) !== 13
+
+			){
+				$this->console("%s","Invalid WebSocket Headers!\n","RedBold");
+				return FALSE;
+			}
+
+			return $headers;
+
+
+		}
+
+		/********************************************************************************************************************
+
+			sendHandshake:	4.2.2.  Sending the Server's Opening Handshake
+
+	    		More information can be found on this section on what information
+	    		is required during the handshake process.
+				
+				//	1.	N/A
+	    		//	2.  The server can perform additional client authentication, for
+				//		example, by returning a 401 status code with the corresponding
+				//		|WWW-Authenticate| header field as described in [RFC2616].  For
+				//		our case we're authenticating anyone with and ouser_id for now.
+				//
+				//	3&4	N/A
+				//
+				//	5.  If the server chooses to accept the incoming connection, it MUST
+		       	//		reply with a valid HTTP response indicating the following.
+				//
+					//	1.	A Status-Line with a 101 response code as per RFC 2616
+					//		[RFC2616].  Such a response could look like "HTTP/1.1 101
+					//		Switching Protocols".
+					//
+					//	2.	An |Upgrade| header field with value "websocket" as per RFC
+					//		2616 [RFC2616].
+					//		We're authenticating 
+					//
+					//	3.	A |Connection| header field with value "Upgrade".
+					//
+					//	4.	A |Sec-WebSocket-Accept| header field.  The value of this
+					//		header field is constructed by concatenating /key/, defined
+					//		above in step 4 in Section 4.2.2, with the string "258EAFA5-
+					//		E914-47DA-95CA-C5AB0DC85B11", taking the SHA-1 hash of this
+					//		concatenated value to obtain a 20-byte value and base64-
+					//		encoding (see Section 4 of [RFC4648]) this 20-byte hash.
+					//
+					//		The ABNF [RFC2616] of this header field is defined as
+					//		follows:
+					//
+					//		Sec-WebSocket-Accept     = base64-value-non-empty
+					//		base64-value-non-empty = (1*base64-data [ base64-padding ]) |
+					//	                            base64-padding
+					//		base64-data      = 4base64-character
+					//		base64-padding   = (2base64-character "==") |
+					//	                      (3base64-character "=")
+	   				//		base64-character = ALPHA | DIGIT | "+" | "/"
+				
+
+		********************************************************************************************************************/
+
+
+		private function sendHandshake( $headers, $conn ){
+
+			//	2.  The server can perform additional client authentication, for
+			//		example, by returning a 401 status code with the corresponding
+			//		|WWW-Authenticate| header field as described in [RFC2616].  For
+			//		our case we're authenticating anyone with and ouser_id for now.
+
+			parse_str( str_replace('/?',"",$headers->uri), $vars );
+			$ouser = "obray-client";
+
+			$client = new stdClass();
+			$client->type = "obray-client";
+
+			if( !empty($vars["ouser_id"]) ){
+
+				$client->type = "Browser";
+				$this->setDatabaseConnection(getDatabaseConnection(true));
+				$this->console( "\tretreiving user: /obray/OUsers/get/?ouser_id=".$vars["ouser_id"].'&with=options'."\n" );
+				$new_user = $this->route('/obray/OUsers/get/?ouser_id='.$vars["ouser_id"].'&with=options');
+
+				if( !empty($new_user->data[0]) ){
+					$client->ouser = new stdClass();
+					$client->ouser->ouser_id = $new_user->data[0]->ouser_id;
+					$client->ouser->ouser_first_name = $new_user->data[0]->ouser_first_name;
+					$client->ouser->ouser_last_name = $new_user->data[0]->ouser_last_name;
+					$client->ouser->ouser_group = $new_user->data[0]->ouser_group;
+				}
+
+				$client->subscriptions = array( "all" => 1 );
+			}
+
+			if( !empty($vars["odevice_UUID"]) ){
+
+				$client->type = "Device";
+				$this->setDatabaseConnection(getDatabaseConnection(true));
+				$this->console( "\tretreiving device: /m/iOS/oDevices/get/?odevice_UUID=".$vars["odevice_UUID"]."\n" );
+				$new_device = $this->route('/m/iOS/oDevices/get/?odevice_UUID='.$vars["odevice_UUID"] );
+
+				if( !empty($new_device->data[0]) ){
+					$client->odevice = new stdClass();
+					$client->odevice->odevice_id = $new_device->data[0]->odevice_id;
+					$client->odevice->odevice_UUID = $new_device->data[0]->odevice_UUID;
+					$client->odevice->odevice_name = $new_device->data[0]->odevice_name;
+					$client->odevice->odevice_operator = $new_device->data[0]->odevice_operator;
+					$client->odevice->odevice_location = $new_device->data[0]->odevice_location;
+					$client->odevice->odevice_GPS = $new_device->data[0]->odevice_GPS;
+					$client->odevice->odevice_battery = $new_device->data[0]->odevice_battery;
+					$client->odevice->odevice_version = $new_device->data[0]->odevice_version;
+				} else {
+					$client->device = new stdClass();
+				}
+
+				$client->subscriptions = array( "devices" => 1 );
+			}
+
+			//	5.  If the server chooses to accept the incoming connection, it MUST
+	       	//		reply with a valid HTTP response indicating the following.
+			//
+
+				//	1.	A Status-Line with a 101 response code as per RFC 2616
+				//		[RFC2616].  Such a response could look like "HTTP/1.1 101
+				//		Switching Protocols".
+
+				$new_headers = array( 0 => "HTTP/1.1 101 Switching Protocols" );
+
+				//	2.	An |Upgrade| header field with value "websocket" as per RFC
+				//		2616 [RFC2616].
+				//		We're authenticating 
+
+				$new_headers[] = "Upgrade: websocket";
+
+				//	3.	A |Connection| header field with value "Upgrade".
+
+				$new_headers[] = "Connection: Upgrade";
+
+				//	4.	A |Sec-WebSocket-Accept| header field.  The value of this
+				//		header field is constructed by concatenating /key/, defined
+				//		above in step 4 in Section 4.2.2, with the string "258EAFA5-
+				//		E914-47DA-95CA-C5AB0DC85B11", taking the SHA-1 hash of this
+				//		concatenated value to obtain a 20-byte value and base64-
+				//		encoding (see Section 4 of [RFC4648]) this 20-byte hash.
+				//
+				//		The ABNF [RFC2616] of this header field is defined as
+				//		follows:
+				//
+				//		Sec-WebSocket-Accept     = base64-value-non-empty
+				//		base64-value-non-empty = (1*base64-data [ base64-padding ]) |
+				//	                            base64-padding
+				//		base64-data      = 4base64-character
+				//		base64-padding   = (2base64-character "==") |
+				//	                      (3base64-character "=")
+   				//		base64-character = ALPHA | DIGIT | "+" | "/"
+
+				$secAccept = base64_encode(pack('H*', sha1($headers->{'Sec-WebSocket-Key'} . '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')));
+				$new_headers[] = "Sec-WebSocket-Accept:$secAccept";
+				$new_headers[] = "\r\n";
+
+			$upgrade = implode("\r\n",$new_headers);
+
+			if( $this->debug ){
+				$this->console("Send upgrade request headers.\n");
+				$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
+				$this->console( $upgrade );
+				$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
+				$this->console($conn);
+			}
+			$this->fwrite_stream($conn,$upgrade,strlen($upgrade));
+
+			return $client;
+
+		}
+
 		/********************************************************************************************************************
 
 			handshake:  Websocket require a sepcial response and this function is going to construct and send it over
 						the established connection.
 
-				1.	Extract the ouser from the connection request
-				2.	Extract header information from request
-				3.	Prepare/send response
+				//	1.	REF: 4.2.1.  Reading the Client's Opening Handshake
+				//	2.	REF: 4.2.2.  Sending the Server's Opening Handshake
 
 		********************************************************************************************************************/
 
@@ -573,76 +905,148 @@
 				$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
 			}
 
-			preg_match('/(?<=GET \/\?ouser_id=)([0-9]*)/',$request,$matches);
+			//	1.	REF: 4.2.1.  Reading the Client's Opening Handshake
+			$headers = $this->readHandshake($request);
+			if( empty($headers) ){ return; }
 
-			// 1.	Extract the ouser from the connection request
-			$ouser = "obray-client";
-			if( !empty($matches) ){
-				$ouser_id = $matches[0];
-				$this->setDatabaseConnection(getDatabaseConnection(true));
-				$this->console( "\tretreiving user: /obray/OUsers/get/?ouser_id=".$ouser_id.'&with=options'."\n" );
-				$new_user = $this->route('/obray/OUsers/get/?ouser_id='.$ouser_id.'&with=options');
-
-				if( !empty($new_user->data[0]) ){
-					$ouser = new stdClass();
-					$ouser->ouser_id = $new_user->data[0]->ouser_id;
-					$ouser->ouser_first_name = $new_user->data[0]->ouser_first_name;
-					$ouser->ouser_last_name = $new_user->data[0]->ouser_last_name;
-					$ouser->ouser_group = $new_user->data[0]->ouser_group;
-				} else {
-					$ouser = new stdClass();
-				}
-
-				$ouser->subscriptions = array( "all" => 1 );
-				//$ouser->connection = new stdClass();
-			}
-
-			// 2.	Extract header information from request
-			$lines = explode("\r\n",$request);
-			$headers = array();
-			foreach($lines as $line){
-				$line = chop($line);
-				if(preg_match('/\A(\S+): (.*)\z/', $line, $matches)){
-					$headers[$matches[1]] = $matches[2];
-					if( is_object($ouser) && !empty($ouser->connection) ){
-						//$ouser->connection->{$matches[1]} = $matches[2];
-					}
-				}
-			}
-
-			// 3.	Prepare/send response
-			if( empty($headers['Sec-WebSocket-Key']) ){ return; }
-			$secKey = $headers['Sec-WebSocket-Key'];
-			$secAccept = base64_encode(pack('H*', sha1($secKey . '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')));
-			//hand shaking header
-			$upgrade  = "HTTP/1.1 101 Web Socket Protocol Handshake\r\n" .
-			"Upgrade: websocket\r\n" .
-			"Connection: Upgrade\r\n" .
-			"WebSocket-Origin: $this->host\r\n" .
-			"WebSocket-Location: ws://$this->host:$this->port/\r\n".
-			"Sec-WebSocket-Accept:$secAccept\r\n\r\n";
-
-			if( $this->debug ){
-				$this->console("Send upgrade request headers.\n");
-				$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
-				$this->console( $upgrade );
-				$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
-				$this->console($conn);
-			}
-			$this->fwrite_stream($conn,$upgrade,strlen($upgrade));
+			//	2.	REF: 4.2.2.  Sending the Server's Opening Handshake
+			$ouser = $this->sendHandshake($headers,$conn);
 
 			return $ouser;
-
+			
 		}
-
+		
 		/********************************************************************************************************************
 
-			Decode: We have to manipulate some bits based on the spec.  Currently there is a limit to the number of
-			 		bits we can send, but that is easily remedied by modifying this function.
+			Decode: We have to manipulate some bits based on the spec.  
+
+			 		0                   1                   2                   3
+					0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+					+-+-+-+-+-------+-+-------------+-------------------------------+
+					|F|R|R|R| opcode|M| Payload len |    Extended payload length    |
+					|I|S|S|S|  (4)  |A|     (7)     |             (16/64)           |
+					|N|V|V|V|       |S|             |   (if payload len==126/127)   |
+					| |1|2|3|       |K|             |                               |
+					+-+-+-+-+-------+-+-------------+ - - - - - - - - - - - - - - - +
+					|     Extended payload length continued, if payload len == 127  |
+					+ - - - - - - - - - - - - - - - +-------------------------------+
+					|                               |Masking-key, if MASK set to 1  |
+					+-------------------------------+-------------------------------+
+					| Masking-key (continued)       |          Payload Data         |
+					+-------------------------------- - - - - - - - - - - - - - - - +
+					:                     Payload Data continued ...                :
+					+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
+					|                     Payload Data continued ...                |
+					+---------------------------------------------------------------+
+
+				//	1.	FIN:  1 bit
+				//
+				//		Indicates that this is the final fragment in a message.  The first
+				//		fragment MAY also be the final fragment.
+				//
+				//	2.	RSV1, RSV2, RSV3:  1 bit each
+				//
+				//		MUST be 0 unless an extension is negotiated that defines meanings
+				//		for non-zero values.  If a nonzero value is received and none of
+				//		the negotiated extensions defines the meaning of such a nonzero
+				//		value, the receiving endpoint MUST _Fail the WebSocket
+				//		Connection_.
+				//
+				//	3.	Opcode:  4 bits
+				//
+				//		Defines the interpretation of the "Payload data".  If an unknown
+				//		opcode is received, the receiving endpoint MUST _Fail the
+				//		WebSocket Connection_.  The following values are defined.
+				//
+				//		*  %x0 denotes a continuation frame
+				//
+				//		*  %x1 denotes a text frame
+				//
+				//		*  %x2 denotes a binary frame
+				//
+				//		*  %x3-7 are reserved for further non-control frames
+				//
+				//		*  %x8 denotes a connection close
+				//
+				//		*  %x9 denotes a ping
+				//
+				//		*  %xA denotes a pong
+				//
+				//		*  %xB-F are reserved for further control frames
+				//
+				//	4.	Mask:  1 bit
+				//
+				//		Defines whether the "Payload data" is masked.  If set to 1, a
+				//		masking key is present in masking-key, and this is used to unmask
+				//		the "Payload data" as per Section 5.3.  All frames sent from
+				//		client to server have this bit set to 1.
+				//
+				//	5.	Payload length:  7 bits, 7+16 bits, or 7+64 bits
+				//
+				//		The length of the "Payload data", in bytes: if 0-125, that is the
+				//		payload length.  If 126, the following 2 bytes interpreted as a
+				//		16-bit unsigned integer are the payload length.  If 127, the
+				//		following 8 bytes interpreted as a 64-bit unsigned integer (the
+				//		most significant bit MUST be 0) are the payload length.  Multibyte
+				//		length quantities are expressed in network byte order.  Note that
+				//		in all cases, the minimal number of bytes MUST be used to encode
+				//		the length, for example, the length of a 124-byte-long string
+				//		can't be encoded as the sequence 126, 0, 124.  The payload length
+				//		is the length of the "Extension data" + the length of the
+				//		"Application data".  The length of the "Extension data" may be
+				//		zero, in which case the payload length is the length of the
+				//		"Application data".
+				//
+				//	6.	Masking-key:  0 or 4 bytes
+				//
+				//		All frames sent from the client to the server are masked by a
+				//		32-bit value that is contained within the frame.  This field is
+				//		present if the mask bit is set to 1 and is absent if the mask bit
+				//		is set to 0.  See Section 5.3 for further information on client-
+				//		to-server masking.
+				//
+				//	7.	Payload data:  (x+y) bytes
+				//
+				//		The "Payload data" is defined as "Extension data" concatenated
+				//		with "Application data".
+				//
+				//		Extension data:  x bytes
+				//
+				//		The "Extension data" is 0 bytes unless an extension has been
+				//		negotiated.  Any extension MUST specify the length of the
+				//		"Extension data", or how that length may be calculated, and how
+				//		the extension use MUST be negotiated during the opening handshake.
+				//		If present, the "Extension data" is included in the total payload
+				//		length.
+				//
+				//		Application data:  y bytes
+				//
+				//		Arbitrary "Application data", taking up the remainder of the frame
+				//		after any "Extension data".  The length of the "Application data"
+				//		is equal to the payload length minus the length of the "Extension
+				//		data".
+				//	8.	Mask the payload data:
+				//		Octet i of the transformed data ("transformed-octet-i") is the XOR of
+				//		octet i of the original data ("original-octet-i") with octet at index
+				//		i modulo 4 of the masking key ("masking-key-octet-j"):
+				//
+				//		j                   = i MOD 4
+				//		transformed-octet-i = original-octet-i XOR masking-key-octet-j
+				//
+				//		The payload length, indicated in the framing as frame-payload-length,
+				//		does NOT include the length of the masking key.  It is the length of
+				//		the "Payload data", e.g., the number of bytes following the masking
+				//		key.
 
 		********************************************************************************************************************/
 
 		private function decode( $msg,$changed_socket ){
+
+			$this->console("In Decode\n");
+
+			$fields = unpack( 'Cheader/Csize' , substr($msg, 0, 16) );
+			$fields["size"] -= 128;
+			$this->console($fields);
 
 			$frame = new stdClass();
 			if( !is_array($msg) ){
@@ -653,79 +1057,170 @@
 			$binary_array = array_map("decbin",$ascii_array);
 			$binary_array = str_split(implode("",$binary_array));
 
-			// FIN bit
+			$first_bits = implode("",array_slice($binary_array,0,64));
+			$this->console("first_bits :".$first_bits."\n");
+			
+			
+			//	1.	FIN:  1 bit
+			//
+			//		Indicates that this is the final fragment in a message.  The first
+			//		fragment MAY also be the final fragment.
+
 			$FIN_bit = array_shift($binary_array);
 			$frame->FIN = (int)$FIN_bit;
 
-			// RSV 1
+			//	2.	RSV1, RSV2, RSV3:  1 bit each
+			//
+			//		MUST be 0 unless an extension is negotiated that defines meanings
+			//		for non-zero values.  If a nonzero value is received and none of
+			//		the negotiated extensions defines the meaning of such a nonzero
+			//		value, the receiving endpoint MUST _Fail the WebSocket
+			//		Connection_.
+
 			$RSV_1 = array_shift($binary_array);
-			// RSV 2
 			$RSV_2 = array_shift($binary_array);
-			// RSV 3
 			$RSV_3 = array_shift($binary_array);
 
-			// opcode
+			//	3.	Opcode:  4 bits
+			//
+			//		Defines the interpretation of the "Payload data".  If an unknown
+			//		opcode is received, the receiving endpoint MUST _Fail the
+			//		WebSocket Connection_.  The following values are defined.
+			//
+			//		*  %x0 denotes a continuation frame
+			//
+			//		*  %x1 denotes a text frame
+			//
+			//		*  %x2 denotes a binary frame
+			//
+			//		*  %x3-7 are reserved for further non-control frames
+			//
+			//		*  %x8 denotes a connection close
+			//
+			//		*  %x9 denotes a ping
+			//
+			//		*  %xA denotes a pong
+			//
+			//		*  %xB-F are reserved for further control frames
+
 			$opcode_bits = implode("",array_splice($binary_array,0,4));
 			$frame->opcode =  bindec( $opcode_bits );
 
-			// MASK Bit
+			//	4.	Mask:  1 bit
+			//
+			//		Defines whether the "Payload data" is masked.  If set to 1, a
+			//		masking key is present in masking-key, and this is used to unmask
+			//		the "Payload data" as per Section 5.3.  All frames sent from
+			//		client to server have this bit set to 1.
+			
 			$mask_bit = array_shift($binary_array);
 			$frame->mask = (int)$mask_bit;
 
-			// Length Bits
+			//	5.	Payload length:  7 bits, 7+16 bits, or 7+64 bits
+			//
+			//		The length of the "Payload data", in bytes: if 0-125, that is the
+			//		payload length.  If 126, the following 2 bytes interpreted as a
+			//		16-bit unsigned integer are the payload length.  If 127, the
+			//		following 8 bytes interpreted as a 64-bit unsigned integer (the
+			//		most significant bit MUST be 0) are the payload length.  Multibyte
+			//		length quantities are expressed in network byte order.  Note that
+			//		in all cases, the minimal number of bytes MUST be used to encode
+			//		the length, for example, the length of a 124-byte-long string
+			//		can't be encoded as the sequence 126, 0, 124.  The payload length
+			//		is the length of the "Extension data" + the length of the
+			//		"Application data".  The length of the "Extension data" may be
+			//		zero, in which case the payload length is the length of the
+			//		"Application data".
+
+			array_splice($ascii_array,0,2); // remove header from ascii array
 			$len_bits = implode("",array_splice($binary_array,0,7));
 			$frame->len = bindec( $len_bits );
 
-			$header = array_splice($ascii_array,0,2);
+			if( $frame->opcode == 15 ){
+				$frame->len = 127;
+			}
+
+			if( $frame->len === 126 ){
+				
+				array_splice($ascii_array,0,2);	// remove additional header from ascii array
+				$len_bits = implode("",array_splice($binary_array,0,16));
+				$frame->len = bindec( $len_bits ) - 32767;
+				
+			} else if( $frame->len === 127 ){
+
+				array_splice($ascii_array,0,8);	// remove additional header from ascii array
+				$len_bits = implode("",array_splice($binary_array,0,16));
+				$frame->len = bindec( $len_bits );
+
+			}
+
+			if( $frame->opcode !== 0 && $frame->opcode !== 1 && $frame->opcode !== 2 ){
+				$this->console("%s","Not a valid opcode. Aborting message decoding.\n","RedBold");
+				$this->console("OPCode Bits: ".$opcode_bits."\n");
+				$this->console($frame);
+				return;
+			}
+
+			//	6.	Masking-key:  0 or 4 bytes
+			//
+			//		All frames sent from the client to the server are masked by a
+			//		32-bit value that is contained within the frame.  This field is
+			//		present if the mask bit is set to 1 and is absent if the mask bit
+			//		is set to 0.  See Section 5.3 for further information on client-
+			//		to-server masking.
 
 			$mask_key_bits = array();
 			$mask_key = array_splice($ascii_array,0,4);
 
-			$encoded_bits = array();
-			$encoded = array_splice($ascii_array,0,$frame->len);
+			//	7.	Payload data:  (x+y) bytes
+			//
+			//		The "Payload data" is defined as "Extension data" concatenated
+			//		with "Application data".
+			//
+			//		Extension data:  x bytes
+			//
+			//		The "Extension data" is 0 bytes unless an extension has been
+			//		negotiated.  Any extension MUST specify the length of the
+			//		"Extension data", or how that length may be calculated, and how
+			//		the extension use MUST be negotiated during the opening handshake.
+			//		If present, the "Extension data" is included in the total payload
+			//		length.
+			//
+			//		Application data:  y bytes
+			//
+			//		Arbitrary "Application data", taking up the remainder of the frame
+			//		after any "Extension data".  The length of the "Application data"
+			//		is equal to the payload length minus the length of the "Extension
+			//		data".
 
+			$encoded_bits = array();
+			$encoded = array_splice($ascii_array,0);
+
+			//	8.	Mask the payload data:
+			//		Octet i of the transformed data ("transformed-octet-i") is the XOR of
+			//		octet i of the original data ("original-octet-i") with octet at index
+			//		i modulo 4 of the masking key ("masking-key-octet-j"):
+			//
+			//		j                   = i MOD 4
+			//		transformed-octet-i = original-octet-i XOR masking-key-octet-j
+			//
+			//		The payload length, indicated in the framing as frame-payload-length,
+			//		does NOT include the length of the masking key.  It is the length of
+			//		the "Payload data", e.g., the number of bytes following the masking
+			//		key.
+			
 			$frame->msg = array();
 			for( $i=0;$i<count($encoded);++$i ){
-				$frame->msg[] = chr($encoded[$i] ^ $mask_key[$i%4]);
+				$char = chr($encoded[$i] ^ $mask_key[$i%4]);
+				$frame->msg[] = $char;
 			}
 			$frame->msg = implode("",$frame->msg);
 
-			if( $frame->FIN === 1 && $frame->opcode = 1 ){
+			
+			if( $frame->FIN === 1 && $frame->opcode == 1 ){
+				//$this->console($frame);
 				$this->onData( $frame,$changed_socket );
 			}
-
-			if( !empty($ascii_array) ){
-				$this->decode($ascii_array,$changed_socket);
-			}
-
-		}
-
-		/********************************************************************************************************************
-
-			unmask: data received from the websocket connection is obfuscated. This fixes that.
-
-		********************************************************************************************************************/
-
-		private function unmask($text) {
-
-			$length = ord($text[1]) & 127;
-			if($length == 126) {
-				$masks = substr($text, 4, 4);
-				$data = substr($text, 8);
-			}
-			elseif($length == 127) {
-				$masks = substr($text, 10, 4);
-				$data = substr($text, 14);
-			}
-			else {
-				$masks = substr($text, 2, 4);
-				$data = substr($text, 6);
-			}
-			$text = "";
-			for ($i = 0; $i < strlen($data); ++$i) {
-				$text .= $data[$i] ^ $masks[$i%4];
-			}
-			return $text;
 
 		}
 
@@ -745,7 +1240,7 @@
 			elseif($length > 125 && $length < 65536)
 				$header = pack('CCn', $b1, 126, $length);
 			elseif($length >= 65536)
-				$header = pack('CCNN', $b1, 127, $length);
+				$header = pack('CCQ', $b1, 127, $length);
 			return $header.$text;
 
 		}
