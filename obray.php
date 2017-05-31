@@ -26,6 +26,7 @@
 	
 	*****************************************************************************/
 
+	
 	require_once("settings.php");
 	
 	error_reporting(E_ALL);						// Set error reporting to display all errors and types
