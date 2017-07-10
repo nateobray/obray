@@ -370,8 +370,13 @@
 				}
 
 				//	5.	remove the connection data and socket
-				$ouser = $this->cData[$found_socket];
-				$this->console("%s","\t".$ouser->ouser_first_name." ".$ouser->ouser_last_name,"BlueBold");
+				$client = $this->cData[$found_socket];
+				if( !empty($client->ouser) ){
+					$this->console("%s","\t".$client->ouser->ouser_first_name." ".$client->ouser->ouser_last_name,"BlueBold");	
+				} else {
+					$this->console("%s","\t".$client->odevice->odevice_name,"BlueBold");	
+				}
+				
 				$this->console("%s"," has logged off.\n","RedBold");
 				unset($this->cData[$found_socket]);
 
