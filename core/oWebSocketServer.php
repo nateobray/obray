@@ -383,9 +383,9 @@
 				//	6.	notify all users about disconnected connection
 				if( !empty($client->ouser) ){
 					$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$client->ouser->ouser_first_name.' '.$client->ouser->ouser_last_name.' disconnected.');
+					$this->send($response);
 				}
-				$this->send($response);
-
+				
 				//	7.	broadcasting list of users
 				$this->sendList();
 
@@ -493,12 +493,16 @@
 
 		}
 
-		private function sendList(){
+		private function sendList( $type = 'user' ){
 			$this->console("\tReceived list, sending...");
 			$data = array();
-			forEach( $this->cData as $user ){
+			forEach( $this->cData as $client ){
 				if( count($data) > 100 ){ break; }
-				$data[] = $user;
+				if( $type == 'user' && !empty($client->ouser) ){
+					$data[] = $client;
+				} else if ( $type == 'device' && !empty($client->odevice) ){
+					$data[] = $client;	
+				}
 			}
 			$msg = (object)array('channel'=>'all', 'type'=>'list', 'message'=>$data);
 			$response = $this->send($msg);

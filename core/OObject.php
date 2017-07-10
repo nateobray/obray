@@ -272,7 +272,7 @@
 				$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 				$info = curl_getinfo( $ch );
 				$data = json_decode($this->data);
-
+				
 				$info["http_code"] =  intval($info["http_code"]);
 
 				if( !( $info["http_code"] >= 200 && $info["http_code"] < 300)  ){
@@ -291,7 +291,6 @@
 					}
 					return $this;
 				} else {
-
 
 					if( !empty($data) ){ $this->data = $data; } else { return $this; }
 
