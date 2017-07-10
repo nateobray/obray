@@ -381,7 +381,9 @@
 				unset($this->cData[$found_socket]);
 
 				//	6.	notify all users about disconnected connection
-				$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' disconnected.');
+				if( !empty($client->ouser) ){
+					$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' disconnected.');
+				}
 				$this->send($response);
 
 				//	7.	broadcasting list of users
