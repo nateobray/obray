@@ -497,7 +497,6 @@
 			$this->console("\tReceived list, sending...");
 			$data = array();
 			forEach( $this->cData as $client ){
-				if( count($data) > 100 ){ break; }
 				if( $type == 'user' && !empty($client->ouser) ){
 					$data[] = $client;
 				} else if ( $type == 'device' && !empty($client->odevice) ){
