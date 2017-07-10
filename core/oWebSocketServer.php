@@ -382,7 +382,7 @@
 
 				//	6.	notify all users about disconnected connection
 				if( !empty($client->ouser) ){
-					$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' disconnected.');
+					$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$client->ouser->ouser_first_name.' '.$client->ouser->ouser_last_name.' disconnected.');
 				}
 				$this->send($response);
 
