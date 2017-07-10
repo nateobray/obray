@@ -124,7 +124,7 @@
 		    "Host: $this->host\r\n".
 		    "Upgrade: websocket\r\n".
 		    "Connection: Upgrade\r\n".
-		    "Sec-WebSocket-Key: ". base64encode( substr( md5(strtotime("now").__OBRAY_TOKEN__), 0, 16 ) )."\r\n".
+		    "Sec-WebSocket-Key: ". base64_encode( substr( md5(strtotime("now").__OBRAY_TOKEN__), 0, 16 ) )."\r\n".
 		    "Sec-WebSocket-Version: 13\r\n".
 		    "Content-Length: ".strlen($data)."\r\n\r\n";
 			fwrite($this->socket, $upgrade );
