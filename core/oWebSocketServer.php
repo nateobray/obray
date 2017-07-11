@@ -706,7 +706,7 @@
 
 				//	2.  A |Host| header field containing the server's authority.
 				
-				empty($headers->Host) || $headers->Host === __WEB_SOCKET_HOST__.':'.__WEB_SOCKET_PORT__ ||
+				empty($headers->Host || $headers->Host === __WEB_SOCKET_HOST__.':'.__WEB_SOCKET_PORT__) ||
 
 				//	3.  An |Upgrade| header field containing the value "websocket",
         		//		treated as an ASCII case-insensitive value.
