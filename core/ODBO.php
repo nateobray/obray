@@ -979,6 +979,29 @@
             return $this;
         }
 
+		public function explain( $sql ){
+
+			$this->console( 'EXPLAIN ' . $sql );
+			
+            try {
+				
+				$result = $this->dbh->query('EXPLAIN ' . $sql);
+				forEach( $result as $r ){
+					$this->console($r);
+				}
+                
+            }
+            catch (Exception $e) {
+                if (isset($this->is_transaction) && $this->is_transaction) {
+                    $this->rollbackTransaction();
+                }
+                $this->throwError($e);
+                $this->logError(oCoreProjectEnum::ODBO, $e);
+            }
+
+            return $this;
+		}
+
         /********************************************************************
 
         runStoredProc
