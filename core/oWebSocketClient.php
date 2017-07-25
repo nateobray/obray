@@ -104,7 +104,7 @@
 			//	4.	establish connection or abort on error
 			$listenstr = 	$protocol."://".$this->host.":".$this->port;
 			$this->console("Binding to ".$this->host.":".$this->port." over ".$protocol."\n");
-			$this->socket = stream_socket_client($listenstr,$errno,$errstr,5,STREAM_CLIENT_CONNECT,$context);
+			$this->socket = @stream_socket_client($listenstr,$errno,$errstr,5,STREAM_CLIENT_CONNECT,$context);
 
 			if( !is_resource($this->socket) ){
 				$this->console("%s",$errstr."\n","RedBold");
