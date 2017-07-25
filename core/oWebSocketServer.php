@@ -82,7 +82,7 @@
 				$protocol = "tcp";
 				$context = 		stream_context_create();
 
-			} else {
+			} else if( in_array(__WEB_SOCKET_PROTOCOL__,['wss','ssl']) ) {
 
 				$protocol = "ssl";
 				try{
@@ -93,6 +93,8 @@
 					return;
 				}
 
+			} else {
+				return;
 			}
 
 			//	3.	establish connection or abort on error
