@@ -94,6 +94,7 @@
 				}
 
 			} else {
+				$this->console("%s","Bad protocal requested!\n","RedBold");
 				return;
 			}
 
@@ -231,7 +232,7 @@
 
 			//	1.	accpet new socket
 			$this->console("%s","\nAttempting to connect a new client.\n","YellowBold");
-			$new_socket = @stream_socket_accept($socket,5);
+			$new_socket = @stream_socket_accept($socket,1);
 
 			if( !$new_socket ){
 				$this->console("%s","\tUnable to connect.\n","RedBold");
