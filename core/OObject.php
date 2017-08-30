@@ -525,7 +525,27 @@
 		    		} else { $this->throwError('You cannot access this resource.',401,'Unauthorized'); }
 
 		    	// restrict access to users without correct permissions
-	    		} else if( is_int($perms[$object_name]) && isSet($_SESSION[$user_session_key]) && (isset($_SESSION[$user_session_key]->ouser_permission_level) && $_SESSION[$user_session_key]->ouser_permission_level != $perms[$object_name]) ){ $this->throwError('You cannot access this resource.',403,'Forbidden'); }
+	    		} else if( 
+					is_int($perms[$object_name]) && 
+					isSet($_SESSION[$user_session_key]) && 
+					(
+						isset($_SESSION[$user_session_key]->ouser_permission_level) 
+						&& !defined("__OBRAY_GRADUATED_PERMISSIONS__") 
+						&& $_SESSION[$user_session_key]->ouser_permission_level != $perms[$object_name]
+					)
+				){ 
+						$this->throwError('You cannot access this resource.',403,'Forbidden'); 
+				} else if( 
+					is_int($perms[$object_name]) && 
+					isSet($_SESSION[$user_session_key]) && 
+					(
+						isset($_SESSION[$user_session_key]->ouser_permission_level) 
+						&& defined("__OBRAY_GRADUATED_PERMISSIONS__") 
+						&& $_SESSION[$user_session_key]->ouser_permission_level > $perms[$object_name]
+					)
+				){
+					$this->throwError('You cannot access this resource.',403,'Forbidden'); 
+				}
 
 	    		// add user_id to params if restriction is based on user
 	    		if( isSet($perms[$object_name]) && $perms[$object_name] === 'user' && isSet($_SESSION[$user_session_key]) ){ $params['ouser_id'] = $_SESSION['ouser']->ouser_id; }

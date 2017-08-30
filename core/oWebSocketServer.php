@@ -122,6 +122,7 @@
 				$changed = $this->sockets; $null = NULL;
 				stream_select( $changed, $null, $null, 0, 200000 );
 
+				
 				/*************************************************************************************************
 
 					2. Handle new connections
@@ -259,7 +260,6 @@
 			//	4.	perform websocket handshake and retreive user data
 			$this->console("\tPerforming websocket handshake.\n");
 			$client = $this->handshake($request, $new_socket);
-			$this->console($client);
 			if( !empty($client->type) && $client->type == 'Browser' && !empty($client->ouser)  ){
 
 				//	5.	store the user data
@@ -346,7 +346,7 @@
 
 		********************************************************************************************************************/
 
-		private function disconnect( $changed_socket ){
+		protected function disconnect( $changed_socket ){
 
 			$found_socket = array_search($changed_socket, $this->sockets);
 			if( !empty($found_socket) ){
@@ -465,9 +465,9 @@
 
 		}
 
-		private function subscribe($found_socket,$channel_hash){
+		protected function subscribe($found_socket,$channel_hash){
 
-			$this->console("\tReceived subscription, subscribing...");
+			$this->console("\tReceived subscription, subscribing ".$channel_hash."...");
 			if( empty($channel_hash) ){
 				$this->console("%s","failed","RedBold"); break;
 			}
@@ -480,7 +480,7 @@
 
 		}
 
-		private function unsubscribe($found_socket,$channel_hash){
+		protected function unsubscribe($found_socket,$channel_hash){
 
 			$this->console("%s","\tReceived unsubscribe, unsubcribing...","RedBold");
 			if( !empty($channel_hash) && !empty($this->subscriptions[ $channel_hash ][ $found_socket ]) ){
@@ -543,11 +543,11 @@
 				if( !empty($new_content) ){
 					$fields = unpack( 'Cheader/Csize' , substr($new_content, 0, 16) );
 					$fields["size"] -= 128;
-					$this->console($fields);
+					//$this->console($fields);
 				}
 
 				$request .= $new_content;
-				$this->console("%s", "Content :".strlen($new_content)."/".strlen($request)."\n", "GreenBold" );
+				//$this->console("%s", "Content :".strlen($new_content)."/".strlen($request)."\n", "GreenBold" );
 				if( strlen($new_content) === 0 && strlen($request) !== 0 ){ return $request; }
 				$current = microtime(TRUE);
 				if( $timeout <= $current-$start ){ $this->console("%s","\tSocket read timed out.\n","RedBold"); return FALSE; }
@@ -1057,25 +1057,20 @@
 
 		private function decode( $msg,$changed_socket ){
 
-			$this->console("In Decode\n");
-
-			$fields = unpack( 'Cheader/Csize' , substr($msg, 0, 16) );
-			$fields["size"] -= 128;
-			$this->console($fields);
-
 			$frame = new stdClass();
 			if( !is_array($msg) ){
 				$ascii_array = array_map("ord",str_split( $msg ));
 			} else {
 				$ascii_array = $msg;
 			}
+
+			$this->console( "ASCII Array Size: " . count($ascii_array) . "\n" );
+
 			$binary_array = array_map("decbin",$ascii_array);
 			$binary_array = str_split(implode("",$binary_array));
 
 			$first_bits = implode("",array_slice($binary_array,0,64));
-			$this->console("first_bits :".$first_bits."\n");
-			
-			
+
 			//	1.	FIN:  1 bit
 			//
 			//		Indicates that this is the final fragment in a message.  The first
@@ -1120,6 +1115,35 @@
 
 			$opcode_bits = implode("",array_splice($binary_array,0,4));
 			$frame->opcode =  bindec( $opcode_bits );
+
+			if( $frame->opcode == 8 ){
+				$this->console("%s","Received close... closing!\n","RedBold");
+				$this->sendClose( $changed_socket, $msg);
+				return;
+			}
+
+			if( $frame->opcode == 11 ){
+				$this->console("%s","Received ping request... send pong.\n","GreenBold");
+				$this->sendPong( $changed_socket, $msg);
+				return;
+			}
+
+			if( $frame->opcode == 10 ){
+
+				$this->console("%s","\nReceived pong from: ","GreenBold");
+				$found_socket = array_search($changed_socket,$this->sockets);
+				if( !empty( $this->cData[$found_socket]->ouser ) ){
+					$ouser = $this->cData[$found_socket]->ouser;
+					$this->console( "%s", $ouser->ouser_first_name . ' ' . $ouser->ouser_last_name,"BlueBold" );
+				}
+				if( !empty( $this->cData[$found_socket]->odevice ) ){
+					$odevice = $this->cData[$found_socket]->odevice;
+					$this->console( "%s", $odevice->odevice_name ,"BlueBold" );
+				}
+				$this->console("\n");
+
+				return;
+			}
 
 			//	4.	Mask:  1 bit
 			//
@@ -1208,8 +1232,11 @@
 			//		is equal to the payload length minus the length of the "Extension
 			//		data".
 
+			$this->console( "ASCII Array Size: " . count($ascii_array) . "\n" );
+			$this->console("Payload size: " . $frame->len . "\n");
+
 			$encoded_bits = array();
-			$encoded = array_splice($ascii_array,0);
+			$encoded = array_splice($ascii_array,0,$frame->len);
 
 			//	8.	Mask the payload data:
 			//		Octet i of the transformed data ("transformed-octet-i") is the XOR of
@@ -1223,7 +1250,7 @@
 			//		does NOT include the length of the masking key.  It is the length of
 			//		the "Payload data", e.g., the number of bytes following the masking
 			//		key.
-			
+
 			$frame->msg = array();
 			for( $i=0;$i<count($encoded);++$i ){
 				$char = chr($encoded[$i] ^ $mask_key[$i%4]);
@@ -1231,10 +1258,14 @@
 			}
 			$frame->msg = implode("",$frame->msg);
 
+			$this->console( "ASCII Array Size: " . count($ascii_array) . "\n" );
 			
 			if( $frame->FIN === 1 && $frame->opcode == 1 ){
-				//$this->console($frame);
 				$this->onData( $frame,$changed_socket );
+			}
+
+			if( !empty($ascii_array) ){
+				$this->decode($ascii_array,$changed_socket);
 			}
 
 		}
@@ -1258,6 +1289,30 @@
 				$header = pack('CCQ', $b1, 127, $length);
 			return $header.$text;
 
+		}
+
+		/********************************************************************************************************************
+
+			sendClose: echos the close request and disconnects
+
+		********************************************************************************************************************/
+
+		private function sendClose( $send_socket,$msg ){
+
+			$b1 = 0x80 | (0x1 & 0x0f);
+			$length = strlen("");
+
+			if($length <= 125){
+				$header = pack('CC', $b1, $length);
+			} elseif($length > 125 && $length < 65536){
+				$header = pack('CCn', $b1, 126, $length);
+			} elseif($length >= 65536) {
+				$header = pack('CCQ', $b1, 127, $length);
+			}
+			
+			$this->fwrite_stream($send_socket,$header) == FALSE;
+			$this->disconnect($send_socket);
+			
 		}
 
 
