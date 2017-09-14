@@ -520,26 +520,6 @@
 		        }
 	        }
 
-	        $GPCalls = array();
-	        $gp_columns_to_index = array();
-	        $gp_index = array_search( "gp",$original_withs );
-	        if( $gp_index !== FALSE  && !empty($this->gp) ){
-	        	$gp = explode(":",$original_withs[$gp_index]);
-	        	array_shift($gp);
-	        	if( count($gp) > 0 ){
-	        		forEach( $gp as $name ){
-	        			//if( $name == "gp" ){ $obj_name = "gp"; } else { $obj_name = $name; }
-	        			//$GPCalls[$obj_name] = $this->gp[$name];
-	        			//$gp_columns_to_index[] = $obj[0];
-					}
-	        	} else{
-	        		$obj = explode(':',$this->gp["default"]);
-	        		$GPCalls["gp"] = new stdClass();
-	        		$GPCalls["gp"]->column = $obj[0];
-	        		$GPCalls["gp"]->path = $obj[1];
-	        	}
-	        }
-
 	        if( isSet($original_params['with']) ){ $original_params['with'] = implode('|',$original_withs); }
 	        $values = array();
 	        $where_str = $this->getWhere($params,$values,$original_params);
@@ -547,41 +527,10 @@
 	        $this->sql = 'SELECT '.implode(',',$columns).' FROM '.$this->table . $this->getJoin() . $filter_join .$where_str . $order_by . $limit;
 	        $statement = $this->dbh->prepare($this->sql);
 	        forEach($values as $value){ if( is_integer($value) ){ $statement->bindValue($value['key'], trim($value['value']), PDO::PARAM_INT); } else { $statement->bindValue($value['key'], trim((string)$value['value']), PDO::PARAM_STR); } }
-	        $statement->execute();
-	        $statement->setFetchMode(PDO::FETCH_NUM);
-	        $data = $statement->fetchAll(PDO::FETCH_OBJ);
-
-
-	        if( !empty($GPCalls) ){
-
-	        	forEach( $GPCalls as $key => $GPCall ){
-	        		$data_to_encode = new stdClass();
-	        		$data_to_encode->Id = array();
-	        		$ids_to_index = array(); $gp_column = $GPCall->column;
-
-	        		forEach( $data as $i => $d ){
-	        			if( !isSet($ids_to_index[$d->$gp_column]) ){ $ids_to_index[$d->$gp_column] = array(); }
-	        			$ids_to_index[$d->$gp_column][] = (int)$i;
-	        			if( !empty($d->$gp_column) ){ $data_to_encode->Id[] = $d->$gp_column; }
-	        		}
-	        		
-		        	$response = $this->route(__HULK__.$GPCall->path.'?http_method=post&http_content_type=application/json&http_accept=application/json',json_encode( $data_to_encode ) )->data;
-
-		        	forEach( $data as $index => $obj ){
-
-		        		if( !isSet($data[$index]->$key) ){ $data[$index]->$key = array(); }
-		        		$obj_key = $obj->$gp_column;
-		        		if( !empty( $response->$obj_key ) ){
-		        			array_push($data[$index]->$key,$response->$obj_key);
-		        		}
-		        	}
-
-
-	        	}
-
-
-	        }
-
+			$statement->execute();
+			$statement->setFetchMode(PDO::FETCH_NUM);
+			$data = $statement->fetchAll(PDO::FETCH_OBJ);
+			
 	        $this->data = $data;
 
 	        if( !empty($withs) && !empty($this->data) ){
@@ -936,9 +885,13 @@
         ********************************************************************/
 
         public function getFirst(){
-	        if( !isSet($this->data) || !is_array($this->data) ){ $this->data = array(); }
-	        forEach( $this->data as $i => $data ){ $v = &$this->data[$i]; return $v; }
-	        return reset($this->data);
+			if( empty($this->errors) ){
+				if( !isSet($this->data) || !is_array($this->data) ){ $this->data = array(); }
+				forEach( $this->data as $i => $data ){ $v = &$this->data[$i]; return $v; }
+				return reset($this->data);
+			} else {
+				return 0;
+			}
         }
 
         /********************************************************************
