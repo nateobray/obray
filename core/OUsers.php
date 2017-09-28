@@ -98,20 +98,51 @@
 					$this->get(array('ouser_email'=>$params['ouser_email']));
 					if( count($this->data) === 1 ){ $this->update(array('ouser_id'=>$this->data[0]->ouser_id,'ouser_failed_attempts'=>($this->data[0]->ouser_failed_attempts+1)) ); $this->data = array(); }
 					$this->throwError('Invalid login, make sure you have entered a valid email and password.');
+					if( defined('__OBRAY_ENABLED_FAILED_ATTEMPT_LOGGING__') ){
+						$login = $this->route('/obray/OUserFailedAttempts/add/',array(
+							'ouser_email'=>$params["ouser_email"],
+							'ouser_password'=>$params["ouser_password"],
+							'ouser_attempt_ip'=> !empty($_SERVER['REMOTE_ADDR'])?$_SERVER['REMOTE_ADDR']:"Unknown",
+							'ouser_attempt_agent'=> !empty($_SERVER['HTTP_USER_AGENT'])?$_SERVER['HTTP_USER_AGENT']:"Unknown"),TRUE
+						);
+					}
 
 				// if the user has exceeded the allowable login attempts
 				} else if( $this->data[0]->ouser_failed_attempts > __OBRAY_MAX_FAILED_LOGIN_ATTEMPTS__ ){
 					$this->throwError('This account has been locked.');
+					if( defined('__OBRAY_ENABLED_FAILED_ATTEMPT_LOGGING__') ){
+						$login = $this->route('/obray/OUserFailedAttempts/add/',array(
+							'ouser_email'=>$params["ouser_email"],
+							'ouser_password'=>$params["ouser_password"],
+							'ouser_attempt_ip'=> !empty($_SERVER['REMOTE_ADDR'])?$_SERVER['REMOTE_ADDR']:"Unknown",
+							'ouser_attempt_agent'=> !empty($_SERVER['HTTP_USER_AGENT'])?$_SERVER['HTTP_USER_AGENT']:"Unknown"),TRUE
+						);
+					}
 
 				// if the user has been disabled
 				} else if( $this->data[0]->ouser_status === 'disabled' ){
 					$this->throwError('This account has been disabled.');
-
+					if( defined('__OBRAY_ENABLED_FAILED_ATTEMPT_LOGGING__') ){
+						$login = $this->route('/obray/OUserFailedAttempts/add/',array(
+							'ouser_email'=>$params["ouser_email"],
+							'ouser_password'=>$params["ouser_password"],
+							'ouser_attempt_ip'=> !empty($_SERVER['REMOTE_ADDR'])?$_SERVER['REMOTE_ADDR']:"Unknown",
+							'ouser_attempt_agent'=> !empty($_SERVER['HTTP_USER_AGENT'])?$_SERVER['HTTP_USER_AGENT']:"Unknown"),TRUE
+						);
+					}
 				// if the user is not found then increment failed attempts and throw error
 				} else {
 					$this->get(array('ouser_email'=>$params['ouser_email']));
 					if( count($this->data) === 1 ){ $this->update( array('ouser_id'=>$this->data[0]->ouser_id,'ouser_failed_attempts'=>($this->data[0]->ouser_failed_attempts+1)) ); }
 					$this->throwError('Invalid login, make sure you have entered a valid email and password.');
+					if( defined('__OBRAY_ENABLED_FAILED_ATTEMPT_LOGGING__') ){
+						$login = $this->route('/obray/OUserFailedAttempts/add/',array(
+							'ouser_email'=>$params["ouser_email"],
+							'ouser_password'=>$params["ouser_password"],
+							'ouser_attempt_ip'=> !empty($_SERVER['REMOTE_ADDR'])?$_SERVER['REMOTE_ADDR']:"Unknown",
+							'ouser_attempt_agent'=> !empty($_SERVER['HTTP_USER_AGENT'])?$_SERVER['HTTP_USER_AGENT']:"Unknown"),TRUE
+						);
+					}
 				}
 			}
 
