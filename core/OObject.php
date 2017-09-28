@@ -740,7 +740,6 @@
 		***********************************************************************/
 
 		public function routeBackground( $route ){
-			$this->console("php -d memory_limit=-1 ".__SELF__."tasks.php \"".$route."\" > /dev/null 2>&1 &\n");
 			shell_exec("php -d memory_limit=-1 ".__SELF__."tasks.php \"".$route."\" > /dev/null 2>&1 &");
 		}
 
