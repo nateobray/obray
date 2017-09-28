@@ -101,7 +101,7 @@
 
 				if( is_array($args[0]) || is_object($args[0]) ) {
 					print_r($args[0]);
-				} else if( count($args) === 3 ){
+				} else if( count($args) === 3 && $args[1] !== NULL && $args[2] !== NULL ){
 					$colors = array(
 						// text color
 						"Black" =>				"\033[30m",
