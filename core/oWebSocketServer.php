@@ -81,7 +81,8 @@
 							"local_cert"=>__WEB_SOCKET_CERT__, 
 							"local_pk"=>__WEB_SOCKET_KEY__, 
 							"passphrase" => __WEB_SOCKET_KEY_PASS__,
-							"ciphers" => 'HIGH:!SSLv2:!SSLv3'
+							"ciphers" => 'HIGH',
+							"disable_compression" => true
 						) 
 					) );
 				} catch( Exception $err ){
@@ -98,7 +99,7 @@
 			//	3.	establish connection or abort on error
 			$listenstr = 	$protocol."://".$this->host.":".$this->port;
 			$this->console("Binding to ".$this->host.":".$this->port." over ".$protocol."\n");
-			$this->socket = @stream_socket_server($listenstr,$errno,$errstr,STREAM_SERVER_BIND|STREAM_SERVER_LISTEN,$context);
+			$this->socket = stream_socket_server($listenstr,$errno,$errstr,STREAM_SERVER_BIND|STREAM_SERVER_LISTEN,$context);
 
 			if( !is_resource($this->socket) ){
 				$this->console("%s",$errstr."\n","RedBold");
