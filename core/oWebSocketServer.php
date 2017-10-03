@@ -74,15 +74,9 @@
 
 			} else if( in_array(__WEB_SOCKET_PROTOCOL__,['wss','ssl']) ) {
 
-				$protocol = "tls";
+				$protocol = "ssl";
 				try{
-					$context = 	stream_context_create( array( 
-						"ssl" => array( 
-							"local_cert"=>__WEB_SOCKET_CERT__, 
-							"local_pk"=>__WEB_SOCKET_KEY__, 
-							"passphrase" => __WEB_SOCKET_KEY_PASS__
-						) 
-					) );
+					$context = 	stream_context_create( array( "ssl" => array( "local_cert"=>__WEB_SOCKET_CERT__, "local_pk"=>__WEB_SOCKET_KEY__, "passphrase" => __WEB_SOCKET_KEY_PASS__ ) ) );
 				} catch( Exception $err ){
 					$this->debug("Unable to create stream context: ".$err->getMessage()."\n");
 					$this->throwError("Unable to create stream context: ".$err->getMessage());
@@ -97,7 +91,7 @@
 			//	3.	establish connection or abort on error
 			$listenstr = 	$protocol."://".$this->host.":".$this->port;
 			$this->console("Binding to ".$this->host.":".$this->port." over ".$protocol."\n");
-			$this->socket = stream_socket_server($listenstr,$errno,$errstr,STREAM_SERVER_BIND|STREAM_SERVER_LISTEN,$context);
+			$this->socket = @stream_socket_server($listenstr,$errno,$errstr,STREAM_SERVER_BIND|STREAM_SERVER_LISTEN,$context);
 
 			if( !is_resource($this->socket) ){
 				$this->console("%s",$errstr."\n","RedBold");
@@ -405,7 +399,7 @@
 
 			//	1.	accept new socket
 			$this->debug("%s","\nAttempting to connect to a new socket.\n","YellowBold");
-			$new_socket = stream_socket_accept($socket,1);
+			$new_socket = @stream_socket_accept($socket,1);
 
 			//	2. 	handle error on socket accept
 			if( !$new_socket ){
