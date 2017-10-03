@@ -407,7 +407,7 @@
 
 			//	1.	accept new socket
 			$this->debug("%s","\nAttempting to connect to a new socket.\n","YellowBold");
-			$new_socket = @stream_socket_accept($socket,1);
+			$new_socket = stream_socket_accept($socket,1);
 
 			//	2. 	handle error on socket accept
 			if( !$new_socket ){
