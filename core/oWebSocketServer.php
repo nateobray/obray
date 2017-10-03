@@ -76,7 +76,15 @@
 
 				$protocol = "ssl";
 				try{
-					$context = 	stream_context_create( array( "ssl" => array( "local_cert"=>__WEB_SOCKET_CERT__, "local_pk"=>__WEB_SOCKET_KEY__, "passphrase" => __WEB_SOCKET_KEY_PASS__ ) ) );
+					$context = 	stream_context_create( array( 
+						"ssl" => array( 
+							"local_cert"=>__WEB_SOCKET_CERT__, 
+							"local_pk"=>__WEB_SOCKET_KEY__, 
+							"passphrase" => __WEB_SOCKET_KEY_PASS__,
+							"ciphers" => 'HIGH:!SSLv2:!SSLv3',
+							"disable_compression" => true
+						) 
+					) );
 				} catch( Exception $err ){
 					$this->debug("Unable to create stream context: ".$err->getMessage()."\n");
 					$this->throwError("Unable to create stream context: ".$err->getMessage());
