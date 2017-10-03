@@ -81,7 +81,8 @@
 							"local_cert"=>__WEB_SOCKET_CERT__, 
 							"local_pk"=>__WEB_SOCKET_KEY__, 
 							"passphrase" => __WEB_SOCKET_KEY_PASS__,
-							"ciphers" => 'HIGH'
+							"ciphers" => 'SHA256, SHA384',
+							"disable_compression" => true
 						) 
 					) );
 				} catch( Exception $err ){
