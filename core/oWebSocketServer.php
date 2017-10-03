@@ -74,7 +74,7 @@
 
 			} else if( in_array(__WEB_SOCKET_PROTOCOL__,['wss','ssl']) ) {
 
-				$protocol = "ssl";
+				$protocol = "tls";
 				try{
 					$context = 	stream_context_create( array( 
 						"ssl" => array( 
