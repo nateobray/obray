@@ -89,6 +89,7 @@
 				// if the user exists log them in but only if they haven't exceed the max number of failed attempts (set in settings)
 				if( count($this->data) === 1 && $this->data[0]->ouser_failed_attempts < __OBRAY_MAX_FAILED_LOGIN_ATTEMPTS__ && $this->data[0]->ouser_status != 'disabled'){
 					$_SESSION['ouser'] = $this->data[0];
+					$this->getRolesAndPermissions();
 					$_SESSION['ouser']->ouser_settings = unserialize(base64_decode($_SESSION['ouser']->ouser_settings));
 					$this->update( array('ouser_id'=>$this->data[0]->ouser_id,'ouser_failed_attempts'=>0,'ouser_last_login'=>date('Y-m-d H:i:s')) );
 					
@@ -186,6 +187,65 @@
 				
 			}
 			
+		}
+
+		/************************************************************
+
+			Get Roles & Permission
+
+		************************************************************/
+
+		public function getRolesAndPermissions(){
+			
+			$sql = "SELECT oPermissions.opermission_code, oRoles.orole_code asdf a
+						FROM oUserRoles
+						JOIN oRoles ON oRoles.orole_id = oUserRoles.orole_id
+					LEFT JOIN oRolePermissions ON oRolePermissions.orole_id = oUserRoles.orole_id
+						JOIN oPermissions ON oPermissions.opermission_id = oRolePermissions.opermission_id
+						WHERE oUserRoles.ouser_id = :ouser_id
+				
+				UNION 
+				
+					SELECT oPermissions.opermission_code, NULL AS orole_code
+						FROM oUserPermissions
+						JOIN oPermissions ON oPermissions.opermission_id = oUserPermissions.opermission_id
+						WHERE oUserPermissions.ouser_id = :ouser_id";
+						
+			try {
+				$statement = $this->dbh->prepare($sql);
+				$statement->bindValue(':ouser_id', $_SESSION["ouser"]->ouser_id);
+				$result = $statement->execute();
+				$this->data = [];
+				$statement->setFetchMode(PDO::FETCH_OBJ);
+				while ($row = $statement->fetch()) {
+					$this->data[] = $row;
+				}
+
+				$roles = array(); $permissions = array();
+				forEach( $this->data as $codes ){
+					if( !empty($codes->orole_code) && !in_array($codes->orole_code,$roles) ){
+						$roles[] = $codes->orole_code;
+					}
+					if( !empty($codes->opermission_code) && !in_array($codes->opermission_code,$permissions) ){
+						$permissions[] = $codes->opermission_code;
+					}
+				}
+
+				if( !empty($_SESSION["ouser"]) ){
+					$_SESSION["ouser"]->permissions = $permissions;
+					$_SESSION["ouser"]->roles = $roles;
+				}
+
+				$this->data = array(
+					"permissions" => $permissions,
+					"roles" => $roles
+				);
+
+			} catch (Exception $e) {
+				//$this->throwError($e);
+				//$this->logError(oCoreProjectEnum::ODBO, $e);
+			}
+
 		}
 
 	}

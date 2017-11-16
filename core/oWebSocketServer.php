@@ -76,6 +76,7 @@
 
 				$protocol = "ssl";
 				try{
+					
 					$context = 	stream_context_create( array( "ssl" => array( 
 						"verify_peer" => FALSE,
 						"local_cert"=>__WEB_SOCKET_CERT__, 
@@ -84,6 +85,7 @@
 						"ciphers" => "HIGH:!SSLv2:!SSLv3",
 						"disable_compression" => TRUE
 					) ) );
+
 				} catch( Exception $err ){
 
 					$this->debug("Unable to create stream context: ".$err->getMessage()."\n");
@@ -188,6 +190,8 @@
 					}
 					$this->debug("%s","\nProcess " . $exited_pid . " killed, number left: ".count($this->socketNumbers)."\n","YellowBold");
 				}
+
+				$this->onParentLoop();
 				
 			}
 
@@ -310,6 +314,8 @@
 					$this->onQueueReceiveChild( $message_to_send, $socket );
 				}
 
+				$this->onChildLoop();
+
 			}
 
 		}
@@ -361,6 +367,10 @@
 			return TRUE;
 		}
 
+		public function onChildLoop(){
+
+		}
+
 		/********************************************************************************************************************
 
 			OVERWRITEABLE FUNCTIONS: PARENT PROCESS
@@ -371,6 +381,8 @@
 		********************************************************************************************************************/
 
 		public function onQueueReceiveParent( $message ){
+
+
 			
 			forEach( $this->socketNumbers as $i => $num ){
 
@@ -382,6 +394,12 @@
 		}
 
 		public function onForked(){
+
+		}
+
+		public function onParentLoop(){
+			
+			sleep(5);
 
 		}
 		
@@ -830,6 +848,7 @@
 		function handshake($request){
 
 			//	1.	REF: 4.2.1.  Reading the Client's Opening Handshake
+
 			$headers = $this->readHandshake($request);
 			if( empty($headers) ){ return FALSE; }
 
