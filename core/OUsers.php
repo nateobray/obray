@@ -91,7 +91,7 @@
 					$_SESSION['ouser'] = $this->data[0];
 					$this->getRolesAndPermissions();
 					$_SESSION['ouser']->ouser_settings = unserialize(base64_decode($_SESSION['ouser']->ouser_settings));
-					$this->update( array('ouser_id'=>$this->data[0]->ouser_id,'ouser_failed_attempts'=>0,'ouser_last_login'=>date('Y-m-d H:i:s')) );
+					$this->update( array('ouser_id'=>$_SESSION['ouser']->ouser_id,'ouser_failed_attempts'=>0,'ouser_last_login'=>date('Y-m-d H:i:s')) );
 					
 				// if the data is empty (no user is found with the provided credentials)	
 				} else if( empty($this->data) ){
@@ -197,7 +197,7 @@
 
 		public function getRolesAndPermissions(){
 			
-			$sql = "SELECT oPermissions.opermission_code, oRoles.orole_code asdf a
+			$sql = "SELECT oPermissions.opermission_code, oRoles.orole_code
 						FROM oUserRoles
 						JOIN oRoles ON oRoles.orole_id = oUserRoles.orole_id
 					LEFT JOIN oRolePermissions ON oRolePermissions.orole_id = oUserRoles.orole_id
