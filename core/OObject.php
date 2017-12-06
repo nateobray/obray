@@ -246,13 +246,13 @@
 				}
 
 				if( $debug ){ $this->console($params); }
-				
-				if( !empty($headers) ){ 
+
+				if( !empty($headers) ){
 					if( $debug ){
 						$this->console("*****HEADERS*****");
 						$this->console($headers);
 					}
-					curl_setopt($ch, CURLOPT_HTTPHEADER, $headers); 
+					curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 				} else {
 					if( $debug ){
 						$this->console("NO HEADERS SET!\n");
@@ -267,12 +267,12 @@
 				if( $debug ){
 					$this->console($this->data);
 				}
-				
+
 				$headers = curl_getinfo($ch, CURLINFO_HEADER_OUT);
 				$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 				$info = curl_getinfo( $ch );
 				$data = json_decode($this->data);
-				
+
 				$info["http_code"] =  intval($info["http_code"]);
 
 				if( !( $info["http_code"] >= 200 && $info["http_code"] < 300)  ){
@@ -378,7 +378,7 @@
 		***********************************************************************/
 
 		private function createObject($path_array,$path,$base_path,&$params,$direct){
-			
+
 			$path = '';
 			$rPath = array();
 
@@ -515,9 +515,9 @@
 
 	    		// restrict permissions on undefined keys
 	    		if( !isSet($perms[$object_name]) ){
-					
+
 					$this->throwError('You cannot access this resource.',403,'Forbidden');
-					
+
 	    		// restrict access to users that are not logged in if that's required
 	    		} else if( ( $perms[$object_name] === 'user' && !isSet($_SESSION[$user_session_key]) ) || ( is_int($perms[$object_name]) && !isSet($_SESSION[$user_session_key]) ) ){
 
@@ -527,54 +527,54 @@
 		    		} else { $this->throwError('You cannot access this resource.',401,'Unauthorized'); }
 
 		    	// restrict access to users without correct permissions (non-graduated)
-	    		} else if( 
-					is_int($perms[$object_name]) && 
-					isSet($_SESSION[$user_session_key]) && 
+	    		} else if(
+					is_int($perms[$object_name]) &&
+					isSet($_SESSION[$user_session_key]) &&
 					(
-						isset($_SESSION[$user_session_key]->ouser_permission_level) 
-						&& !defined("__OBRAY_GRADUATED_PERMISSIONS__") 
+						isset($_SESSION[$user_session_key]->ouser_permission_level)
+						&& !defined("__OBRAY_GRADUATED_PERMISSIONS__")
 						&& $_SESSION[$user_session_key]->ouser_permission_level != $perms[$object_name]
 					)
-				){ 
+				){
 
-						$this->throwError('You cannot access this resource.',403,'Forbidden'); 
+						$this->throwError('You cannot access this resource.',403,'Forbidden');
 
 				// restrict access to users without correct permissions (graduated)
-				} else if( 
-					is_int($perms[$object_name]) && 
-					isSet($_SESSION[$user_session_key]) && 
+				} else if(
+					is_int($perms[$object_name]) &&
+					isSet($_SESSION[$user_session_key]) &&
 					(
-						isset($_SESSION[$user_session_key]->ouser_permission_level) 
-						&& defined("__OBRAY_GRADUATED_PERMISSIONS__") 
+						isset($_SESSION[$user_session_key]->ouser_permission_level)
+						&& defined("__OBRAY_GRADUATED_PERMISSIONS__")
 						&& $_SESSION[$user_session_key]->ouser_permission_level > $perms[$object_name]
 					)
 				){
 
-					$this->throwError('You cannot access this resource.',403,'Forbidden'); 
+					$this->throwError('You cannot access this resource.',403,'Forbidden');
 
 				// roles & permissions checks
 				} else if(
 					(
-						is_array($perms[$object_name]) && 
+						is_array($perms[$object_name]) &&
 						isSet($perms[$object_name]['permissions']) &&
 						is_array($perms[$object_name]['permissions']) &&
 						count(array_intersect($perms[$object_name]['permissions'],$_SESSION[$user_session_key]->permissions)) == 0
 					) || (
-						is_array($perms[$object_name]) && 
+						is_array($perms[$object_name]) &&
 						isSet($perms[$object_name]['roles']) &&
 						is_array($perms[$object_name]['roles']) &&
 						count(array_intersect($perms[$object_name]['roles'],$_SESSION[$user_session_key]->roles)) == 0
 					) || (
-						is_array($perms[$object_name]) && 
+						is_array($perms[$object_name]) &&
 						isSet($perms[$object_name]['roles']) &&
 						is_array($perms[$object_name]['roles']) &&
 						in_array("SUPER",$_SESSION[$user_session_key]->roles)
 					) || (
-						is_array($perms[$object_name]) && 
+						is_array($perms[$object_name]) &&
 						isSet($perms[$object_name]['permissions']) &&
 						!is_array($perms[$object_name]['permissions'])
 					) || (
-						is_array($perms[$object_name]) && 
+						is_array($perms[$object_name]) &&
 						isSet($perms[$object_name]['roles']) &&
 						!is_array($perms[$object_name]['roles'])
 					) || (
@@ -584,16 +584,16 @@
 					)
 				){
 
-					$this->throwError('You cannot access this resource.',403,'Forbidden'); 
-				
+					$this->throwError('You cannot access this resource.',403,'Forbidden');
+
 				// add user_id to params if restriction is based on user
 				} else {
-	
+
 					if( isSet($perms[$object_name]) && $perms[$object_name] === 'user' && isSet($_SESSION[$user_session_key]) ){ $params['ouser_id'] = $_SESSION['ouser']->ouser_id; }
 
 				}
 			}
-			
+
     		return $params;
 
 		}
@@ -869,6 +869,24 @@
 				}
 				return FALSE;
 			}
+		}
+
+		public function setSession($key, $value) {
+			session_start();
+			if(isset($key) == true && isset($value) == true) {
+				$_SESSION[$key] = $value;
+			}
+			session_write_close();
+			return;
+		}
+
+		public function unsetSession($key) {
+			session_start();
+			if(isset($key) == true) {
+				unset($_SESSION[$key]);
+			}
+			session_write_close();
+			return;
 		}
 
 	}
