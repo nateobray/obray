@@ -104,7 +104,7 @@
 			//	4.	establish connection or abort on error
 			$listenstr = 	$protocol."://".$this->host.":".$this->port;
 			$this->console("Binding to ".$this->host.":".$this->port." over ".$protocol."\n");
-			$this->socket = stream_socket_client($listenstr,$errno,$errstr,5,STREAM_CLIENT_CONNECT,$context);
+			$this->socket = @stream_socket_client($listenstr,$errno,$errstr,5,STREAM_CLIENT_CONNECT,$context);
 
 			if( !is_resource($this->socket) ){
 				$this->console("%s",$errstr."\n","RedBold");
@@ -124,7 +124,7 @@
 		    "Host: $this->host\r\n".
 		    "Upgrade: websocket\r\n".
 		    "Connection: Upgrade\r\n".
-		    "Sec-WebSocket-Key: ".md5(strtotime("now").__OBRAY_TOKEN__)."\r\n".
+		    "Sec-WebSocket-Key: ". base64_encode( substr( md5(strtotime("now").__OBRAY_TOKEN__), 0, 16 ) )."\r\n".
 		    "Sec-WebSocket-Version: 13\r\n".
 		    "Content-Length: ".strlen($data)."\r\n\r\n";
 			fwrite($this->socket, $upgrade );
