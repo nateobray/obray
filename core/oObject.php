@@ -25,7 +25,7 @@
 
 	*****************************************************************************/
 
-	if (!class_exists( 'OObject' )) { die(); }
+	if (!class_exists( 'oObject' )) { die(); }
 
 	/******************************************************
 	    SETUP DB CONNECTION - DO NOT MODIFY
@@ -75,7 +75,7 @@
 
 	********************************************************************************************************************/
 
-	Class OObject {
+	Class oObject {
 
 		// private data members
 		private $delegate = FALSE;																	// does this object have a delegate [TO BE IMPLEMENTED]

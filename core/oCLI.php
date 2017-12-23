@@ -26,7 +26,7 @@
 	
 	*****************************************************************************/
 
-	if (!class_exists( 'OObject' )) { die(); }
+	if (!class_exists( 'oObject' )) { die(); }
 
 	Class oCLIPanel {
 		public $window;
@@ -46,7 +46,7 @@
 
 	********************************************************************************************************************/
 	
-	Class oCLI extends ODBO{
+	Class oCLI extends obray\oDBO{
 
 		protected $windows = array();
 		protected $rows = 0;
