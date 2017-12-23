@@ -1,6 +1,6 @@
 <?php
 
-if (!class_exists( 'OObject' )) { die(); }
+if (!class_exists( 'oObject' )) { die(); }
 
 class oCoreProjectEnum {
     const ODBO = 'ODBO';
@@ -13,7 +13,7 @@ class oLogTypeEnum {
     const INFO = 'Info';
 }
 
-class oLog extends OObject {
+class oLog extends obray\OObject {
     public function __construct(){
 
         $this->permissions = array(
