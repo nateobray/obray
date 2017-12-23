@@ -58,17 +58,14 @@
 	}
 
 	if (!function_exists('getallheaders')){
-        function getallheaders()
-        {
-               $headers = '';
-           foreach ($_SERVER as $name => $value)
-           {
-               if (substr($name, 0, 5) == 'HTTP_')
-               {
-                   $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
-               }
-           }
-           return $headers;
+        function getallheaders(){
+        	$headers = array();
+			foreach ($_SERVER as $name => $value){
+				if (substr($name, 0, 5) == 'HTTP_'){
+					$headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
+				}
+			}
+			return $headers;
         }
     }
 
@@ -101,7 +98,7 @@
 
 				if( is_array($args[0]) || is_object($args[0]) ) {
 					print_r($args[0]);
-				} else if( count($args) === 3 ){
+				} else if( count($args) === 3 && $args[1] !== NULL && $args[2] !== NULL ){
 					$colors = array(
 						// text color
 						"Black" =>				"\033[30m",
@@ -272,7 +269,7 @@
 				$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 				$info = curl_getinfo( $ch );
 				$data = json_decode($this->data);
-
+				
 				$info["http_code"] =  intval($info["http_code"]);
 
 				if( !( $info["http_code"] >= 200 && $info["http_code"] < 300)  ){
@@ -292,7 +289,6 @@
 					return $this;
 				} else {
 
-
 					if( !empty($data) ){ $this->data = $data; } else { return $this; }
 
 					if( !empty($this->data) ){
@@ -303,22 +299,27 @@
 				}
 
 			} else {
+
 	    		/*********************************
 	    			Parse Path & setup params
 	    		*********************************/
 
 	    		$_REQUEST = $params;
-
-				$path_array = preg_split('[/]',$components['path'],NULL,PREG_SPLIT_NO_EMPTY);
+				
+				$path_array = explode('/',$components['path']);
+				$path_array = array_filter($path_array);
+				$path_array = array_values($path_array);
+				
 				$base_path = $this->getBasePath($path_array);
-
-
+				
 				/*********************************
 					Validate Remote Application
 				*********************************/
 
-				$this->validateRemoteApplication($direct);
-
+				if( $direct === FALSE ){
+					$this->validateRemoteApplication($direct);
+				}
+				
 				/*********************************
 					SET CONTENT TYPE FROM ROUTE
 				*********************************/
@@ -330,12 +331,11 @@
 				/*********************************
 					CALL FUNCTION
 				*********************************/
-
+				
 				if( empty($base_path) && count($path_array) == 1 && !empty($this->object) && $this->object != $path_array[0] ){
-
 					return $this->executeMethod($path,$path_array,$direct,$params);
 				}
-
+				
 				/*********************************
 					CREATE OBJECT
 				*********************************/
@@ -386,7 +386,7 @@
 			if( empty($path_array) && empty($this->object) && empty($base_path)){
 				if(empty($path_array)){	$path_array[] = "index";	}
 			}
-
+			
 			while(count($path_array)>0){
 
 				if( empty($base_path) ){
@@ -409,11 +409,13 @@
 					if( empty($path) ){ $path = "/index/"; }
 				}
 
+				
 				if ( !empty($objectType) ) {
-
+					
 					require_once $this->path;
+					
 					if (!class_exists( $obj_name )) { $this->throwError("File exists, but could not find object: $obj_name",404,'notfound'); return $this; } else {
-
+						
 						try{
 
 				    		//	CREATE OBJECT
@@ -450,7 +452,7 @@
 				}
 
 			}
-			//exit();
+			
 			$this->throwError('Route not found object: '.$path,404,'notfound'); return $this;
 
 		}
@@ -469,7 +471,30 @@
 				try {
 					$params = array_merge($this->checkPermissions($path, $direct), $params);
 					if (!$this->isError()) {
-						$this->$path($params);
+						
+						$reflector = new ReflectionMethod($this, $path);
+						$function_parameters = $reflector->getParameters();
+						
+						if( count($function_parameters) === 1 && $function_parameters[0]->name === 'params' ){
+							$this->$path($params);
+						} else if( count($function_parameters) > 0 ) {
+
+							$parameters = array();
+							forEach( $function_parameters as $function_parameter ){
+								if( !empty($params[$function_parameter->name]) ){
+									$parameters[] = $params[$function_parameter->name];
+								} else if( !$function_parameter->isOptional() ) {
+									$this->throwError("Missing method parameter.", 500, $function_parameter->name );
+								}
+							}
+							if( !empty($parameters) && empty($this->errors) ){
+								call_user_func_array(array($this, $path), $parameters);
+							}
+							
+						} else {
+							$this->$path();
+						}
+						
 					}
 				} catch (Exception $e) {
 					$this->throwError($e->getMessage());
@@ -516,7 +541,9 @@
 
 	    		// restrict permissions on undefined keys
 	    		if( !isSet($perms[$object_name]) ){
-		    		$this->throwError('You cannot access this resource.',403,'Forbidden');
+					
+					$this->throwError('You cannot access this resource.',403,'Forbidden');
+					
 	    		// restrict access to users that are not logged in if that's required
 	    		} else if( ( $perms[$object_name] === 'user' && !isSet($_SESSION[$user_session_key]) ) || ( is_int($perms[$object_name]) && !isSet($_SESSION[$user_session_key]) ) ){
 
@@ -525,14 +552,74 @@
 			    		if( !isSet($_SESSION[$user_session_key]) ){ $this->throwError('You cannot access this resource.',401,'Unauthorized');	}
 		    		} else { $this->throwError('You cannot access this resource.',401,'Unauthorized'); }
 
-		    	// restrict access to users without correct permissions
-	    		} else if( is_int($perms[$object_name]) && isSet($_SESSION[$user_session_key]) && (isset($_SESSION[$user_session_key]->ouser_permission_level) && $_SESSION[$user_session_key]->ouser_permission_level != $perms[$object_name]) ){ $this->throwError('You cannot access this resource.',403,'Forbidden'); }
+		    	// restrict access to users without correct permissions (non-graduated)
+	    		} else if( 
+					is_int($perms[$object_name]) && 
+					isSet($_SESSION[$user_session_key]) && 
+					(
+						isset($_SESSION[$user_session_key]->ouser_permission_level) 
+						&& !defined("__OBRAY_GRADUATED_PERMISSIONS__") 
+						&& $_SESSION[$user_session_key]->ouser_permission_level != $perms[$object_name]
+					)
+				){ 
 
-	    		// add user_id to params if restriction is based on user
-	    		if( isSet($perms[$object_name]) && $perms[$object_name] === 'user' && isSet($_SESSION[$user_session_key]) ){ $params['ouser_id'] = $_SESSION['ouser']->ouser_id; }
+						$this->throwError('You cannot access this resource.',403,'Forbidden'); 
 
-    		}
+				// restrict access to users without correct permissions (graduated)
+				} else if( 
+					is_int($perms[$object_name]) && 
+					isSet($_SESSION[$user_session_key]) && 
+					(
+						isset($_SESSION[$user_session_key]->ouser_permission_level) 
+						&& defined("__OBRAY_GRADUATED_PERMISSIONS__") 
+						&& $_SESSION[$user_session_key]->ouser_permission_level > $perms[$object_name]
+					)
+				){
 
+					$this->throwError('You cannot access this resource.',403,'Forbidden'); 
+
+				// roles & permissions checks
+				} else if(
+					(
+						is_array($perms[$object_name]) && 
+						isSet($perms[$object_name]['permissions']) &&
+						is_array($perms[$object_name]['permissions']) &&
+						count(array_intersect($perms[$object_name]['permissions'],$_SESSION[$user_session_key]->permissions)) == 0
+					) || (
+						is_array($perms[$object_name]) && 
+						isSet($perms[$object_name]['roles']) &&
+						is_array($perms[$object_name]['roles']) &&
+						count(array_intersect($perms[$object_name]['roles'],$_SESSION[$user_session_key]->roles)) == 0
+					) || (
+						is_array($perms[$object_name]) && 
+						isSet($perms[$object_name]['roles']) &&
+						is_array($perms[$object_name]['roles']) &&
+						in_array("SUPER",$_SESSION[$user_session_key]->roles)
+					) || (
+						is_array($perms[$object_name]) && 
+						isSet($perms[$object_name]['permissions']) &&
+						!is_array($perms[$object_name]['permissions'])
+					) || (
+						is_array($perms[$object_name]) && 
+						isSet($perms[$object_name]['roles']) &&
+						!is_array($perms[$object_name]['roles'])
+					) || (
+						is_array($perms[$object_name]) &&
+						!isSet($perms[$object_name]['roles']) &&
+						!isSet($perms[$object_name]['permissions'])
+					)
+				){
+
+					$this->throwError('You cannot access this resource.',403,'Forbidden'); 
+				
+				// add user_id to params if restriction is based on user
+				} else {
+	
+					if( isSet($perms[$object_name]) && $perms[$object_name] === 'user' && isSet($_SESSION[$user_session_key]) ){ $params['ouser_id'] = $_SESSION['ouser']->ouser_id; }
+
+				}
+			}
+			
     		return $params;
 
 		}
@@ -566,8 +653,11 @@
 		***********************************************************************/
 
 		private function getBasePath(&$path_array){
+			$base_path = '';
 			$routes = unserialize(__OBRAY_ROUTES__);
-			if(!empty($path_array) && isSet($routes[$path_array[0]])){ $base_path = $routes[array_shift($path_array)]; } else { $base_path = ''; }
+			if(!empty($path_array) && isSet($routes[$path_array[0]])){ 
+				$base_path = $routes[array_shift($path_array)]; 
+			}
 			return $base_path;
 		}
 
@@ -690,16 +780,52 @@
 
 		/***********************************************************************
 
+			ROLES & PERMISSIONS FUNCTIONS
+
+		***********************************************************************/
+
+		public function hasRole( $code ){
+			if( ( !empty($_SESSION['ouser']->roles) && in_array($code,$_SESSION["ouser"]->roles) ) || ( !empty($_SESSION["ouser"]->roles) && in_array("SUPER",$_SESSION["ouser"]->roles) ) ){
+				return TRUE;
+			}
+			return FALSE;
+		}
+
+		public function errorOnRole( $code ){
+			if( !$this->hasRole($code) ){
+				$this->throwError( "Permission denied", 403 );
+				return true;
+			}
+			return false;
+		}
+
+		public function hasPermission( $code ){
+			if( ( !empty($_SESSION['ouser']->permissions) && in_array($code,$_SESSION["ouser"]->permissions) ) || ( !empty($_SESSION["ouser"]->roles) && in_array("SUPER",$_SESSION["ouser"]->roles) ) ){
+				return TRUE;
+			}
+			return FALSE;
+		}
+
+		public function errorOnPermission( $code ){
+			if( !$this->hasPermission($code) ){
+				$this->throwError( "Permission denied", 403 );
+				return true;
+			}
+			return false;
+		}
+
+		/***********************************************************************
+
 			GETTER AND SETTER FUNCTIONS
 
 		***********************************************************************/
 
 		private function setObject($obj){ $this->object = $obj;}
-		public  function getStatusCode(){ return $this->status_code; }
-		public  function getContentType(){ return $this->content_type; }
-		public  function setContentType($type){ if($this->content_type != 'text/html'){ $this->content_type = $type; } }
-		public  function getPermissions(){ return isset($this->permissions) ? $this->permissions : array(); }
-		public  function setMissingPathHandler($handler,$path){ $this->missing_path_handler = $handler; $this->missing_path_handler_path = $path; }
+		public function getStatusCode(){ return $this->status_code; }
+		public function getContentType(){ return $this->content_type; }
+		public function setContentType($type){ if($this->content_type != 'text/html'){ $this->content_type = $type; } }
+		public function getPermissions(){ return isset($this->permissions) ? $this->permissions : array(); }
+		public function setMissingPathHandler($handler,$path){ $this->missing_path_handler = $handler; $this->missing_path_handler_path = $path; }
 		public function dumpster($data,$force=false) { if( (defined("__LOCAL__") && __LOCAL__) || $force ) { echo '<pre>'; print_r($data); echo '</pre>'; } }
 		public function redirect($location="/"){ header( 'Location: '.$location ); die(); }
 
@@ -746,6 +872,32 @@
 			$logger = new oLog();
 			$logger->logDebug($oProjectEnum, $message);
 			return;
+		}
+
+		public function getMessageQueue( $queue ){
+			$this->message_queue = msg_get_queue($queue);
+		}
+
+		public function messageQueueSend( $msgType, $message ){
+
+
+			if( empty($this->message_queue) || !msg_send( $this->message_queue, $msgType, $message, FALSE, TRUE, $error_code ) ){
+				$this->throwError("Error (".$error_code."): Unable to queue message.");
+			}
+		}
+
+		function messageQueueReceive( $msgType ){
+			$received_type = 0;
+			$error_code;
+			$message = FALSE;
+			if( empty($this->message_queue) || msg_receive( $this->message_queue, $msgType, $received_type, 8192000, $message, FALSE, MSG_IPC_NOWAIT, $error_code ) ){
+				return $message;
+			} else {
+				if( $error_code !== 42 ){
+					$this->console("%s","Error receiving message from queue (".$error_code.")!\n","RedBold");
+				}
+				return FALSE;
+			}
 		}
 
 	}

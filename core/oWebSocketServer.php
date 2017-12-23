@@ -1,4 +1,5 @@
 <?php
+
 	/*****************************************************************************
 
 	The MIT License (MIT)
@@ -27,31 +28,19 @@
 
 	if (!class_exists( 'OObject' )) { die(); }
 
-	class oSocketFrame {
-
-		public $FIN = FALSE;
-		public $opcode;
-		public $mask;
-		public $len;
-		public $msg = "";
-
-	}
-
 	/********************************************************************************************************************
 
 		oWebSocketServer:
 
 			1.  Establish a connection on specified host and port
-			2.	Handle new connections
-			3.	Loop through all the changed sockets
-
-				//	1.	Get changed socket
-				//	2.	Read from changed socket
-				//	3.	if EOF then close connection.
-
+			2.	Run main Event loop
+				1. 	
+			
 	********************************************************************************************************************/
 
 	Class oWebSocketServer extends ODBO {
+
+		public $MSGQUEUE = 2678;
 
 		public function __construct($params){
 
@@ -63,16 +52,17 @@
 				//	2.	determine the protocol to connect (essentially on client side ws or wss) and create
 				//		context.
 				//	3.	establish connection or abort on error
-				//	4.	listen for data on our connections
+				//	4. 	setup some server data stores
 
 			*************************************************************************************************/
 
 			//	1.	retreive host and ports or set them to defaults
 			$this->host = !empty($params["host"])?$params["host"]:"localhost";
 			$this->port = !empty($params["port"])?$params["port"]:"80";
-			$this->debug = FALSE;
+			$this->debug_mode = FALSE;
 			if( !empty($params["debug"]) ){
-				$this->debug = TRUE;
+				$this->debug_mode = TRUE;
+				unset($params["debug"]);
 			}
 
 			//	2.	determine the protocol to connect (essentially on client side ws or wss) and create
@@ -82,17 +72,31 @@
 				$protocol = "tcp";
 				$context = 		stream_context_create();
 
-			} else {
+			} else if( in_array(__WEB_SOCKET_PROTOCOL__,['wss','ssl']) ) {
 
 				$protocol = "ssl";
 				try{
-					$context = 	stream_context_create( array( "ssl" => array( "local_cert"=>__WEB_SOCKET_CERT__, "local_pk"=>__WEB_SOCKET_KEY__, "passphrase" => __WEB_SOCKET_KEY_PASS__ ) ) );
+					
+					$context = 	stream_context_create( array( "ssl" => array( 
+						"verify_peer" => FALSE,
+						"local_cert"=>__WEB_SOCKET_CERT__, 
+						"local_pk"=>__WEB_SOCKET_KEY__, 
+						"passphrase" => __WEB_SOCKET_KEY_PASS__,
+						"ciphers" => "HIGH:!SSLv2:!SSLv3",
+						"disable_compression" => TRUE
+					) ) );
+
 				} catch( Exception $err ){
-					$this->console("Unable to create stream context: ".$err->getMessage()."\n");
+
+					$this->debug("Unable to create stream context: ".$err->getMessage()."\n");
 					$this->throwError("Unable to create stream context: ".$err->getMessage());
 					return;
+
 				}
 
+			} else {
+				$this->debug("%s","Bad protocal requested!\n","RedBold");
+				return;
 			}
 
 			//	3.	establish connection or abort on error
@@ -107,47 +111,164 @@
 			}
 
 			$this->console("%s","Listening...\n","GreenBold");
+			
+			//	4. 	setup some server data stores
 
-			$this->sockets = array( $this->socket );
-			$this->cData = array();
-			$this->subscriptions = array();
-			$this->obray_clients = array();
+			// keeps track of the parent process PID, we use this for sending messages through the queue to the parent
+			$this->parent_process_pid = getmypid();
 
-			//	4.	listen for data on our connections
+			// stores fragmented messages so they can be reconstructed
+			$this->fragments = array();
+
+			// stores threads for independent connections
+			$this->socketNumbers = array();
+
+			// message queue for communication between forked processes
+			$this->message_queue = msg_get_queue($this->MSGQUEUE);
+			msg_remove_queue($this->message_queue);
+			$this->message_queue = msg_get_queue($this->MSGQUEUE);
+
+			/*************************************************************************************************
+
+				2.	Run main Event loop
+				//	1. 	stream_select: look for changes on the socket to process incoming connections
+				//	2. 	If new connection fork process to child and pass off connection, continue loop
+				//	3. 	check message queue for messages for the parent process
+				//	4. 	check if child processes have terminated and update list
+
+			*************************************************************************************************/
+
 			while(true){
 
-				$changed = $this->sockets; $null = NULL;
-				stream_select( $changed, $null, $null, 0, 200000 );
+				//	1. 	stream_select: look for changes on the socket to process incoming connections
+				$changed = array( 0 => $this->socket ); $null = NULL;
+				@stream_select( $changed, $null, $null, 0, 20000 );
 
-				/*************************************************************************************************
-
-					2. Handle new connections
-
-				*************************************************************************************************/
-
+				//	2. 	If new connection fork process to child and pass off connection, continue loop
 				if( in_array($this->socket,$changed) ){
 
-					$new_socket = $this->connect($this->socket, $changed);
+					// put new connection onto new thread
+					$this->console("%s","Starting new process.\n","YellowBold");
+					
+					$pid = pcntl_fork();
 
-					// removes original socket from the changed array (so we don't keep looking for a new connections)
-					$found_socket = array_search($this->socket, $changed);
-					unset($changed[$found_socket]);
-					if( !$new_socket ){	continue; }
+					if( $pid === -1 ){
+						$this->debug("%s","Could not create process!\n","RedBold");
+					} else if( $pid ) {
+						$this->debug("%s","\tParent thread done spawning child: ".$pid."\n","GreenBold");
+						$this->socketNumbers[] = $pid;
+						// removes original socket from the changed array (so we don't keep looking for a new connections)
+						$found_socket = array_search($this->socket, $changed);
+						$this->onForked();
+						unset($changed[$found_socket]);
+						usleep(20000);
+					} else if( $pid === 0 ) {
+						$new_socket = $this->connect($this->socket);
+						if( $new_socket ){  
+							$this->select( $new_socket );
+						}
+						exit();
+					}
 
 				}
 
-				/*************************************************************************************************
+				//	3. 	check message queue for messages for the parent process
 
-					3.	Handle changes to existing sockets
+				$message = $this->messageQueueReceive( $this->parent_process_pid );
+				if( $message !== FALSE ){
+					$this->onQueueReceiveParent( $message );
+				}
 
-						//	1.	Get changed socket
-						//	2.	Read from changed socket
-						//	3.	if EOF then close connection.
+				//	4. 	check if child processes have terminated and update list
 
-				*************************************************************************************************/
+				$exited_pid = pcntl_waitpid(0,$status,WNOHANG);
+				if( $exited_pid > 0 ){
+					$index = array_search( $exited_pid, $this->socketNumbers );
+					if( $index !== FALSE ){
+						unset($this->socketNumbers[$index]);
+						$this->socketNumbers = array_values($this->socketNumbers);
+					}
+					$this->debug("%s","\nProcess " . $exited_pid . " killed, number left: ".count($this->socketNumbers)."\n","YellowBold");
+				}
 
+				$this->onParentLoop();
+				
+			}
+
+			pcntl_wait();
+
+		}
+
+		/********************************************************************************************************************
+
+			messageQueueSend: 	queues a message onto the queue with type (must be an integer)
+
+		********************************************************************************************************************/
+
+		protected function messageQueueSend( $msgType, $message ){
+			if( !msg_send( $this->message_queue, $msgType, $message, FALSE, TRUE, $error_code ) ){
+				$this->console("%s","Error (".$error_code."): Unable to queue message.\n","RedBold");
+			}
+		}
+
+		/********************************************************************************************************************
+
+			messageQueueReceive: 	receives a message from the queue with the specified type (must be an integer).  When
+									a message is received it is removed from the queue.
+
+		********************************************************************************************************************/
+
+		protected function messageQueueReceive( $msgType ){
+			$received_type = 0;
+			$message = FALSE;
+			if( msg_receive( $this->message_queue, $msgType, $received_type, 8192000, $message, FALSE, MSG_IPC_NOWAIT, $error_code ) ){
+				return $message;
+			} else {
+				if( $error_code !== 42 ){
+					$this->console("%s","Error receiving message from queue (".$error_code.")!\n","RedBold");
+				}
+				return FALSE;
+			}
+		}
+
+		/********************************************************************************************************************
+
+			select: 	Select receives a socket and does a stream_select on it to wait for incoming messages from the
+						socket.  It's assumed it working with a child process.
+
+			//	1.	Run child process main event loop
+			//		1.	stream select on child socket
+			//		2.	for any changes on the socket attempt to process the message
+
+		********************************************************************************************************************/
+
+		private function select( $socket ){
+
+			$this->child_process_pid = getmypid();
+			$this->debug("%s","\tStarting child stream_select()\n","GreenBold");
+			$connected = TRUE;
+
+			/*************************************************************************************************
+
+				//	1.	Run child process main event loop
+				//		1.	stream select on child socket
+				//		2.	for any changes on the socket attempt to process the message
+				//			1.	Get changed socket
+				//			2.	Read from changed socket
+				//			3.	if EOF then close connection.
+				//		3. 	check for messages on the queue for the child process
+
+			*************************************************************************************************/
+
+			while($connected){
+				
+				//		1.	stream select on child socket
+				$changed = array( 0 => $socket ); $null = NULL;
+				@stream_select( $changed, $null, $null, 0, 20000 );
+			
+				//		2.	for any changes on the socket attempt to process the message
 				foreach ( array_keys($changed) as $changed_key) {
-
+					
 					//	1.	Get changed socket
 					$changed_socket = $changed[$changed_key];
 					$info = stream_get_meta_data($changed_socket);
@@ -157,35 +278,18 @@
 
 						$buf = $this->fread_stream($changed_socket,100000*1024);
 						if( $buf == FALSE ){
-							$this->console("%s","Unable to read form socket\n","RedBold");
+							$this->debug("%s","\nUnable to read from socket\n","RedBold");
 							$this->disconnect($changed_socket);
 							break;
 						}
 
-						if( !empty($this->obray_clients[ array_search($changed_socket,$this->sockets) ]) ){
+						$this->debug("%s","\nNew message Received.\n","YellowBold");
+						$this->decode($buf,$changed_socket);
 
-							 $msg = json_decode(trim($buf,"\x00\xff"));
-							 $this->console("%s","\tobray-client sending message...");
-							 $response = $this->send($msg);
-							 if( !empty($response) ){
-								 $this->console("%s","done.\n","GreenBold");
-							 } else {
-								 $this->console("%s","No one listening.\n","RedBold");
-							 }
-
-							 $obj = new stdClass();
-							 $obj->channels = $response;
-							 $obj->type = 'delivery-receipt';
-							 $message = json_encode($obj);
-
-							 $this->fwrite_stream( $this->sockets[ array_search($changed_socket,$this->sockets) ] , $message, strlen($message));
-
-						} else {
-							$this->decode($buf,$changed_socket);
-						}
+						unset($changed[$changed_key]);
 
 						// this prevents possible endless loop
-         				if( $info['unread_bytes'] <= 0 ){ break; }
+							if( $info['unread_bytes'] <= 0 ){ break; }
 						break;
 
 					//	3.	if EOF then close connection.
@@ -197,15 +301,108 @@
 						// remove from changed socket array
 						$found_socket = array_search($changed_socket, $changed);
 						unset($changed[$found_socket]);
+						$connected = FALSE;
 						break;
 
 					}
 
 				}
 
+				//		3. 	check for messages on the queue for the child process
+				$message_to_send = $this->messageQueueReceive( $this->child_process_pid );
+				if( $message_to_send !== FALSE ){
+					$this->onQueueReceiveChild( $message_to_send, $socket );
+				}
+
+				$this->onChildLoop();
+
 			}
 
 		}
+
+		/********************************************************************************************************************
+
+			OVERWRITEABLE FUNCTIONS: CHILD PROCESS
+
+			It's expected that these function will be overwritten by the extending socket server.
+
+			onSocketReceive:		by default will send back whatever messages was sent from the client (basic echo server).
+									Overwrite this method to handle the data received by the server in your own way.
+
+			onQueueReceiveChild:	By default this function simply sends the received message out the child process's
+									socket connection.
+
+			onConnect: 				Called when connection is established and handshake completed successfully.  Overwrite this
+									method when you need to do more setup or authenticat on the connection.
+
+			onDisconnect: 			Called after a connection is successfully disconnected. Overwrite this method to do whatever
+									cleanup you need to after a connect is closed
+
+		********************************************************************************************************************/
+
+		public function onSocketReceive($frame, $changed_socket){
+			
+			$this->messageQueueSend( $this->parent_process_pid, $frame->msg );
+			$this->console("%s","\tEchoed message!\n","GreenBold");
+			return;
+			
+		}
+
+		public function onQueueReceiveChild($message){
+			
+			$this->send( $message );
+			return;
+			
+		}
+
+		public function onConnect( $headers ){
+			return TRUE;
+		}
+
+		public function onConnected( ){
+
+		}
+
+		public function onDisconnect( $index ){
+			return TRUE;
+		}
+
+		public function onChildLoop(){
+
+		}
+
+		/********************************************************************************************************************
+
+			OVERWRITEABLE FUNCTIONS: PARENT PROCESS
+
+			onQueueRecieveParent: 	by default will loop through each process and add the message to that processes message
+									queue.  From there each process will write the message out on the socket connection.
+
+		********************************************************************************************************************/
+
+		public function onQueueReceiveParent( $message ){
+
+
+			
+			forEach( $this->socketNumbers as $i => $num ){
+
+				$this->console("\tRelaying message on process: ".$num."\n");
+				$this->messageQueueSend( $num, $message );
+
+			}
+
+		}
+
+		public function onForked(){
+
+		}
+
+		public function onParentLoop(){
+			
+			sleep(5);
+
+		}
+		
 
 		/********************************************************************************************************************
 
@@ -216,116 +413,59 @@
 				handled.
 
 				//	1.	accpet new socket
-				//	2.	add socket to socket list
-				//	3.	read data sent by the socket
-				//	4.	perform websocket handshake
-				//	5.	store the client data
-				//	6.	notify all users of newely connected user
-				//	7.	remove new socket from changed array
-
+				//	2. 	handle error on socket accept
+				//	3. 	Set settings on socket (used to tune the server)
+				//	4.	read data sent by the socket
+				//	5.	perform websocket handshake
+				//	6. 	handle handshake failure
+				// 	7. 	call on connected
+				
 		********************************************************************************************************************/
 
-		private function connect( &$socket, &$changed ){
+		private function connect( &$socket ){
 
-			//	1.	accpet new socket
-			$this->console("%s","\nAttempting to connect a new client.\n","YellowBold");
-			$new_socket = stream_socket_accept($socket,5);
+			//	1.	accept new socket
+			$this->debug("%s","\nAttempting to connect to a new socket.\n","YellowBold");
+			$new_socket = @stream_socket_accept($socket,1);
 
+			//	2. 	handle error on socket accept
 			if( !$new_socket ){
-				$this->console("%s","\tUnable to connect.\n","RedBold");
-				$found_socket = array_search($socket, $changed);
-				unset($changed[$found_socket]);
+				$this->debug("%s","\tUnable to connect.\n","RedBold");
 				return FALSE;
 			}
 
+			//	3. 	Set settings on socket (used to tune the server)
 			stream_set_blocking($new_socket, false);
-			stream_set_read_buffer($new_socket,0);
-			stream_set_write_buffer($new_socket,0);
 
-			//	2.	add socket to socket list
-			$this->console("\tReading from socket.\n");
-
-			$request = $this->fread_stream($new_socket,100000*1024);
+			//	4.	read data sent by the socket
+			$this->debug("\tReading from socket.\n");
+			$request = $this->fread_stream($new_socket,100000*1024,2);
 			if( !$request ){
-				$found_socket = array_search($socket, $changed);
-				unset($changed[$found_socket]);
+				$this->debug("%s","Unable to read from socket, disconnecting.\n","RedBold");
 				return FALSE;
 			}
-			$this->sockets[] = $new_socket;
 
-			//	4.	perform websocket handshake and retreive user data
-			$this->console("\tPerforming websocket handshake.\n");
-			$client = $this->handshake($request, $new_socket);
-			$this->console($client);
-			if( !empty($client->type) && $client->type == 'Browser' && !empty($client->ouser)  ){
+			$this->childSocket = $new_socket;
 
-				//	5.	store the user data
-				$client->websocket_login_datetime = strtotime('now');
-				$client->subscriptions = array();
-				$found_socket = array_search($new_socket,$this->sockets);
-				$this->cData[ $found_socket ] = $client;
-				$this->subscribe($found_socket,md5("all"));
-				$this->subscribe($found_socket,md5($client->ouser->ouser_id));
-				$this->console("%s","\t".$client->ouser->ouser_first_name." ".$client->ouser->ouser_last_name,"BlueBold");
-				$this->console("%s"," has logged on.\n","GreenBold");
+			//	5.	perform websocket handshake
+			$this->debug("\tPerforming websocket handshake.\n");
+			$headers = $this->handshake($request, $new_socket);
 
-				//	6.	notify all users of newely connected user
-				$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$client->ouser->ouser_first_name.' '.$client->ouser->ouser_last_name.' connected.' );
-				$this->send($response);
+			//	6. 	handle handshake failure
+			if( empty($headers) ) {
 
-				//	7.	remove new socket from changed array
-				// removes original socket from changed array (so we don't keep looking for a new connections)
-				$found_socket = array_search($socket, $changed);
-				unset($changed[$found_socket]);
-				$this->console( "\t".(count($this->sockets)-1)." users connected.\n" );
-				return $new_socket;
-
-			} else if ( !empty($client->type) && $client->type == 'Device' && !empty($client->odevice) ) {
-
-				//	5.	store the user data
-				$client->websocket_login_datetime = strtotime('now');
-				$client->subscriptions = array();
-				$found_socket = array_search($new_socket,$this->sockets);
-				$this->cData[ $found_socket ] = $client;
-				$this->subscribe($found_socket,md5("devices"));
-				$this->subscribe($found_socket,md5($client->odevice->odevice_UUID));
-				$this->console("%s","\t".$client->odevice->odevice_name,"BlueBold");
-				$this->console("%s"," has logged on.\n","GreenBold");
-
-				//	6.	notify all users of newely connected user
-				$response = (object)array( 'channel'=>'devices', 'type'=>'broadcast', 'message'=>$client->odevice->odevice_name.' connected.' );
-				$this->send($response);
-
-				//	7.	remove new socket from changed array
-				// removes original socket from changed array (so we don't keep looking for a new connections)
-				$found_socket = array_search($socket, $changed);
-				unset($changed[$found_socket]);
-				$this->console( "\t".(count($this->sockets)-1)." users/devices connected.\n" );
-				return $new_socket;
-
-			} else if ( !empty($client->type) && $client->type == 'obray-client' ){
-
-				// keep track of obray client connections
-				$this->console("%s","\tConnected obray-client\n","GreenBold");
-				$this->obray_clients[array_search($new_socket,$this->sockets)] = TRUE;
-
-			} else {
-
-				$new_headers = array( 0 => "HTTP/1.1 403 Forbidden" );
-				$new_headers[] = "Sec-WebSocket-Version: 13";
-				$new_headers[] = "\r\n";
-				$request = implode("\r\n",$new_headers);
-				$this->fwrite_stream($new_socket,$request,strlen($request));
-
-				// abort if unable to find user
-				$this->console("%s","\tConnection failed, unable to connect user (not found).\n","RedBold");
+				$this->debug("%s","\tConnection failed, handshake failed.  Returning 403 forbidden.\n","RedBold");
+				$this->sendForbidden($new_socket);
+				$this->disconnect($new_socket);
 				// removes our newely connected socket from our sockets array (aborting the connection)
-				$found_socket = array_search($new_socket, $this->sockets);
-				unset($this->sockets[$found_socket]);
 				return FALSE;
 
 			}
 
+			// 	7. 	call on connected
+			$this->onConnected();
+			return $new_socket;
+			
 		}
 
 		/********************************************************************************************************************
@@ -333,209 +473,97 @@
 			disconnect: takes the changed socket and the changed socket array, disconnects the user, the removes user data
 						and the socket from the sockets array.
 
-			//	1.	remove the changes socket from the list of sockets
-			//	2.	shutdown the socket connection
-			//	3.	if client is obray disconnect and return
-			//	4.	remove all subscriptions
-			//	5.	remove the connection data and socket
-			//	6.	notify all users about disconnected connection
-			//	7.	broadcasting list of users
+			//	1.	shutdown the socket connection
+			//	2.	call onDisconnect
+			//	3.	Terminate the process
 
 		********************************************************************************************************************/
 
-		private function disconnect( $changed_socket ){
+		protected function disconnect( ){
 
-			$found_socket = array_search($changed_socket, $this->sockets);
-			if( !empty($found_socket) ){
+			$this->debug("%s","\nAttempting to disconnect.\n","YellowBold");
 
-				$this->console("%s","\nAttempting to disconnect index: ".$found_socket."\n","YellowBold");
+			//	1.	shutdown the socket connection
+			stream_socket_shutdown($this->childSocket,STREAM_SHUT_RDWR);
 
+			//	2.	call onDisconnect
+			$this->debug("%s","\tDisconnect successful, calling onDisconnect.\n","GreenBold");
+			$this->onDisconnect( $this->childSocket );
 
-				//	1.	remove the changes socket from the list of sockets
-				unset($this->sockets[$found_socket]);
-
-				//	2.	shutdown the socket connection
-				stream_socket_shutdown($changed_socket,STREAM_SHUT_RDWR);
-
-				//	3.	if client is obray disconnect and return
-				if( !empty($this->obray_clients[ $found_socket ]) ){
-					$this->console("%s","\tobray-client disconnected.\n","RedBold");
-					unset($this->obray_clients[ $found_socket ]);
-					return;
-				}
-
-				//	4.	remove all subscriptions
-				forEach( $this->cData[ $found_socket ]->subscriptions as $key => $value ){
-					$this->unsubscribe($found_socket,$key);
-				}
-
-				//	5.	remove the connection data and socket
-				$ouser = $this->cData[$found_socket];
-				$this->console("%s","\t".$ouser->ouser_first_name." ".$ouser->ouser_last_name,"BlueBold");
-				$this->console("%s"," has logged off.\n","RedBold");
-				unset($this->cData[$found_socket]);
-
-				//	6.	notify all users about disconnected connection
-				$response = (object)array( 'channel'=>'all', 'type'=>'broadcast', 'message'=>$ouser->ouser_first_name.' '.$ouser->ouser_last_name.' disconnected.');
-				$this->send($response);
-
-				//	7.	broadcasting list of users
-				$this->sendList();
-
-			} else {
-				$this->console("%s","\tSocket not found, unable to disconnect.\n","RedBold");
-			}
+			//	3.	Terminate the process
+			exit();
 
 		}
 
 		/********************************************************************************************************************
 
-			onData: this function is called when we are done decoding a full message.  It determines how to handle
-					the incoming message.
+			fwrite_stream: 	takes a socket and a string and attempts to write the string to the socket.  This is setup
+							to be non-blocking, so we must loop through until the full string is written to the socket
+							or we exhaust our retries or the socket connection fails
 
-				//	1.	validate message
-				//	2.	switch based on message type
-				//		a.	subscribe to channel if not already subscribed
-				//		b.	unsubscribe from channel if not already subscribed
-				//		c.	send list of users logged in
-				//		d.	handle an unknown message type but requires specific message format
+			//	1.	loop until data is all written
+			//		1.	attempt to write, handle error
+			//		2. 	if nothing written or failure
+			//			1. 	retries maxed then abort write attempt returning FALSE
+			//			2. 	retires not maxed then incement retries and continue loop
+			//	2.	all data written return bytes written to the socket
 
 		********************************************************************************************************************/
 
-		public function onData( $frame, $changed_socket ){
-
-			//	1.	validate message
-			if( $frame->len == 0 ){ return; }
-			$msg = json_decode($frame->msg);
-			if( empty($msg) || empty($msg->type) ){ return; }
-			$channel_hash = FALSE;
-			if( !empty($msg->channel) ){ $channel_hash = md5($msg->channel); }
-			$found_socket = array_search($changed_socket, $this->sockets);
-
-			//	2.	switch based on message type
-			switch( $msg->type ){
-
-				//		a.	subscribe to channel if not already subscribed
-				case 'subscribe':
-
-					$this->subscribe($found_socket,$channel_hash);
-					break;
-
-				//		b.	unsubscribe from channel if not already subscribed
-				case 'unsubscribe':
-
-					$this->unsubscribe($found_socket,$channel_hash);
-					break;
-
-				//		c.	send list of users logged in
-				case 'list':
-
-					$this->sendList();
-					break;
-
-				//		d.	handle an unknown message type but requires specific message format
-				default:
-
-					$this->console("Received broadcast, sending...");
-					if( empty($msg->channel) ){ $this->console("%s","Invalid messsage format.\n","RedBold"); break; }
-					if( empty($msg->type) ){ $this->console("%s","Invalid messsage format.\n","RedBold"); break; }
-					if( empty($msg->message) ){ $this->console("%s","Invalid messsage format.\n","RedBold"); break; }
-
-					$response = $this->send($msg);
-					if( !empty($response) ){
-						$this->console("%s","done\n","GreenBold");
-					} else {
-						$this->console("%s","No subscribers on ".$msg->channel."\n","RedBold");
-					}
-					break;
-
-			}
-
-		}
-
-		private function subscribe($found_socket,$channel_hash){
-
-			$this->console("\tReceived subscription, subscribing...");
-			if( empty($channel_hash) ){
-				$this->console("%s","failed","RedBold"); break;
-			}
-			if( empty($this->subscriptions[$channel_hash]) ){
-				$this->subscriptions[$channel_hash] = array();
-			}
-			$this->subscriptions[ $channel_hash ][ $found_socket ] = TRUE;
-			$this->cData[ $found_socket ]->subscriptions[$channel_hash] = TRUE;
-			$this->console("%s","done\n","GreenBold");
-
-		}
-
-		private function unsubscribe($found_socket,$channel_hash){
-
-			$this->console("%s","\tReceived unsubscribe, unsubcribing...","RedBold");
-			if( !empty($channel_hash) && !empty($this->subscriptions[ $channel_hash ][ $found_socket ]) ){
-				unset($this->subscriptions[ $channel_hash ][ $found_socket ]);
-				$this->console("%s","done\n","GreenBold");
-			} else {
-				$this->console("%s","failed","RedBold");
-			}
-
-			if( !empty($this->cData[ $found_socket ]->subscriptions[$channel_hash]) ){
-				unset($this->cData[ $found_socket ]->subscriptions[$channel_hash]);
-			}
-
-			if( count($this->subscriptions[ $channel_hash ]) === 0 ){ unset($this->subscriptions[ $channel_hash ]); }
-
-		}
-
-		private function sendList(){
-			$this->console("\tReceived list, sending...");
-			$data = array();
-			forEach( $this->cData as $user ){
-				if( count($data) > 100 ){ break; }
-				$data[] = $user;
-			}
-			$msg = (object)array('channel'=>'all', 'type'=>'list', 'message'=>$data);
-			$response = $this->send($msg);
-			if( !empty($response) ){
-				$this->console("%s","done\n","GreenBold");
-			} else {
-				$this->console("%s","Unable to deliver message.\n","RedBold");
-			}
-		}
-
 		private function fwrite_stream($socket, $string) {
+
+			$retries = 0;
+
+			//	1.	loop until data is all written
 		    for ($written = 0; $written < strlen($string); $written += $fwrite) {
+				
+				//		1.	attempt to write, handle error
 				try {
-		        	$fwrite = fwrite($socket, substr($string, $written),8192*10);
+		        	$fwrite = @fwrite($socket, substr($string, $written),10240);
 				} catch (Exception $err){
-					$this->console("%s","Write failed (try/catch).","RedBold");
 					return FALSE;
 				}
-				if ($fwrite == FALSE) {
-					$this->console("%s","Write failed.","RedBold");
-		            return FALSE;
-		        }
 
-		    }
-		    return $written;
+				//		2. 	if nothing written or failure
+				if( $fwrite === 0 || $fwrite === FALSE ){
+
+					//			1. 	retries maxed then abort write attempt returning FALSE
+					if( $retries > 10 ){
+						return FALSE;
+
+					//			2. 	retires not maxed then incement retries and continue loop
+					} else {
+						++$retries;
+						usleep(100000);
+						continue;
+					}
+					return FALSE;
+				}
+
+				$retries = 0;
+
+			}
+			
+			//	2.	all data written return bytes written to the socket
+			return $written;
+			
 		}
 
-		private function fread_stream($socket,$length){
+		private function fread_stream($socket,$length,$timeout=30){
 
-			$request = ''; $start = microtime(TRUE); $timeout = 2;
+			$request = ''; $start = microtime(TRUE);
 			while( !feof($socket) ){
 				$new_content = fread($socket, $length);
 
 				if( !empty($new_content) ){
 					$fields = unpack( 'Cheader/Csize' , substr($new_content, 0, 16) );
 					$fields["size"] -= 128;
-					$this->console($fields);
 				}
 
 				$request .= $new_content;
-				$this->console("%s", "Content :".strlen($new_content)."/".strlen($request)."\n", "GreenBold" );
 				if( strlen($new_content) === 0 && strlen($request) !== 0 ){ return $request; }
 				$current = microtime(TRUE);
-				if( $timeout <= $current-$start ){ $this->console("%s","\tSocket read timed out.\n","RedBold"); return FALSE; }
+				if( $timeout <= $current-$start ){ $this->debug("%s","\tSocket read timed out.\n","RedBold"); return FALSE; }
 				usleep(50000);
 			}
 			return $request;
@@ -546,56 +574,46 @@
 
 			send:  takes a message and passes though to all the connections subscribed to the specified channel
 
-			//	1.	valid message
-			//	2.	loop through channels
-			//	3.	loop through array of sockets in the channel
-			//	3.	make sure the socket has not timed out or lost it's connections
-			//	4.	send message
+			//	1.	make sure the socket has not timed out or lost it's connection
+			//	2.	send message
 
 		********************************************************************************************************************/
 
-		function send($msg){
-			$msg_sent = array();
-
-			//	1.	valid message and channel
-			if( empty($msg->channel) ){ return $msg_sent; }
-			if( empty($msg->type) ){ return $msg_sent; }
-			if( empty($msg->message) ){ return $msg_sent; }
-
-			//	2.	loop through channels
-			$channels = explode('|',$msg->channel);
-			forEach( $channels as $channel ){
-
-				$channel_hash = md5($channel);
-				if( empty($this->subscriptions[ $channel_hash ]) ){ continue; }
-
-				//	2.	loop through array of sockets in the channel
-				forEach( $this->subscriptions[ $channel_hash ] as $key => $value ){
-					$send_socket = $this->sockets[ $key ];
-
-					//	3.	make sure the socket has not timed out or lost it's connections
-					$info = stream_get_meta_data($send_socket);
-					if( feof($send_socket) || $info['timed_out'] ){
-						$this->disconnect($send_socket);
-						continue;
-					}
-
-					//	4.	send message
-					$msg->channel = $channel;
-					$message =  $this->mask( json_encode($msg) );
-					if( $this->fwrite_stream($send_socket,$message) == FALSE ){
-						$this->disconnect($send_socket);
-						$msg_sent[$channel] = FALSE;
-					} else {
-						$msg_sent[$channel] = TRUE;
-					}
-
-				}
-
+		public function send($msg){
+			
+			//	1.	make sure the socket has not timed out or lost it's connection
+			$this->debug("\tMaking sure socket hasn't timed out...");
+			$info = stream_get_meta_data($this->childSocket);
+			if( feof($this->childSocket) || $info['timed_out'] ){
+				$this->disconnect();
+				return FALSE;
 			}
-			return $msg_sent;
+			$this->debug("%s","done\n","GreenBold");
 
+			//	2.	send message
+			$this->debug("\tWriting to socket...");
+			if( $this->fwrite_stream($this->childSocket,$this->mask($msg)) == FALSE ){
+				$this->disconnect();
+				return FALSE;				
+			}
+			$this->debug("%s","done\n","GreenBold");
+			
+			return TRUE;
+			
 		}
+
+		/********************************************************************************************************************
+
+			parseRequestHeader: 	parses the header information from the handshake request.  These headers
+								 	are used to validate a valid request. It can also be used to pass additional information
+								 	into the socket server for authentication or other purpsoses when overriding onConnected.
+
+			//	1.	retreive method and validate
+			//	2.	retreive path and validate
+			//	3.	retreive HTTP version major
+			//	4.	retreive all other headers
+
+		********************************************************************************************************************/
 
 		private function parseRequestHeader( $request ){
 
@@ -716,7 +734,7 @@
 				empty($headers->{'Sec-WebSocket-Version'}) || intval($headers->{'Sec-WebSocket-Version'}) !== 13
 
 			){
-				$this->console("%s","Invalid WebSocket Headers!\n","RedBold");
+				$this->debug("%s","Invalid WebSocket Headers!\n","RedBold");
 				return FALSE;
 			}
 
@@ -735,8 +753,7 @@
 				//	1.	N/A
 	    		//	2.  The server can perform additional client authentication, for
 				//		example, by returning a 401 status code with the corresponding
-				//		|WWW-Authenticate| header field as described in [RFC2616].  For
-				//		our case we're authenticating anyone with and ouser_id for now.
+				//		|WWW-Authenticate| header field as described in [RFC2616].
 				//
 				//	3&4	N/A
 				//
@@ -774,65 +791,7 @@
 
 		********************************************************************************************************************/
 
-
-		private function sendHandshake( $headers, $conn ){
-
-			//	2.  The server can perform additional client authentication, for
-			//		example, by returning a 401 status code with the corresponding
-			//		|WWW-Authenticate| header field as described in [RFC2616].  For
-			//		our case we're authenticating anyone with and ouser_id for now.
-
-			parse_str( str_replace('/?',"",$headers->uri), $vars );
-			$ouser = "obray-client";
-
-			$client = new stdClass();
-			$client->type = "obray-client";
-
-			if( !empty($vars["ouser_id"]) ){
-
-				$client->type = "Browser";
-				$this->setDatabaseConnection(getDatabaseConnection(true));
-				$this->console( "\tretreiving user: /obray/OUsers/get/?ouser_id=".$vars["ouser_id"].'&with=options'."\n" );
-				$new_user = $this->route('/obray/OUsers/get/?ouser_id='.$vars["ouser_id"].'&with=options');
-
-				if( !empty($new_user->data[0]) ){
-					$client->ouser = new stdClass();
-					$client->ouser->ouser_id = $new_user->data[0]->ouser_id;
-					$client->ouser->ouser_first_name = $new_user->data[0]->ouser_first_name;
-					$client->ouser->ouser_last_name = $new_user->data[0]->ouser_last_name;
-					$client->ouser->ouser_group = $new_user->data[0]->ouser_group;
-				}
-
-				$client->subscriptions = array( "all" => 1 );
-			}
-
-			if( !empty($vars["odevice_UUID"]) ){
-
-				$client->type = "Device";
-				$this->setDatabaseConnection(getDatabaseConnection(true));
-				$this->console( "\tretreiving device: /m/iOS/oDevices/get/?odevice_UUID=".$vars["odevice_UUID"]."\n" );
-				$new_device = $this->route('/m/iOS/oDevices/get/?odevice_UUID='.$vars["odevice_UUID"] );
-
-				if( !empty($new_device->data[0]) ){
-					$client->odevice = new stdClass();
-					$client->odevice->odevice_id = $new_device->data[0]->odevice_id;
-					$client->odevice->odevice_UUID = $new_device->data[0]->odevice_UUID;
-					$client->odevice->odevice_name = $new_device->data[0]->odevice_name;
-					$client->odevice->odevice_operator = $new_device->data[0]->odevice_operator;
-					$client->odevice->odevice_location = $new_device->data[0]->odevice_location;
-					$client->odevice->odevice_GPS = $new_device->data[0]->odevice_GPS;
-					$client->odevice->odevice_battery = $new_device->data[0]->odevice_battery;
-					$client->odevice->odevice_version = $new_device->data[0]->odevice_version;
-				} else {
-					$client->device = new stdClass();
-				}
-
-				$client->subscriptions = array( "devices" => 1 );
-			}
-
-			//	5.  If the server chooses to accept the incoming connection, it MUST
-	       	//		reply with a valid HTTP response indicating the following.
-			//
+		private function sendHandshake( $headers ){
 
 				//	1.	A Status-Line with a 101 response code as per RFC 2616
 				//		[RFC2616].  Such a response could look like "HTTP/1.1 101
@@ -860,13 +819,11 @@
 				//		The ABNF [RFC2616] of this header field is defined as
 				//		follows:
 				//
-				//		Sec-WebSocket-Accept     = base64-value-non-empty
-				//		base64-value-non-empty = (1*base64-data [ base64-padding ]) |
-				//	                            base64-padding
-				//		base64-data      = 4base64-character
-				//		base64-padding   = (2base64-character "==") |
-				//	                      (3base64-character "=")
-   				//		base64-character = ALPHA | DIGIT | "+" | "/"
+				//		Sec-WebSocket-Accept    = base64-value-non-empty
+				//		base64-value-non-empty 	= (1*base64-data [ base64-padding ]) | base64-padding
+				//		base64-data      		= 4base64-character
+				//		base64-padding   		= (2base64-character "==") | (3base64-character "=")
+   				//		base64-character 		= ALPHA | DIGIT | "+" | "/"
 
 				$secAccept = base64_encode(pack('H*', sha1($headers->{'Sec-WebSocket-Key'} . '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')));
 				$new_headers[] = "Sec-WebSocket-Accept:$secAccept";
@@ -874,16 +831,7 @@
 
 			$upgrade = implode("\r\n",$new_headers);
 
-			if( $this->debug ){
-				$this->console("Send upgrade request headers.\n");
-				$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
-				$this->console( $upgrade );
-				$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
-				$this->console($conn);
-			}
-			$this->fwrite_stream($conn,$upgrade,strlen($upgrade));
-
-			return $client;
+			$this->fwrite_stream($this->childSocket,$upgrade,strlen($upgrade));
 
 		}
 
@@ -897,23 +845,23 @@
 
 		********************************************************************************************************************/
 
-		function handshake($request,$conn){
-
-			if( $this->debug ){
-				$this->console("%s","\n---------------------------------------------------------------------------------------\n","BlueBold");
-				$this->console($request);
-				$this->console("%s","\n---------------------------------------------------------------------------------------\n\n","BlueBold");
-			}
+		function handshake($request){
 
 			//	1.	REF: 4.2.1.  Reading the Client's Opening Handshake
+
 			$headers = $this->readHandshake($request);
-			if( empty($headers) ){ return; }
+			if( empty($headers) ){ return FALSE; }
+
+			if( $this->onConnect($headers) === FALSE ){
+				$headers = array(); 
+				return FALSE;
+			}
 
 			//	2.	REF: 4.2.2.  Sending the Server's Opening Handshake
-			$ouser = $this->sendHandshake($headers,$conn);
+			$this->sendHandshake($headers);
 
-			return $ouser;
-			
+			return $headers;
+
 		}
 		
 		/********************************************************************************************************************
@@ -1038,29 +986,34 @@
 				//		the "Payload data", e.g., the number of bytes following the masking
 				//		key.
 
+				//	5.4.  Fragmentation
+				//
+				//	1. 	For a text message sent as three fragments, the first
+				//		fragment would have an opcode of 0x1 and a FIN bit clear, 
+				//	2. 	the second fragment would have an opcode of 0x0 and a FIN bit clear,
+				//	3.	and the third fragment would have an opcode of 0x0 and a FIN bit
+				//		that is set.
+
+
 		********************************************************************************************************************/
 
 		private function decode( $msg,$changed_socket ){
-
-			$this->console("In Decode\n");
-
-			$fields = unpack( 'Cheader/Csize' , substr($msg, 0, 16) );
-			$fields["size"] -= 128;
-			$this->console($fields);
-
+			
 			$frame = new stdClass();
 			if( !is_array($msg) ){
 				$ascii_array = array_map("ord",str_split( $msg ));
 			} else {
 				$ascii_array = $msg;
 			}
-			$binary_array = array_map("decbin",$ascii_array);
+
+			$header = array_slice($ascii_array,0,13);
+
+			$binary_array = array_map("decbin",$header);
+			$binary_array = array_map(function($item){
+				return str_pad($item,8,"0",STR_PAD_LEFT);
+			},$binary_array);
 			$binary_array = str_split(implode("",$binary_array));
 
-			$first_bits = implode("",array_slice($binary_array,0,64));
-			$this->console("first_bits :".$first_bits."\n");
-			
-			
 			//	1.	FIN:  1 bit
 			//
 			//		Indicates that this is the final fragment in a message.  The first
@@ -1077,9 +1030,9 @@
 			//		value, the receiving endpoint MUST _Fail the WebSocket
 			//		Connection_.
 
-			$RSV_1 = array_shift($binary_array);
-			$RSV_2 = array_shift($binary_array);
-			$RSV_3 = array_shift($binary_array);
+			$frame->rsv1 = array_shift($binary_array);
+			$frame->rsv2 = array_shift($binary_array);
+			$frame->rsv3 = array_shift($binary_array);
 
 			//	3.	Opcode:  4 bits
 			//
@@ -1105,6 +1058,37 @@
 
 			$opcode_bits = implode("",array_splice($binary_array,0,4));
 			$frame->opcode =  bindec( $opcode_bits );
+
+			if( $frame->opcode == 2 ){
+				$this->debug("%s","\tReceived binary frame... not supported, aborting.\n","RedBold");
+				return;
+			}
+
+			if( $frame->opcode == 8 ){
+				$this->debug("%s","\tReceived close... closing!\n","RedBold");
+				$this->sendClose( $changed_socket);
+				return;
+			}
+
+			if( $frame->opcode == 11 ){
+				$this->debug("%s","\tReceived ping request... send pong.\n","GreenBold");
+				$this->sendPong( $changed_socket, $msg);
+				return;
+			}
+
+			if( $frame->opcode == 10 ){
+
+				$this->debug("%s","\tReceived pong.\n","GreenBold");
+				
+				return;
+			}
+			
+			if( $frame->opcode > 10 ){
+
+				$this->debug("%s","\tUnsupported control frame received... aborting.\n","RedBold");
+				return;
+
+			}
 
 			//	4.	Mask:  1 bit
 			//
@@ -1135,29 +1119,25 @@
 			array_splice($ascii_array,0,2); // remove header from ascii array
 			$len_bits = implode("",array_splice($binary_array,0,7));
 			$frame->len = bindec( $len_bits );
-
-			if( $frame->opcode == 15 ){
-				$frame->len = 127;
-			}
-
+			
 			if( $frame->len === 126 ){
 				
+				$this->debug("%s","\tMedium message: 126\n","BlueBold");
 				array_splice($ascii_array,0,2);	// remove additional header from ascii array
-				$len_bits = implode("",array_splice($binary_array,0,16));
-				$frame->len = bindec( $len_bits ) - 32767;
+				$frame->len = bindec( implode( "", array_splice($binary_array,0,16) ) );
 				
 			} else if( $frame->len === 127 ){
 
+				$this->debug("%s","\tLarge message: 127\n","BlueBold");
 				array_splice($ascii_array,0,8);	// remove additional header from ascii array
-				$len_bits = implode("",array_splice($binary_array,0,16));
-				$frame->len = bindec( $len_bits );
-
+				$frame->len = bindec( implode( "", array_splice($binary_array,0,64) ) );
+				
 			}
 
 			if( $frame->opcode !== 0 && $frame->opcode !== 1 && $frame->opcode !== 2 ){
-				$this->console("%s","Not a valid opcode. Aborting message decoding.\n","RedBold");
-				$this->console("OPCode Bits: ".$opcode_bits."\n");
-				$this->console($frame);
+				$this->debug("%s","Not a valid opcode. Aborting message decoding.\n","RedBold");
+				$this->debug("OPCode Bits: ".$opcode_bits."\n");
+				$this->debug($frame);
 				return;
 			}
 
@@ -1194,7 +1174,7 @@
 			//		data".
 
 			$encoded_bits = array();
-			$encoded = array_splice($ascii_array,0);
+			$encoded = array_splice($ascii_array,0,$frame->len);
 
 			//	8.	Mask the payload data:
 			//		Octet i of the transformed data ("transformed-octet-i") is the XOR of
@@ -1207,8 +1187,8 @@
 			//		The payload length, indicated in the framing as frame-payload-length,
 			//		does NOT include the length of the masking key.  It is the length of
 			//		the "Payload data", e.g., the number of bytes following the masking
-			//		key.
-			
+			//	
+
 			$frame->msg = array();
 			for( $i=0;$i<count($encoded);++$i ){
 				$char = chr($encoded[$i] ^ $mask_key[$i%4]);
@@ -1216,10 +1196,55 @@
 			}
 			$frame->msg = implode("",$frame->msg);
 
-			
-			if( $frame->FIN === 1 && $frame->opcode == 1 ){
-				//$this->console($frame);
-				$this->onData( $frame,$changed_socket );
+			//	5.4.  Fragmentation
+			//
+			//	1. 	For a text message sent as three fragments, the first
+			//		fragment would have an opcode of 0x1 and a FIN bit clear, 
+			//	2. 	the second fragment would have an opcode of 0x0 and a FIN bit clear,
+			//	3.	and the third fragment would have an opcode of 0x0 and a FIN bit
+			//		that is set.
+
+			//	1. 	For a text message sent as three fragments, the first
+			//		fragment would have an opcode of 0x1 and a FIN bit clear, 
+
+			if( $frame->FIN === 0 && $frame->opcode === 1 ){
+
+				$this->debug("\tReceived first fragmented message.\n");
+				$this->fragments = array();
+				$this->fragments[] = $frame->msg;
+
+			}
+
+			//	2. 	the second fragment would have an opcode of 0x0 and a FIN bit clear,
+			if( $frame->FIN === 0 && $frame->opcode === 0 ){
+
+				$this->debug("\tReceived middle fragmented message.\n");
+				$this->fragments[] = $frame->msg;
+
+			}
+
+			//	3.	and the third fragment would have an opcode of 0x0 and a FIN bit
+			//		that is set.
+			if( $frame->FIN === 1 && $frame->opcode === 0 ){
+				
+				$this->debug("\tReceived final fragmented message.\n");
+				$this->fragments[] = $frame->msg;
+				$frame->msg = implode("",$this->fragments);
+				unset($this->fragments);
+
+				// set opcode to 1 so it process the frame as the full message
+				$frame->opcode = 1;
+
+			}
+
+			// if this is the final frame and the opcode is text then process as completed message
+			if( $frame->FIN === 1 && $frame->opcode === 1 ){
+				$this->debug("%s","\tReceived full text frame... calling onData.\n","GreenBold");
+				$this->onSocketReceive( $frame,$changed_socket );
+			}
+
+			if( !empty($ascii_array) ){
+				$this->decode($ascii_array,$changed_socket);
 			}
 
 		}
@@ -1240,11 +1265,65 @@
 			elseif($length > 125 && $length < 65536)
 				$header = pack('CCn', $b1, 126, $length);
 			elseif($length >= 65536)
-				$header = pack('CCQ', $b1, 127, $length);
+				$header = pack('CCJ', $b1, 127, $length);
 			return $header.$text;
 
 		}
 
+		/********************************************************************************************************************
+
+			sendClose: echos the close request and disconnects
+
+		********************************************************************************************************************/
+
+		private function sendClose( $send_socket ){
+
+			$b1 = 0x88;
+			$length = strlen("");
+			$header = pack('CC', $b1, $length);
+			
+			$this->fwrite_stream($send_socket,$header) == FALSE;
+			$this->disconnect($send_socket);
+			
+		}
+
+		/********************************************************************************************************************
+
+			sendForbidden: sends a response back with a 403 forbidden
+
+		********************************************************************************************************************/
+
+		protected function sendForbidden(){
+			
+			$new_headers = array( 0 => "HTTP/1.1 403 Forbidden" );
+			$new_headers[] = "Sec-WebSocket-Version: 13";
+			$new_headers[] = "\r\n";
+			$request = implode("\r\n",$new_headers);
+			$this->fwrite_stream($this->childSocket,$request,strlen($request));
+
+		}
+
+		/********************************************************************************************************************
+
+			sendBadRequest: sends a response back with a 400 Bad Request
+
+		********************************************************************************************************************/
+
+		protected function sendBadRequest(){
+			$new_headers = array( 0 => "HTTP/1.1 400 Bad Request" );
+			$new_headers[] = "Sec-WebSocket-Version: 13";
+			$new_headers[] = "\r\n";
+			$request = implode("\r\n",$new_headers);
+			$this->fwrite_stream($socket,$request,strlen($request));
+		}
+
+		protected function debug($format,$text=NULL,$color=NULL){
+
+			if( !empty($this->debug_mode) ){
+				$this->console($format,$text,$color);
+			}
+
+		}
 
 	}
 ?>
