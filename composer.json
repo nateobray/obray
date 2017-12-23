@@ -1,0 +1,13 @@
+{
+    "name": "obray/obray",
+    "description": "Simple PHP framework for websites and applications.",
+    "license": "MIT",
+    "homepage": "http://www.obray.net",
+    "require": {
+        "php": ">=7.0"
+    },
+    "autoload": {
+        "psr-4": {}
+            "obray": "core"
+        }
+    }
