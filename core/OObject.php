@@ -58,17 +58,14 @@
 	}
 
 	if (!function_exists('getallheaders')){
-        function getallheaders()
-        {
-               $headers = '';
-           foreach ($_SERVER as $name => $value)
-           {
-               if (substr($name, 0, 5) == 'HTTP_')
-               {
-                   $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
-               }
-           }
-           return $headers;
+        function getallheaders(){
+        	$headers = array();
+			foreach ($_SERVER as $name => $value){
+				if (substr($name, 0, 5) == 'HTTP_'){
+					$headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
+				}
+			}
+			return $headers;
         }
     }
 
@@ -302,22 +299,27 @@
 				}
 
 			} else {
+
 	    		/*********************************
 	    			Parse Path & setup params
 	    		*********************************/
 
 	    		$_REQUEST = $params;
-
-				$path_array = preg_split('[/]',$components['path'],NULL,PREG_SPLIT_NO_EMPTY);
+				
+				$path_array = explode('/',$components['path']);
+				$path_array = array_filter($path_array);
+				$path_array = array_values($path_array);
+				
 				$base_path = $this->getBasePath($path_array);
-
-
+				
 				/*********************************
 					Validate Remote Application
 				*********************************/
 
-				$this->validateRemoteApplication($direct);
-
+				if( $direct === FALSE ){
+					$this->validateRemoteApplication($direct);
+				}
+				
 				/*********************************
 					SET CONTENT TYPE FROM ROUTE
 				*********************************/
@@ -329,12 +331,11 @@
 				/*********************************
 					CALL FUNCTION
 				*********************************/
-
+				
 				if( empty($base_path) && count($path_array) == 1 && !empty($this->object) && $this->object != $path_array[0] ){
-
 					return $this->executeMethod($path,$path_array,$direct,$params);
 				}
-
+				
 				/*********************************
 					CREATE OBJECT
 				*********************************/
@@ -385,7 +386,7 @@
 			if( empty($path_array) && empty($this->object) && empty($base_path)){
 				if(empty($path_array)){	$path_array[] = "index";	}
 			}
-
+			
 			while(count($path_array)>0){
 
 				if( empty($base_path) ){
@@ -408,11 +409,13 @@
 					if( empty($path) ){ $path = "/index/"; }
 				}
 
+				
 				if ( !empty($objectType) ) {
-
+					
 					require_once $this->path;
+					
 					if (!class_exists( $obj_name )) { $this->throwError("File exists, but could not find object: $obj_name",404,'notfound'); return $this; } else {
-
+						
 						try{
 
 				    		//	CREATE OBJECT
@@ -449,7 +452,7 @@
 				}
 
 			}
-			//exit();
+			
 			$this->throwError('Route not found object: '.$path,404,'notfound'); return $this;
 
 		}
@@ -468,7 +471,30 @@
 				try {
 					$params = array_merge($this->checkPermissions($path, $direct), $params);
 					if (!$this->isError()) {
-						$this->$path($params);
+						
+						$reflector = new ReflectionMethod($this, $path);
+						$function_parameters = $reflector->getParameters();
+						
+						if( count($function_parameters) === 1 && $function_parameters[0]->name === 'params' ){
+							$this->$path($params);
+						} else if( count($function_parameters) > 0 ) {
+
+							$parameters = array();
+							forEach( $function_parameters as $function_parameter ){
+								if( !empty($params[$function_parameter->name]) ){
+									$parameters[] = $params[$function_parameter->name];
+								} else if( !$function_parameter->isOptional() ) {
+									$this->throwError("Missing method parameter.", 500, $function_parameter->name );
+								}
+							}
+							if( !empty($parameters) && empty($this->errors) ){
+								call_user_func_array(array($this, $path), $parameters);
+							}
+							
+						} else {
+							$this->$path();
+						}
+						
 					}
 				} catch (Exception $e) {
 					$this->throwError($e->getMessage());
@@ -627,8 +653,11 @@
 		***********************************************************************/
 
 		private function getBasePath(&$path_array){
+			$base_path = '';
 			$routes = unserialize(__OBRAY_ROUTES__);
-			if(!empty($path_array) && isSet($routes[$path_array[0]])){ $base_path = $routes[array_shift($path_array)]; } else { $base_path = ''; }
+			if(!empty($path_array) && isSet($routes[$path_array[0]])){ 
+				$base_path = $routes[array_shift($path_array)]; 
+			}
 			return $base_path;
 		}
 
