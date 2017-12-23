@@ -1,6 +1,7 @@
 <?php
 
-if (!class_exists( 'oObject' )) { die(); }
+namespace obray;
+if (!class_exists( 'obray\oObject' )) { die(); }
 
 class oCoreProjectEnum {
     const ODBO = 'ODBO';

@@ -26,8 +26,9 @@
 
 	*****************************************************************************/
 
-	if (!class_exists( 'oObject' )) { die(); }
-
+	namespace obray;
+	if (!class_exists( 'obray\oObject' )) { die(); }
+	
 	/********************************************************************************************************************
 
 		ODBO:	This is the database interface object built specifically for MySQL and MariaDB.
