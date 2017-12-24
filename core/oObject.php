@@ -54,19 +54,6 @@
 
 	}
 
-	/******************************************************
-	    REMOVE SPECIAL CHARS (cleans a string)
-	******************************************************/
-
-	function removeSpecialChars($string,$space = '',$amp = ''){
-
-		$string = str_replace(' ',$space,$string);
-		$string = str_replace('&',$amp,$string);
-		$string = preg_replace('/[^a-zA-Z0-9\-_s]/', '', $string);
-		return $string;
-
-	}
-
 	if (!function_exists('getallheaders')){
         function getallheaders(){
         	$headers = array();
@@ -81,7 +68,7 @@
 
 	/********************************************************************************************************************
 
-		OOBJECT:
+		oOBJECT:
 
 	********************************************************************************************************************/
 
@@ -93,7 +80,7 @@
 		private $status_code = 200;			// status code - used to translate to HTTP 1.1 status codes
 		private $content_type = 'application/json';	// stores the content type of this class or how it should be represented externally
 		private $path = '';				// the path of this object
-		private $access;
+		private $debug_mode = FALSE;			// specify if we are in debug mode or not
 
 		// public data members
 		public $object = '';                            // stores the name of the class
@@ -379,6 +366,9 @@
 			//      4)      This is to add greater flexibility for using custom session variable for storage of user data
 			//      5)      restrict permissions on undefined keys
 			//      6)      restrict access to users that are not logged in if that's required
+			//      7)      restrict access to users without correct permissions (non-graduated)
+			//      8)      restrict access to users without correct permissions (graduated)
+			//      9)      roles & permissions checks
 
 		***********************************************************************/
 
@@ -387,7 +377,7 @@
 			$params = array();
 
 			//	1)	only restrict permissions if the call is come from and HTTP request through router $direct === FALSE
-			if( !$direct ){
+			if( $direct ){ return; }
 
 	    		//	2)	retrieve permissions
 	    		$perms = $this->getPermissions();
@@ -408,71 +398,73 @@
 
 		    		if( isSet($_SERVER['PHP_AUTH_USER']) && isSet($_SERVER['PHP_AUTH_PW']) ){
 			    		$login = $this->route('/obray/OUsers/login/',array('ouser_email'=>$_SERVER['PHP_AUTH_USER'],'ouser_password'=>$_SERVER['PHP_AUTH_PW']),TRUE);
-			    		if( !isSet($_SESSION[$user_session_key]) ){ $this->throwError('You cannot access this resource.',401,'Unauthorized');	}
-		    		} else { $this->throwError('You cannot access this resource.',401,'Unauthorized'); }
+			    		if( !isSet($_SESSION[$user_session_key]) ){ 
+						$this->throwError('You cannot access this resource.',401,'Unauthorized');
+					}
+		    		} else {
+					$this->throwError('You cannot access this resource.',401,'Unauthorized'); 
+				}
 
 		    	//	7)	restrict access to users without correct permissions (non-graduated)
 	    		} else if(
-					is_int($perms[$object_name]) &&
-					isSet($_SESSION[$user_session_key]) &&
-					(
-						isset($_SESSION[$user_session_key]->ouser_permission_level)
-						&& !defined("__OBRAY_GRADUATED_PERMISSIONS__") 
-						&& $_SESSION[$user_session_key]->ouser_permission_level != $perms[$object_name]
-					)
-				){
+				is_int($perms[$object_name]) &&
+				isSet($_SESSION[$user_session_key]) &&
+				(
+					isset($_SESSION[$user_session_key]->ouser_permission_level)
+					&& !defined("__OBRAY_GRADUATED_PERMISSIONS__") 
+					&& $_SESSION[$user_session_key]->ouser_permission_level != $perms[$object_name]
+				)
+			){
 
-						$this->throwError('You cannot access this resource.',403,'Forbidden'); 
+				$this->throwError('You cannot access this resource.',403,'Forbidden'); 
 
-				// restrict access to users without correct permissions (graduated)
-				} else if( 
-					is_int($perms[$object_name]) &&
-					isSet($_SESSION[$user_session_key]) &&
-					(
-						isset($_SESSION[$user_session_key]->ouser_permission_level) 
-						&& defined("__OBRAY_GRADUATED_PERMISSIONS__") 
-						&& $_SESSION[$user_session_key]->ouser_permission_level > $perms[$object_name]
-					)
-				){
+			//	8)	restrict access to users without correct permissions (graduated)
+			} else if( 
+				is_int($perms[$object_name]) &&
+				isSet($_SESSION[$user_session_key]) &&
+				(
+					isset($_SESSION[$user_session_key]->ouser_permission_level) 
+					&& defined("__OBRAY_GRADUATED_PERMISSIONS__") 
+					&& $_SESSION[$user_session_key]->ouser_permission_level > $perms[$object_name]
+				)
+			){
 
-					$this->throwError('You cannot access this resource.',403,'Forbidden'); 
+				$this->throwError('You cannot access this resource.',403,'Forbidden'); 
 
-				// roles & permissions checks
-				} else if(
-					(
-						is_array($perms[$object_name]) && 
-						isSet($perms[$object_name]['permissions']) &&
-						is_array($perms[$object_name]['permissions']) &&
-						count(array_intersect($perms[$object_name]['permissions'],$_SESSION[$user_session_key]->permissions)) == 0
-					) || (
-						is_array($perms[$object_name]) && 
-						isSet($perms[$object_name]['roles']) &&
-						is_array($perms[$object_name]['roles']) &&
-						count(array_intersect($perms[$object_name]['roles'],$_SESSION[$user_session_key]->roles)) == 0
-					) || (
-						is_array($perms[$object_name]) && 
-						isSet($perms[$object_name]['roles']) &&
-						is_array($perms[$object_name]['roles']) &&
-						in_array("SUPER",$_SESSION[$user_session_key]->roles)
-					) || (
-						is_array($perms[$object_name]) && 
-						isSet($perms[$object_name]['permissions']) &&
-						!is_array($perms[$object_name]['permissions'])
-					) || (
-						is_array($perms[$object_name]) && 
-						isSet($perms[$object_name]['roles']) &&
-						!is_array($perms[$object_name]['roles'])
-					) || (
-						is_array($perms[$object_name]) &&
-						!isSet($perms[$object_name]['roles']) &&
-						!isSet($perms[$object_name]['permissions'])
-					)
-				){
+			//	9)	roles & permissions checks
+			} else if(
+				(
+					is_array($perms[$object_name]) && 
+					isSet($perms[$object_name]['permissions']) &&
+					is_array($perms[$object_name]['permissions']) &&
+					count(array_intersect($perms[$object_name]['permissions'],$_SESSION[$user_session_key]->permissions)) == 0
+				) || (
+					is_array($perms[$object_name]) && 
+					isSet($perms[$object_name]['roles']) &&
+					is_array($perms[$object_name]['roles']) &&
+					count(array_intersect($perms[$object_name]['roles'],$_SESSION[$user_session_key]->roles)) == 0
+				) || (
+					is_array($perms[$object_name]) && 
+					isSet($perms[$object_name]['roles']) &&
+					is_array($perms[$object_name]['roles']) &&
+					in_array("SUPER",$_SESSION[$user_session_key]->roles)
+				) || (
+					is_array($perms[$object_name]) && 
+					isSet($perms[$object_name]['permissions']) &&
+					!is_array($perms[$object_name]['permissions'])
+				) || (
+					is_array($perms[$object_name]) && 
+					isSet($perms[$object_name]['roles']) &&
+					!is_array($perms[$object_name]['roles'])
+				) || (
+					is_array($perms[$object_name]) &&
+					!isSet($perms[$object_name]['roles']) &&
+					!isSet($perms[$object_name]['permissions'])
+				)
+			){
 
-					$this->throwError('You cannot access this resource.',403,'Forbidden'); 
+				$this->throwError('You cannot access this resource.',403,'Forbidden'); 
 
-				// add user_id to params if restriction is based on user
-				}
 			}
 
 		}
@@ -484,13 +476,41 @@
 				The idea here is to prevent infromation from 'leaking'
 				that's not explicitly intended.
 
+			//	1)	remove all object keys not white listed for
+			//		output - this is so we don't expose unnecessary
+			//		information
+			// 	2) 	if in debug mode allow some additiona information
+                        //              through
+			// 	3) 	based on our allowed keys unset valus from public
+                        //              data members
+
 		***********************************************************************/
 
 		public function cleanUp(){
 			if( !in_array($this->content_type,['text/csv','text/tsv','text/table']) ){
-				// remove all object keys not white listed for output - this is so we don't expose unnecessary information
-				$keys = ['object','errors','data','runtime','html','recordcount']; //if( __OBRAY_DEBUG_MODE__ ){ $keys[] = 'sql'; $keys[] = 'filter'; }
-				foreach($this as $key => $value) { if( !in_array($key,$keys) ){ unset($this->$key); } }
+
+				// 	1) 	remove all object keys not white listed for
+                        	// 		output - this is so we don't expose unnecessary
+                        	//              information
+
+				$keys = ['object','errors','data','runtime','html','recordcount'];
+
+				//	2)	if in debug mode allow some additiona information
+				//		through
+
+				if( $this->debug_mode ){
+					$keys[] = 'sql'; $keys[] = 'filter'; 
+				}
+
+				//	3)	based on our allowed keys unset valus from public
+				//		data members
+
+				foreach($this as $key => $value) {
+					if( !in_array($key,$keys) ){
+						unset($this->$key);
+					}
+				}
+
 			}
 		}
 
@@ -498,17 +518,61 @@
 
 			ERROR HANDLING FUNCTIONS
 
+			//	1)	Throw Error
+			//		a)	Set is_error to TRUE
+			//		b)	initialize this->errors if not intialized
+			//		c)	add error of type to errors array
+			//		d)	set status code
+
+			//	2)	Is Error: returns TRUE/FALSE if error on object
+
+			//	3)	Get Stack Trace
+
 		***********************************************************************/
 
+		////////////////////////////////////////////////////////////////////////
+		//
+		//	1)	Throw Error
+                //		a)	Set is_error to TRUE
+                //		b)	initialize this->errors if not intialized
+                //		c)	add error of type to errors array
+                //		d)      set status code
+		//
+		////////////////////////////////////////////////////////////////////////
+
 		public function throwError($message,$status_code=500,$type='general'){
-	        $this->is_error = TRUE;
-	        if( empty($this->errors) || !is_array($this->errors) ){ $this->errors = []; }
-	        $this->errors[$type][] = $message;
-	        $this->status_code = $status_code;
-	    }
-		public function isError(){ return $this->is_error; }
+
+			//              a)      Set is_error to TRUE
+			$this->is_error = TRUE;
+			//              b)      initialize this->errors if not intialized
+			if( empty($this->errors) || !is_array($this->errors) ){
+				$this->errors = [];
+			}
+			//              c)      add error of type to errors array
+	        	$this->errors[$type][] = $message;
+			//              d)      set status code
+	        	$this->status_code = $status_code;
+
+	    	}
+
+		////////////////////////////////////////////////////////////////////////
+		//
+		//      2)      Is Error: returns TRUE/FALSE if error on object
+		//
+		////////////////////////////////////////////////////////////////////////
+
+		public function isError(){
+			return $this->is_error;
+		}
+
+		////////////////////////////////////////////////////////////////////////
+		//
+		//      3)      Get Stack Trace
+		//
+		////////////////////////////////////////////////////////////////////////
 
 		public function getStackTrace($exception) {
+
 			$stackTrace = "";
 			$count = 0;
 			foreach ($exception->getTrace() as $frame) {
@@ -543,6 +607,7 @@
 				$count++;
 			}
 			return $stackTrace;
+
 		}
 
 		/***********************************************************************
@@ -592,8 +657,6 @@
 		public function getContentType(){ return $this->content_type; }
 		public function setContentType($type){ if($this->content_type != 'text/html'){ $this->content_type = $type; } }
 		public function getPermissions(){ return isset($this->permissions) ? $this->permissions : array(); }
-		public function setMissingPathHandler($handler,$path){ $this->missing_path_handler = $handler; $this->missing_path_handler_path = $path; }
-		public function dumpster($data,$force=false) { if( (defined("__LOCAL__") && __LOCAL__) || $force ) { echo '<pre>'; print_r($data); echo '</pre>'; } }
 		public function redirect($location="/"){ header( 'Location: '.$location ); die(); }
 
 		public function switchDB($db,$uname,$psswd){
