@@ -67,8 +67,8 @@
 				}
 			}
 			return $headers;
-        }
-    }
+        	}
+    	}
 
 	/********************************************************************************************************************
 
@@ -79,15 +79,15 @@
 	Class oObject {
 
 		// private data members
-		private $starttime;																			// records the start time (time the object was created).  Cane be used for performance tuning
-		private $is_error = FALSE;																	// error bit
-		private $status_code = 200;																	// status code - used to translate to HTTP 1.1 status codes
-		private $content_type = 'application/json';													// stores the content type of this class or how it should be represented externally
-		private $path = '';																			// the path of this object
+		private $starttime;				// records the start time (time the object was created).  Cane be used for performance tuning
+		private $is_error = FALSE;			// error bit
+		private $status_code = 200;			// status code - used to translate to HTTP 1.1 status codes
+		private $content_type = 'application/json';	// stores the content type of this class or how it should be represented externally
+		private $path = '';				// the path of this object
 		private $access;
 
 		// public data members
-		public $object = '';                                                                        // stores the name of the class
+		public $object = '';                            // stores the name of the class
 
 		public function console(){
 
@@ -99,14 +99,14 @@
 				} else if( count($args) === 3 && $args[1] !== NULL && $args[2] !== NULL ){
 					$colors = array(
 						// text color
-						"Black" =>				"\033[30m",
-						"Red" => 				"\033[31m",
-						"Green" =>				"\033[32m",
+						"Black" =>			"\033[30m",
+						"Red" => 			"\033[31m",
+						"Green" =>			"\033[32m",
 						"Yellow" => 			"\033[33m",
-						"Blue" => 				"\033[34m",
+						"Blue" => 			"\033[34m",
 						"Purple" => 			"\033[35m",
-						"Cyan" =>				"\033[36m",
-						"White" => 				"\033[37m",
+						"Cyan" =>			"\033[36m",
+						"White" => 			"\033[37m",
 						// text color bold
 						"BlackBold" => 			"\033[30m",
 						"RedBold" => 			"\033[1;31m",
@@ -125,14 +125,14 @@
 						"CyanMuted" => 			"\033[2;36m",
 						"WhiteMuted" => 		"\033[2;37m",
 						// text color muted
-						"BlackUnderline" => 	"\033[4;30m",
+						"BlackUnderline" => 		"\033[4;30m",
 						"RedUnderline" => 		"\033[4;31m",
-						"GreenUnderline" => 	"\033[4;32m",
-						"YellowUnderline" => 	"\033[4;33m",
+						"GreenUnderline" => 		"\033[4;32m",
+						"YellowUnderline" => 		"\033[4;33m",
 						"BlueUnderline" => 		"\033[4;34m",
-						"PurpleUnderline" => 	"\033[4;35m",
+						"PurpleUnderline" =>	 	"\033[4;35m",
 						"CyanUnderline" => 		"\033[4;36m",
-						"WhiteUnderline" => 	"\033[4;37m",
+						"WhiteUnderline" =>	 	"\033[4;37m",
 						// text color blink
 						"BlackBlink" => 		"\033[5;30m",
 						"RedBlink" => 			"\033[5;31m",
@@ -179,7 +179,7 @@
     				$path = $components["scheme"] ."://". $components["host"] . (!empty($components["port"])?':'.$components["port"]:'') . $components["path"];
     			}
 			}
-			
+
 			/******************************************************************
 				handle remote HTTP(S) calls
 			******************************************************************/
@@ -214,9 +214,9 @@
 			/******************************************************************
 				attempt to Find Object
 			******************************************************************/
-			
+
 			if( class_exists( '\\' . implode('\\',$path_array) ) ){
-				$obj = $this->createObject( '\\' . implode('\\',$path_array), $params, $direct );
+				$obj = $this->createObject( '\\' . implode('\\',$path_array), NULL, $params, $direct );
 				return $obj;
 			}
 
@@ -229,6 +229,8 @@
 				$obj = $this->createObject( '\\' . implode('\\',$path_array), $function, $params, $direct );
 				return $obj;
 			}
+
+			$this->throwError("Could not find " . $components['path']);
 
 			return $this;
 
@@ -282,7 +284,7 @@
 				$obj->path_to_object = $path;
 
 				//	3)	check object permissions
-				$params = array_merge($obj->checkPermissions('object',$direct),$params);
+				$obj->checkPermissions('object',$direct);
 
 				//	4)	setup Database connection
 				if( method_exists($obj,'setDatabaseConnection') ){ $obj->setDatabaseConnection(getDatabaseConnection()); }
@@ -319,13 +321,13 @@
 
 			try {
 				//	1)	check permission on function call (return if not permitted)
-				$params = array_merge($obj->checkPermissions($function, $direct), $params);
+				$obj->checkPermissions($function, $direct);
 				if ( $obj->isError() ) { return; }
 
 				//	2)	create new reflector to map parameters
 				$reflector = new \ReflectionMethod($obj, $function);
 				$function_parameters = $reflector->getParameters();
-				
+
 				//	3)	if params is passed in then use old style params array passed into function
 				if( count($function_parameters) === 1 && $function_parameters[0]->name === 'params' ){
 					$obj->$function($params);
@@ -344,12 +346,12 @@
 					if( empty($obj->errors) ){
 						call_user_func_array(array($obj, $function), $parameters);
 					}
-				
+
 				//	5)	if no parameters passed in simply call function
 				} else {
 					$obj->$function();
 				}
-			
+
 			//	6)	handle errors on on the object itself
 			} catch (Exception $e) {
 				$obj->throwError($e->getMessage());
@@ -357,7 +359,7 @@
 			}
 
 		}
-		
+
 		/***********************************************************************
 
 			CHECK PERMISSIONS
@@ -382,9 +384,9 @@
 
 	    		// restrict permissions on undefined keys
 	    		if( !isSet($perms[$object_name]) ){
-					
-					$this->throwError('You cannot access this resource.',403,'Forbidden');
-					
+
+				$this->throwError('You cannot access this resource.',403,'Forbidden');
+
 	    		// restrict access to users that are not logged in if that's required
 	    		} else if( ( $perms[$object_name] === 'user' && !isSet($_SESSION[$user_session_key]) ) || ( is_int($perms[$object_name]) && !isSet($_SESSION[$user_session_key]) ) ){
 
@@ -394,22 +396,22 @@
 		    		} else { $this->throwError('You cannot access this resource.',401,'Unauthorized'); }
 
 		    	// restrict access to users without correct permissions (non-graduated)
-	    		} else if( 
-					is_int($perms[$object_name]) && 
-					isSet($_SESSION[$user_session_key]) && 
+	    		} else if(
+					is_int($perms[$object_name]) &&
+					isSet($_SESSION[$user_session_key]) &&
 					(
-						isset($_SESSION[$user_session_key]->ouser_permission_level) 
+						isset($_SESSION[$user_session_key]->ouser_permission_level)
 						&& !defined("__OBRAY_GRADUATED_PERMISSIONS__") 
 						&& $_SESSION[$user_session_key]->ouser_permission_level != $perms[$object_name]
 					)
-				){ 
+				){
 
 						$this->throwError('You cannot access this resource.',403,'Forbidden'); 
 
 				// restrict access to users without correct permissions (graduated)
 				} else if( 
-					is_int($perms[$object_name]) && 
-					isSet($_SESSION[$user_session_key]) && 
+					is_int($perms[$object_name]) &&
+					isSet($_SESSION[$user_session_key]) &&
 					(
 						isset($_SESSION[$user_session_key]->ouser_permission_level) 
 						&& defined("__OBRAY_GRADUATED_PERMISSIONS__") 
@@ -452,16 +454,10 @@
 				){
 
 					$this->throwError('You cannot access this resource.',403,'Forbidden'); 
-				
-				// add user_id to params if restriction is based on user
-				} else {
-	
-					if( isSet($perms[$object_name]) && $perms[$object_name] === 'user' && isSet($_SESSION[$user_session_key]) ){ $params['ouser_id'] = $_SESSION['ouser']->ouser_id; }
 
+				// add user_id to params if restriction is based on user
 				}
 			}
-			
-    		return $params;
 
 		}
 

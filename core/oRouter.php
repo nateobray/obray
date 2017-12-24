@@ -41,7 +41,7 @@
 
 	********************************************************************************************************************/
 
-	Class ORouter extends oObject{
+	Class oRouter extends oObject{
 
 		public function route($path,$params=array(),$direct=FALSE){
 
