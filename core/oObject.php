@@ -79,14 +79,11 @@
 	Class oObject {
 
 		// private data members
-		private $delegate = FALSE;																	// does this object have a delegate [TO BE IMPLEMENTED]
 		private $starttime;																			// records the start time (time the object was created).  Cane be used for performance tuning
 		private $is_error = FALSE;																	// error bit
 		private $status_code = 200;																	// status code - used to translate to HTTP 1.1 status codes
 		private $content_type = 'application/json';													// stores the content type of this class or how it should be represented externally
 		private $path = '';																			// the path of this object
-		private $missing_path_handler;																// if path is not found by router we can pass it to this handler for another attempt
-		private $missing_path_handler_path;															// the path of the missing handler
 		private $access;
 
 		// public data members
@@ -173,7 +170,6 @@
 		public function route( $path , $params = array(), $direct = TRUE ) {
 
 			if( !$direct ){ $params = array_merge($params,$_GET,$_POST); }
-			$cmd = $path;
 			$this->params = $params;
 			$components = parse_url($path); $this->components = $components;
 			if( isSet($components['query']) ){
@@ -182,175 +178,56 @@
     			if( !empty($components["scheme"]) && ( $components["scheme"] == "http" || $components["scheme"] == "https" ) ){
     				$path = $components["scheme"] ."://". $components["host"] . (!empty($components["port"])?':'.$components["port"]:'') . $components["path"];
     			}
-    		}
+			}
+			
+			/******************************************************************
+				handle remote HTTP(S) calls
+			******************************************************************/
+			if( isSet($components['host']) && $direct ){
+				return $this;
+			}
+
+			/******************************************************************
+				validate Remote Application
+			******************************************************************/
+
+			if( $direct === FALSE ){
+				$this->validateRemoteApplication($direct);
+			}
+
+			/******************************************************************
+				parse Path
+			******************************************************************/
+
+			$path_array = explode('/',$components['path']);
+			$path_array = array_filter($path_array);
+			$path_array = array_values($path_array);
+
+			/******************************************************************
+				set content type from params
+			******************************************************************/
+
+			if( isset($params['ocsv']) ){ $this->setContentType('text/csv'); unset($params['ocsv']); }
+			if( isset($params['otsv']) ){ $this->setContentType('text/tsv'); unset($params['otsv']); }
+			if( isset($params['otable']) ){ $this->setContentType('text/table'); unset($params['otable']); }
+
+			/******************************************************************
+				attempt to Find Object
+			******************************************************************/
+			
+			if( class_exists( '\\' . implode('\\',$path_array) ) ){
+				$obj = $this->createObject( '\\' . implode('\\',$path_array), $params, $direct );
+				return $obj;
+			}
 
 			/*********************************
-				handle remote HTTP(S) calls
+				Attempt to Find Object/Function
 			*********************************/
-			if( isSet($components['host']) && $direct ){
 
-				$timeout = 5;
-				$ch = curl_init();
-				curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-				curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
-
-				// SET HEADERS
-				$headers = array();
-				$headers[] = "Expect: ";
-				curl_setopt($ch, CURLINFO_HEADER_OUT, true);
-
-
-				if( defined('__OBRAY_REMOTE_HOSTS__') && defined('__OBRAY_TOKEN__') && in_array($components['host'],unserialize(__OBRAY_REMOTE_HOSTS__)) ){ $headers[] = 'Obray-Token: '.__OBRAY_TOKEN__; }
-				if( !empty($params['http_headers']) ){ $headers = $params['http_headers']; unset($params["http_headers"]); }
-				if( !empty($params['http_content_type']) ){ $headers[] = 'Content-type: '.$params['http_content_type']; $content_type = $params['http_content_type']; unset($params['http_content_type']);  }
-				if( !empty($params['http_accept']) ){ $headers[] = 'Accept: '.$params['http_accept']; unset($params['http_accept']); }
-				if( !empty($params['http_username']) && !empty($params['http_password']) ){ curl_setopt($ch, CURLOPT_USERPWD, $params['http_username'].":".$params['http_password']); unset($params['http_username']); unset($params['http_password']); }
-				if( !empty($params['http_username']) && empty($params['http_password']) ){ curl_setopt($ch, CURLOPT_USERPWD, $params['http_username'].":"); unset($params['http_username']); }
-				if( !empty($params['http_raw']) ){ $show_raw_data = TRUE; unset($params['http_raw']); }
-				if( !empty($params['http_debug']) ){ $debug = TRUE; unset($params["http_debug"]); } else { $debug = FALSE; }
-				if( !empty($params['http_user_agent']) ){ curl_setopt($ch,CURLOPT_USERAGENT,$params["http_user_agent"]); unset($params["http_user_agent"]); }
-
-				if( (!empty($this->params) && empty($params['http_method'])) || (!empty($params['http_method']) && $params['http_method'] == 'post') ){
-					unset($params["http_method"]);
-					if( count($params) == 1 && !empty($params["body"]) ){
-						curl_setopt($ch, CURLOPT_POST, 1);
-						curl_setopt($ch, CURLOPT_POSTFIELDS, $params["body"]);
-					} else {
-						if( !empty($content_type) && $content_type == "application/json" ){
-							curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
-							$json = json_encode($params);
-							$headers[] = 'Content-Length: '.strlen($json);
-							curl_setopt($ch, CURLOPT_POST, 1);
-							curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
-						} else {
-							if( $debug ){
-								$this->console("\n\nPost Fields\n");
-								$this->console("Count: ".count($params)."\n");
-								$this->console($params);
-							}
-							curl_setopt($ch, CURLOPT_POST, count($params));
-							curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
-						}
-					}
-
-				} else {
-					if( !empty($params["http_method"]) ){ unset($params["http_method"]); }
-					if( !empty($components["query"]) ){
-						$path.= "?" . $components["query"];
-					}
-					if( $debug ){ $this->console($path); }
-					curl_setopt($ch, CURLOPT_HTTPGET, TRUE);
-					curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
-				}
-
-				if( $debug ){ $this->console($params); }
-				
-				if( !empty($headers) ){ 
-					if( $debug ){
-						$this->console("*****HEADERS*****");
-						$this->console($headers);
-					}
-					curl_setopt($ch, CURLOPT_HTTPHEADER, $headers); 
-				} else {
-					if( $debug ){
-						$this->console("NO HEADERS SET!\n");
-					}
-				}
-				curl_setopt($ch, CURLOPT_URL, $path);
-				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-				curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
-				curl_setopt($ch, CURLOPT_TIMEOUT, 400); //timeout in seconds
-				$this->data = curl_exec($ch);
-
-				if( $debug ){
-					$this->console($this->data);
-				}
-				
-				$headers = curl_getinfo($ch, CURLINFO_HEADER_OUT);
-				$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
-				$info = curl_getinfo( $ch );
-				$data = json_decode($this->data);
-				
-				$info["http_code"] =  intval($info["http_code"]);
-
-				if( !( $info["http_code"] >= 200 && $info["http_code"] < 300)  ){
-
-					$this->data = array();
-					//echo "HTTP CODE IS NOT 200";
-					if( !empty($data->Message) ){
-						$this->throwError($data->Message,$info["http_code"]);
-					} else if ( !empty($data->error) ){
-						$this->throwError( $data->error );
-					} else if ( !empty($data->errors) ){
-						$this->throwError("");
-						$this->errors = $data->errors;
-					} else {
-						$this->throwError("An error has occurred with no message.",$info["http_code"]);
-					}
-					return $this;
-				} else {
-
-					if( !empty($data) ){ $this->data = $data; } else { return $this; }
-
-					if( !empty($this->data) ){
-						if( isSet($this->data->errors) ){ $this->errors = $this->data->errors; }
-						if( isSet($this->data->html) ){ $this->html = $this->data->html; }
-						if( isSet($this->data->data) && empty($show_raw_data) ){ $this->data = $this->data->data; }
-					}
-				}
-
-			} else {
-
-	    		/*********************************
-	    			Parse Path & setup params
-	    		*********************************/
-
-	    		$_REQUEST = $params;
-				
-				$path_array = explode('/',$components['path']);
-				$path_array = array_filter($path_array);
-				$path_array = array_values($path_array);
-				
-				$base_path = $this->getBasePath($path_array);
-				
-				/*********************************
-					Validate Remote Application
-				*********************************/
-
-				if( $direct === FALSE ){
-					$this->validateRemoteApplication($direct);
-				}
-				
-				/*********************************
-					SET CONTENT TYPE FROM ROUTE
-				*********************************/
-
-				if( isset($params['ocsv']) ){ $this->setContentType('text/csv'); unset($params['ocsv']); }
-				if( isset($params['otsv']) ){ $this->setContentType('text/tsv'); unset($params['otsv']); }
-				if( isset($params['otable']) ){ $this->setContentType('text/table'); unset($params['otable']); }
-
-				/*********************************
-					CALL FUNCTION
-				*********************************/
-				
-				if( empty($base_path) && count($path_array) == 1 && !empty($this->object) && $this->object != $path_array[0] ){
-					return $this->executeMethod($path,$path_array,$direct,$params);
-				}
-				
-				/*********************************
-					CREATE OBJECT
-				*********************************/
-
-				$obj = $this->createObject($path_array,$path,$base_path,$params,$direct);
-				if( empty($this->errors)  ){ return $obj; }
-
-				/*********************************
-					FIND MISSING ROUTE
-				*********************************/
-				if( $this->status_code == 404 ){
-					return $this->findMissingRoute($components['path'],$params);
-				}
-
+			$function = array_pop($path_array);
+			if( class_exists( '\\' . implode('\\',$path_array) ) ){
+				$obj = $this->createObject( '\\' . implode('\\',$path_array), $function, $params, $direct );
+				return $obj;
 			}
 
 			return $this;
@@ -377,84 +254,51 @@
 
 			CREATE OBJECT
 
+			//	1)	create and setup object
+			//	2)	set object properties
+			//	3)	check object permissions
+			//	4)	setup Database connection
+			//	5)	if there is a function to call, then execute method
+
 		***********************************************************************/
 
-		private function createObject($path_array,$path,$base_path,&$params,$direct){
-			
-			$path = '';
-			$rPath = array();
+		private function createObject( $path, $function=NULL, $params=array(), $direct=FALSE, $object_type="model" ){
 
-			if( empty($path_array) && empty($this->object) && empty($base_path)){
-				if(empty($path_array)){	$path_array[] = "index";	}
+			//	1)	create and setup object
+			try{
+				$obj = new $path($params,$direct);
+			} catch (Exception $e){
+				$this->throwError($e->getMessage());
+				$this->logError(oCoreProjectEnum::OOBJECT,$e);
+				exit();
 			}
-			
-			while(count($path_array)>0){
 
-				if( empty($base_path) ){
-					if(is_dir(__OBRAY_SITE_ROOT__.'controllers/'.implode('/',$path_array))){	$path_array[] = $path_array[count($path_array)-1];		}
-				}
+			try{
 
-				$obj_name = array_pop($path_array);
-				$this->controller_path = __OBRAY_SITE_ROOT__."controllers/".implode('/',$path_array).'/c'.str_replace(' ','',ucWords( str_replace('-',' ',$obj_name) ) ).'.php';
-				$this->model_path = $base_path . implode('/',$path_array).'/'.$obj_name.'.php';
+				//	2)	set object properties
+				$obj->objectType = $object_type;
+				$obj->setObject(get_class($obj));
+				$obj->setContentType($obj->content_type);
+				$obj->path_to_object = $path;
 
-				if( file_exists( $this->model_path ) ){
-					$objectType = "model";
-					$this->path = $this->model_path;
-				} else if( file_exists( $this->controller_path ) ){
-					$objectType = "controller";
-					$obj_name = "c".str_replace(' ','',ucWords( str_replace('-',' ',$obj_name) ) );
-					$this->path = $this->controller_path;
-					// include the root controller
-					if( file_exists( __OBRAY_SITE_ROOT__ . "controllers/cRoot.php" ) ){ require_once __OBRAY_SITE_ROOT__."controllers/cRoot.php"; }
-					if( empty($path) ){ $path = "/index/"; }
-				}
+				//	3)	check object permissions
+				$params = array_merge($obj->checkPermissions('object',$direct),$params);
 
-				
-				if ( !empty($objectType) ) {
-					
-					require_once $this->path;
-					
-					if (!class_exists( $obj_name )) { $this->throwError("File exists, but could not find object: $obj_name",404,'notfound'); return $this; } else {
-						
-						try{
+				//	4)	setup Database connection
+				if( method_exists($obj,'setDatabaseConnection') ){ $obj->setDatabaseConnection(getDatabaseConnection()); }
 
-				    		//	CREATE OBJECT
-				    		$obj = new $obj_name($params,$direct,$rPath);
-				    		$obj->objectType = $objectType;
-				    		$obj->setObject(get_class($obj));
-				    		$obj->setContentType($obj->content_type);
-				    		$obj->path_to_object = implode('/',$path_array);
-							array_pop($rPath);
-							$obj->rPath = $rPath;
-
-				    		//	CHECK PERMISSIONS
-				    		$params = array_merge($obj->checkPermissions('object',$direct),$params);
-
-				    		//	SETUP DATABASE CONNECTION
-				    		if( method_exists($obj,'setDatabaseConnection') ){ $obj->setDatabaseConnection(getDatabaseConnection()); }
-
-				    		//	ROUTE REMAINING PATH - function calls
-							if(!empty($path))
-								$obj->route($path,$params,$direct);
-
-					        return $obj;
-
-				        } catch (Exception $e){
-				        	$this->throwError($e->getMessage());
-							$this->logError(oCoreProjectEnum::OOBJECT,$e);
-				       	}
-
-					}
-					break;
-				} else {
-					$rPath[] = strtolower($obj_name);
-					$path = '/'.$obj_name;
-				}
-
+			} catch (Exception $e){
+				$obj->throwError($e->getMessage());
+				$obj->logError(oCoreProjectEnum::OOBJECT,$e);
+				return $obj;
 			}
-			
-			$this->throwError('Route not found object: '.$path,404,'notfound'); return $this;
+
+			//	5)	if there is a function to call, then execute method
+			if( !empty($function) ){
+				$this->executeMethod($obj,$function,$params,$direct);
+			}
+
+			return $obj;
 
 		}
 
@@ -462,62 +306,58 @@
 
 			EXECUTE METHOD
 
+			//	1)	check permission on function call (return if not permitted)
+			//	2)	create new reflector to map parameters
+			//	3)	if params is passed in then use old style params array passed into function
+			//	4)	if there are parameters other than params then pass them through to the function
+			//	5)	if no parameters passed in simply call function
+			//	6)	handle errors on on the object itself
+
 		***********************************************************************/
 
-		private function executeMethod($path,$path_array,$direct,&$params) {
+		private function executeMethod( $obj,$function,$params,$direct=FALSE ){
 
-			$path = str_replace('-', '', $path_array[0]);
+			try {
+				//	1)	check permission on function call (return if not permitted)
+				$params = array_merge($obj->checkPermissions($function, $direct), $params);
+				if ( $obj->isError() ) { return; }
 
-			if (method_exists($this, $path)) {
-				try {
-					$params = array_merge($this->checkPermissions($path, $direct), $params);
-					if (!$this->isError()) {
-						
-						$reflector = new ReflectionMethod($this, $path);
-						$function_parameters = $reflector->getParameters();
-						
-						if( count($function_parameters) === 1 && $function_parameters[0]->name === 'params' ){
-							$this->$path($params);
-						} else if( count($function_parameters) > 0 ) {
+				//	2)	create new reflector to map parameters
+				$reflector = new \ReflectionMethod($obj, $function);
+				$function_parameters = $reflector->getParameters();
+				
+				//	3)	if params is passed in then use old style params array passed into function
+				if( count($function_parameters) === 1 && $function_parameters[0]->name === 'params' ){
+					$obj->$function($params);
 
-							$parameters = array();
-							forEach( $function_parameters as $function_parameter ){
-								if( !empty($params[$function_parameter->name]) ){
-									$parameters[] = $params[$function_parameter->name];
-								} else if( !$function_parameter->isOptional() ) {
-									$this->throwError("Missing method parameter.", 500, $function_parameter->name );
-								}
-							}
-							if( !empty($parameters) && empty($this->errors) ){
-								call_user_func_array(array($this, $path), $parameters);
-							}
-							
-						} else {
-							$this->$path();
+				//	4)	if there are parameters other than params then pass them through to the function
+				} else if( count($function_parameters) > 0 ) {
+
+					$parameters = array();
+					forEach( $function_parameters as $function_parameter ){
+						if( !empty($params[$function_parameter->name]) ){
+							$parameters[] = $params[$function_parameter->name];
+						} else if( !$function_parameter->isOptional() ) {
+							$obj->throwError("Missing method parameter.", 500, $function_parameter->name );
 						}
-						
 					}
-				} catch (Exception $e) {
-					$this->throwError($e->getMessage());
-					$this->logError(oCoreProjectEnum::ODBO,$e);
-				}
-				return $this;
-			} else if (method_exists($this, "index")) {
-				try {
-					$params = array_merge($this->checkPermissions("index", $direct), $params);
-					if (!$this->isError()) {
-						$this->index($params);
+					if( empty($obj->errors) ){
+						call_user_func_array(array($obj, $function), $parameters);
 					}
-				} catch (Exception $e) {
-					$this->throwError($e->getMessage());
-					$this->logError(oCoreProjectEnum::ODBO,$e);
+				
+				//	5)	if no parameters passed in simply call function
+				} else {
+					$obj->$function();
 				}
-				return $this;
-			} else {
-				return $this->findMissingRoute($path, $params);
+			
+			//	6)	handle errors on on the object itself
+			} catch (Exception $e) {
+				$obj->throwError($e->getMessage());
+				$obj->logError(oCoreProjectEnum::ODBO,$e);
 			}
-		}
 
+		}
+		
 		/***********************************************************************
 
 			CHECK PERMISSIONS
@@ -627,43 +467,6 @@
 
 		/***********************************************************************
 
-			PARSE PATH
-
-		***********************************************************************/
-
-		public function parsePath($path){
-
-			$path = preg_split('([\][?])',$path);
-			if(count($path) > 1){ parse_str($path[1],$params); } else { $params = array(); }
-			$path = $path[0];
-
-			$path_array = preg_split('[/]',$path,NULL,PREG_SPLIT_NO_EMPTY);
-			$path = '/';
-
-			$routes = unserialize(__OBRAY_ROUTES__);
-			if( !empty($path_array) && isSet($routes[$path_array[0]]) ){ $base_path = $routes[array_shift($path_array)]; } else { $base_path = ''; }
-
-			return array('path_array'=>$path_array,'path'=>$path,'base_path'=>$base_path,'params'=>$params);
-
-		}
-
-		/***********************************************************************
-
-			GET BASE PATH - returns the path of a specified route
-
-		***********************************************************************/
-
-		private function getBasePath(&$path_array){
-			$base_path = '';
-			$routes = unserialize(__OBRAY_ROUTES__);
-			if(!empty($path_array) && isSet($routes[$path_array[0]])){ 
-				$base_path = $routes[array_shift($path_array)]; 
-			}
-			return $base_path;
-		}
-
-		/***********************************************************************
-
 			CLEANUP FUNCTION - removes parameters form object for output
 
 				The idea here is to prevent infromation from 'leaking'
@@ -674,58 +477,9 @@
 		public function cleanUp(){
 			if( !in_array($this->content_type,['text/csv','text/tsv','text/table']) ){
 				// remove all object keys not white listed for output - this is so we don't expose unnecessary information
-				$keys = ['object','errors','data','runtime','html','recordcount']; if( __OBRAY_DEBUG_MODE__ ){ $keys[] = 'sql'; $keys[] = 'filter'; }
+				$keys = ['object','errors','data','runtime','html','recordcount']; //if( __OBRAY_DEBUG_MODE__ ){ $keys[] = 'sql'; $keys[] = 'filter'; }
 				foreach($this as $key => $value) { if( !in_array($key,$keys) ){ unset($this->$key); } }
 			}
-		}
-
-		/***********************************************************************
-
-			IS OBJECT - Determines if path is an object
-
-		***********************************************************************/
-
-		public function isObject($path){
-
-			$components = $this->parsePath($path);
-			$obj_name = array_pop($components['path_array']);
-			if( count($components['path_array']) > 0 ){ $seperator = '/'; } else { $seperator = ''; }
-			$path = $components['base_path'] . implode('/',$components['path_array']).$seperator.$obj_name.'.php';
-			if (file_exists( $path ) ) { require_once $path; if (class_exists( $obj_name )){ return TRUE; } }
-
-			return FALSE;
-
-		}
-
-		/***********************************************************************
-
-			FIND MISSING ROUTE
-
-		***********************************************************************/
-
-		private function findMissingRoute($path,$params){
-
-			if( isSet($this->missing_path_handler) ){
-				include $this->missing_path_handler_path;
-
-				$obj = new $this->missing_path_handler();
-				$obj->setObject($this->missing_path_handler);
-
-				$obj->setContentType($obj->content_type);
-
-				//	CHECK PERMISSIONS
-				$params = array_merge($obj->checkPermissions('object',FALSE),$params);
-
-				//	SETUP DATABSE CONNECTION
-				if( method_exists($obj,'setDatabaseConnection') ){ $obj->setDatabaseConnection(getDatabaseConnection()); }
-
-				//	ROUTE REMAINING PATH - function calls
-				$obj->missing('/'.ltrim(rtrim($path,'/'),'/').'/',$params,FALSE);
-
-				return $obj;
-			}
-
-			return $this;
 		}
 
 		/***********************************************************************
