@@ -37,9 +37,18 @@
 		global $conn;
 		if( !isSet( $conn ) || $reconnect ){
 			try {
-		        $conn = new PDO('mysql:host='.__OBRAY_DATABASE_HOST__.';dbname='.__OBRAY_DATABASE_NAME__.';charset=utf8', __OBRAY_DATABASE_USERNAME__,__OBRAY_DATABASE_PASSWORD__,array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'));
-		        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-		    } catch(PDOException $e) { echo 'ERROR: ' . $e->getMessage(); exit(); }
+		        	$conn = new PDO(
+					'mysql:host='.__OBRAY_DATABASE_HOST__.';dbname='.__OBRAY_DATABASE_NAME__.';charset=utf8',
+					__OBRAY_DATABASE_USERNAME__,
+					__OBRAY_DATABASE_PASSWORD__,
+					array(
+						PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'
+					));
+		        	$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+			} catch(PDOException $e) {
+				echo 'ERROR: ' . $e->getMessage(); 
+				exit();
+			}
 		}
 	    return $conn;
 
@@ -144,14 +153,14 @@
 						"WhiteBlink" => 		"\033[5;37m",
 						// text color background
 						"RedBackground" => 		"\033[7;31m",
-						"GreenBackground" => 	"\033[7;32m",
-						"YellowBackground" => 	"\033[7;33m",
-						"BlueBackground" => 	"\033[7;34m",
-						"PurpleBackground" => 	"\033[7;35m",
-						"CyanBackground" => 	"\033[7;36m",
-						"WhiteBackground" => 	"\033[7;37m",
+						"GreenBackground" => 		"\033[7;32m",
+						"YellowBackground" => 		"\033[7;33m",
+						"BlueBackground" => 		"\033[7;34m",
+						"PurpleBackground" => 		"\033[7;35m",
+						"CyanBackground" => 		"\033[7;36m",
+						"WhiteBackground" => 		"\033[7;37m",
 						// reset - auto called after each of the above by default
-						"Reset"=> 				"\033[0m"
+						"Reset"=> 			"\033[0m"
 					);
 					$color = $colors[$args[2]];
 					printf($color.array_shift($args)."\033[0m",array_shift($args) );
@@ -173,11 +182,11 @@
 			$this->params = $params;
 			$components = parse_url($path); $this->components = $components;
 			if( isSet($components['query']) ){
-    			if( is_string($params) ){ $params = array( "body" => $params ); }
-    			parse_str($components['query'],$tmp); $params = array_merge($tmp,$params);
-    			if( !empty($components["scheme"]) && ( $components["scheme"] == "http" || $components["scheme"] == "https" ) ){
-    				$path = $components["scheme"] ."://". $components["host"] . (!empty($components["port"])?':'.$components["port"]:'') . $components["path"];
-    			}
+    				if( is_string($params) ){ $params = array( "body" => $params ); }
+    				parse_str($components['query'],$tmp); $params = array_merge($tmp,$params);
+    				if( !empty($components["scheme"]) && ( $components["scheme"] == "http" || $components["scheme"] == "https" ) ){
+    					$path = $components["scheme"] ."://". $components["host"] . (!empty($components["port"])?':'.$components["port"]:'') . $components["path"];
+    				}
 			}
 
 			/******************************************************************
@@ -364,30 +373,37 @@
 
 			CHECK PERMISSIONS
 
+			//	1)	only restrict permissions if the call is come from and HTTP request through router $direct === FALSE
+			//      2)      retrieve permissions
+			//      3)      set the "method" permission is set and the specific method has no permis then set the object_name to "method"
+			//      4)      This is to add greater flexibility for using custom session variable for storage of user data
+			//      5)      restrict permissions on undefined keys
+			//      6)      restrict access to users that are not logged in if that's required
+
 		***********************************************************************/
 
 		private function checkPermissions($object_name,$direct){
 
 			$params = array();
 
-			// only restrict permissions if the call is come from and HTTP request through router $direct === FALSE
+			//	1)	only restrict permissions if the call is come from and HTTP request through router $direct === FALSE
 			if( !$direct ){
 
-	    		// retrieve permissions
+	    		//	2)	retrieve permissions
 	    		$perms = $this->getPermissions();
 
-	    		// set the "method" permission is set and the specific method has no permis then set the object_name to "method"
+	    		//	3)	set the "method" permission is set and the specific method has no permis then set the object_name to "method"
 	    		if( !isSet($perms[$object_name]) && isSet($perms['method']) ){ $object_name = 'method'; }
 
-				//This is to add greater flexibility for using custom session variable for storage of user data
-				$user_session_key = isset($this->user_session) ? $this->user_session : 'ouser';
+			//	4)	This is to add greater flexibility for using custom session variable for storage of user data
+			$user_session_key = isset($this->user_session) ? $this->user_session : 'ouser';
 
-	    		// restrict permissions on undefined keys
+	    		//	5)	restrict permissions on undefined keys
 	    		if( !isSet($perms[$object_name]) ){
 
 				$this->throwError('You cannot access this resource.',403,'Forbidden');
 
-	    		// restrict access to users that are not logged in if that's required
+	    		//	6)	restrict access to users that are not logged in if that's required
 	    		} else if( ( $perms[$object_name] === 'user' && !isSet($_SESSION[$user_session_key]) ) || ( is_int($perms[$object_name]) && !isSet($_SESSION[$user_session_key]) ) ){
 
 		    		if( isSet($_SERVER['PHP_AUTH_USER']) && isSet($_SERVER['PHP_AUTH_PW']) ){
@@ -395,7 +411,7 @@
 			    		if( !isSet($_SESSION[$user_session_key]) ){ $this->throwError('You cannot access this resource.',401,'Unauthorized');	}
 		    		} else { $this->throwError('You cannot access this resource.',401,'Unauthorized'); }
 
-		    	// restrict access to users without correct permissions (non-graduated)
+		    	//	7)	restrict access to users without correct permissions (non-graduated)
 	    		} else if(
 					is_int($perms[$object_name]) &&
 					isSet($_SESSION[$user_session_key]) &&
