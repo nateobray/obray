@@ -79,153 +79,118 @@
 		private $is_error = FALSE;			// error bit
 		private $status_code = 200;			// status code - used to translate to HTTP 1.1 status codes
 		private $content_type = 'application/json';	// stores the content type of this class or how it should be represented externally
-		private $path = '';				// the path of this object
 		private $debug_mode = FALSE;			// specify if we are in debug mode or not
 
 		// public data members
 		public $object = '';                            // stores the name of the class
 
-		public function console(){
-
-			$args = func_get_args();
-			if( PHP_SAPI === 'cli' && !empty($args) ){
-
-				if( is_array($args[0]) || is_object($args[0]) ) {
-					print_r($args[0]);
-				} else if( count($args) === 3 && $args[1] !== NULL && $args[2] !== NULL ){
-					$colors = array(
-						// text color
-						"Black" =>			"\033[30m",
-						"Red" => 			"\033[31m",
-						"Green" =>			"\033[32m",
-						"Yellow" => 			"\033[33m",
-						"Blue" => 			"\033[34m",
-						"Purple" => 			"\033[35m",
-						"Cyan" =>			"\033[36m",
-						"White" => 			"\033[37m",
-						// text color bold
-						"BlackBold" => 			"\033[30m",
-						"RedBold" => 			"\033[1;31m",
-						"GreenBold" => 			"\033[1;32m",
-						"YellowBold" => 		"\033[1;33m",
-						"BlueBold" => 			"\033[1;34m",
-						"PurpleBold" => 		"\033[1;35m",
-						"CyanBold" => 			"\033[1;36m",
-						"WhiteBold" => 			"\033[1;37m",
-						// text color muted
-						"RedMuted" => 			"\033[2;31m",
-						"GreenMuted" => 		"\033[2;32m",
-						"YellowMuted" => 		"\033[2;33m",
-						"BlueMuted" => 			"\033[2;34m",
-						"PurpleMuted" => 		"\033[2;35m",
-						"CyanMuted" => 			"\033[2;36m",
-						"WhiteMuted" => 		"\033[2;37m",
-						// text color muted
-						"BlackUnderline" => 		"\033[4;30m",
-						"RedUnderline" => 		"\033[4;31m",
-						"GreenUnderline" => 		"\033[4;32m",
-						"YellowUnderline" => 		"\033[4;33m",
-						"BlueUnderline" => 		"\033[4;34m",
-						"PurpleUnderline" =>	 	"\033[4;35m",
-						"CyanUnderline" => 		"\033[4;36m",
-						"WhiteUnderline" =>	 	"\033[4;37m",
-						// text color blink
-						"BlackBlink" => 		"\033[5;30m",
-						"RedBlink" => 			"\033[5;31m",
-						"GreenBlink" => 		"\033[5;32m",
-						"YellowBlink" => 		"\033[5;33m",
-						"BlueBlink" => 			"\033[5;34m",
-						"PurpleBlink" => 		"\033[5;35m",
-						"CyanBlink" =>			"\033[5;36m",
-						"WhiteBlink" => 		"\033[5;37m",
-						// text color background
-						"RedBackground" => 		"\033[7;31m",
-						"GreenBackground" => 		"\033[7;32m",
-						"YellowBackground" => 		"\033[7;33m",
-						"BlueBackground" => 		"\033[7;34m",
-						"PurpleBackground" => 		"\033[7;35m",
-						"CyanBackground" => 		"\033[7;36m",
-						"WhiteBackground" => 		"\033[7;37m",
-						// reset - auto called after each of the above by default
-						"Reset"=> 			"\033[0m"
-					);
-					$color = $colors[$args[2]];
-					printf($color.array_shift($args)."\033[0m",array_shift($args) );
-				} else {
-					printf( array_shift($args),array_shift($args) );
-				}
-			}
-		}
-
 		/***********************************************************************
 
-			ROUTE FUNCTION
+			ROUTE
+
+			//	1)	parase path
+			//		a)	merge our paramf rom $_GET and $_POST
+			//		b)	parse incoming path as a URL (see PHP parse_url)
+			//		c)	parse query parameters from url components
+			//	2)	route remote HTTP(S) calls
+			//		a)	check if obray\oCURL is installed
+			//		b)	call obray\oCURL
+			//	3)	validate Remote Application
+			//	4)	set content type from params: oRouter will use
+			//		these predefined values determine which encoder
+			//		to use for output (default application/json).
+			//		a)	ocsv: set content type to text/csv
+			//		b)	otsv: set content type to text/tsv
+			//		c)	otable: set content type to text/table
+			//	5)	attempt to Find Object
+			//		a)	find object only and return
+			//		b)	find object and method and return
+			//	6)	throw error: unable to find object
+
 
 		***********************************************************************/
 
 		public function route( $path , $params = array(), $direct = TRUE ) {
 
-			if( !$direct ){ $params = array_merge($params,$_GET,$_POST); }
-			$this->params = $params;
-			$components = parse_url($path); $this->components = $components;
-			if( isSet($components['query']) ){
-    				if( is_string($params) ){ $params = array( "body" => $params ); }
-    				parse_str($components['query'],$tmp); $params = array_merge($tmp,$params);
-    				if( !empty($components["scheme"]) && ( $components["scheme"] == "http" || $components["scheme"] == "https" ) ){
-    					$path = $components["scheme"] ."://". $components["host"] . (!empty($components["port"])?':'.$components["port"]:'') . $components["path"];
-    				}
+			/***************************************************************
+			//	1)	parase path
+			***************************************************************/
+			//		a)	merge our paramf rom $_GET and $_POST
+			if( !$direct ){ 
+				$params = array_merge($params,$_GET,$_POST); 
 			}
 
-			/******************************************************************
-				handle remote HTTP(S) calls
-			******************************************************************/
+			//		b)	parse incoming path as a URL (see PHP parse_url)
+			$components = parse_url($path); $this->components = $components;
+
+			//		c)	parse query parameters from url components
+			if( isSet($components['query']) ){
+				parse_str($components['query'],$tmp_params);
+				$params = array_merge($tmp_params,$params);
+			}
+
+			//		d)	parse component path into array
+			$path_array = explode('/',$components['path']);
+			$path_array = array_filter($path_array);
+			$path_array = array_values($path_array);
+
+			/***************************************************************
+			//	2)	handle remote HTTP(S) calls
+			//		a)	check if obray\oCURL is installed
+			//		b)	call obray\oCURL
+			***************************************************************/
 			if( isSet($components['host']) && $direct ){
+			//		a)	check if obray\oCURL is installed
+				if (!class_exists( 'obray\oCURL' )) { 
+					$this->throwError("obray\oCURL is not defined/installed.");
+					return;
+				}
+			//		b)	call obray\oCURL
+				$this->data = new obray\oCURL($components);
 				return $this;
 			}
 
-			/******************************************************************
-				validate Remote Application
-			******************************************************************/
+			/***************************************************************
+			//	3)	validate Remote Application
+			***************************************************************/
 
 			if( $direct === FALSE ){
 				$this->validateRemoteApplication($direct);
 			}
 
-			/******************************************************************
-				parse Path
-			******************************************************************/
-
-			$path_array = explode('/',$components['path']);
-			$path_array = array_filter($path_array);
-			$path_array = array_values($path_array);
-
-			/******************************************************************
-				set content type from params
-			******************************************************************/
+			/***************************************************************
+			//	4)	set content type from params: oRouter will use
+			//		these predefined values determine which encoder
+			//		to use for output (default application/json).
+			//		a)	ocsv: set content type to text/csv
+			//		b)	otsv: set content type to text/tsv
+			//		c)	otable: set content type to text/table
+			***************************************************************/
 
 			if( isset($params['ocsv']) ){ $this->setContentType('text/csv'); unset($params['ocsv']); }
 			if( isset($params['otsv']) ){ $this->setContentType('text/tsv'); unset($params['otsv']); }
 			if( isset($params['otable']) ){ $this->setContentType('text/table'); unset($params['otable']); }
 
-			/******************************************************************
-				attempt to Find Object
-			******************************************************************/
-
+			/***************************************************************
+			//	5)	attempt to Find Object
+			//		a)	find object only and return
+			//		b)	find object and method and return
+			***************************************************************/
+			//		a)	find object only and return
 			if( class_exists( '\\' . implode('\\',$path_array) ) ){
 				$obj = $this->createObject( '\\' . implode('\\',$path_array), NULL, $params, $direct );
 				return $obj;
 			}
 
-			/*********************************
-				Attempt to Find Object/Function
-			*********************************/
-
+			//		b)	find object and method and return
 			$function = array_pop($path_array);
 			if( class_exists( '\\' . implode('\\',$path_array) ) ){
 				$obj = $this->createObject( '\\' . implode('\\',$path_array), $function, $params, $direct );
 				return $obj;
 			}
-
+			/***************************************************************
+			//	6)	throw error: unable to find object
+			***************************************************************/
 			$this->throwError("Could not find " . $components['path']);
 
 			return $this;
@@ -727,6 +692,78 @@
 					$this->console("%s","Error receiving message from queue (".$error_code.")!\n","RedBold");
 				}
 				return FALSE;
+			}
+		}
+
+		public function console(){
+
+			$args = func_get_args();
+			if( PHP_SAPI === 'cli' && !empty($args) ){
+
+				if( is_array($args[0]) || is_object($args[0]) ) {
+					print_r($args[0]);
+				} else if( count($args) === 3 && $args[1] !== NULL && $args[2] !== NULL ){
+					$colors = array(
+						// text color
+						"Black" =>			"\033[30m",
+						"Red" => 			"\033[31m",
+						"Green" =>			"\033[32m",
+						"Yellow" => 			"\033[33m",
+						"Blue" => 			"\033[34m",
+						"Purple" => 			"\033[35m",
+						"Cyan" =>			"\033[36m",
+						"White" => 			"\033[37m",
+						// text color bold
+						"BlackBold" => 			"\033[30m",
+						"RedBold" => 			"\033[1;31m",
+						"GreenBold" => 			"\033[1;32m",
+						"YellowBold" => 		"\033[1;33m",
+						"BlueBold" => 			"\033[1;34m",
+						"PurpleBold" => 		"\033[1;35m",
+						"CyanBold" => 			"\033[1;36m",
+						"WhiteBold" => 			"\033[1;37m",
+						// text color muted
+						"RedMuted" => 			"\033[2;31m",
+						"GreenMuted" => 		"\033[2;32m",
+						"YellowMuted" => 		"\033[2;33m",
+						"BlueMuted" => 			"\033[2;34m",
+						"PurpleMuted" => 		"\033[2;35m",
+						"CyanMuted" => 			"\033[2;36m",
+						"WhiteMuted" => 		"\033[2;37m",
+						// text color underlined
+						"BlackUnderline" => 		"\033[4;30m",
+						"RedUnderline" => 		"\033[4;31m",
+						"GreenUnderline" => 		"\033[4;32m",
+						"YellowUnderline" => 		"\033[4;33m",
+						"BlueUnderline" => 		"\033[4;34m",
+						"PurpleUnderline" =>	 	"\033[4;35m",
+						"CyanUnderline" => 		"\033[4;36m",
+						"WhiteUnderline" =>	 	"\033[4;37m",
+						// text color blink
+						"BlackBlink" => 		"\033[5;30m",
+						"RedBlink" => 			"\033[5;31m",
+						"GreenBlink" => 		"\033[5;32m",
+						"YellowBlink" => 		"\033[5;33m",
+						"BlueBlink" => 			"\033[5;34m",
+						"PurpleBlink" => 		"\033[5;35m",
+						"CyanBlink" =>			"\033[5;36m",
+						"WhiteBlink" => 		"\033[5;37m",
+						// text color background
+						"RedBackground" => 		"\033[7;31m",
+						"GreenBackground" => 		"\033[7;32m",
+						"YellowBackground" => 		"\033[7;33m",
+						"BlueBackground" => 		"\033[7;34m",
+						"PurpleBackground" => 		"\033[7;35m",
+						"CyanBackground" => 		"\033[7;36m",
+						"WhiteBackground" => 		"\033[7;37m",
+						// reset - auto called after each of the above by default
+						"Reset"=> 			"\033[0m"
+					);
+					$color = $colors[$args[2]];
+					printf($color.array_shift($args)."\033[0m",array_shift($args) );
+				} else {
+					printf( array_shift($args),array_shift($args) );
+				}
 			}
 		}
 
