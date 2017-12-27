@@ -28,6 +28,70 @@
 
 	namespace obray;
 	if (!class_exists( 'obray\oObject' )) { die(); }
+
+	Class oDBOConnection{
+
+		private $username;
+		private $password;
+		private $host;
+		private $port;
+		private $db_name;
+
+		private $conn;
+
+		public function __construct($host,$username,$password,$db_name,$port='3306'){
+			$this->host = $host;
+			$this->username = $username;
+			$this->password = $password;
+			$this->db_name = $db_name;
+			$this->port = $port
+		}
+
+		public function setUsername( string $username ){
+			$this->username = $username;
+		}
+
+		public function setPassword( string $password ){
+			$this->password = $password;
+		}
+
+		public function setHost( $host ){
+			$this->host = $host;
+		}
+
+		public function setPort( $port ){
+			$this->port = $port;
+		}
+
+		public function setDBName( $name ){
+			$this->db_name = $name;
+		}
+
+		public function establishConnection( $reconnects=FALSE ){
+			
+			if( !isSet( $this->conn ) || $reconnect ){
+				try {
+					$this->conn = new PDO(
+						'mysql:host='.$this->host.';dbname='.$this->db_name.';charset=utf8',
+						$this->username,
+						$this->password,
+						array(
+							PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'
+						));
+					$this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+				} catch(PDOException $e) {
+					echo 'ERROR: ' . $e->getMessage(); 
+					exit();
+				}
+			}
+
+		}
+
+		public function getConnection(){
+			return $this->conn;
+		}
+
+	}
 	
 	/********************************************************************************************************************
 
@@ -35,7 +99,7 @@
 
 	********************************************************************************************************************/
 
-	Class oDBO extends obray\oObject {
+	Class oDBO extends \obray\oObject {
 
         /**
          * @var PDO $dbh PDO Connection

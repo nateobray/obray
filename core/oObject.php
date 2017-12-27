@@ -338,24 +338,23 @@
 
 		***********************************************************************/
 
-		private function checkPermissions($object_name,$direct){
+		protected function checkPermissions($object_name,$direct){
 
-			$params = array();
-
-			//	1)	only restrict permissions if the call is coming from and HTTP request through router $direct === FALSE
-			if( $direct ){ return; }
-
-	    		//	2)	retrieve permissions
-	    		$perms = $this->getPermissions();
-
-			if ( class_exists( 'obray\oUsers' ) ) { 
-				$oUsers = \obray\oUsers()->checkPermissions();
+			if ( class_exists( '\obray\oUsers' ) ) { 
+				$oUsers = new \obray\oUsers();
+				$oUsers->checkPermissions($object_name,$direct);
 				if( !empty($oUsers->errors) ){
 					$this->throwError('');
 					$this->errors = $oUsers->errors;
 					return;
 				}
 			}
+
+			//	1)	only restrict permissions if the call is coming from and HTTP request through router $direct === FALSE
+			if( $direct ){ return; }
+
+	    		//	2)	retrieve permissions
+	    		$perms = $this->getPermissions();
 
 	    		//	3)	restrict permissions on undefined keys
 	    		if( !isSet($perms[$object_name]) ){
@@ -365,82 +364,7 @@
 			} else if ( isSet($perms[$object_name]) && $perms[$object_name] !== 'any' ){
 				$this->throwError('You cannot access this resource.',403,'Forbidden');
 			}
-			/******
-	    		//	6)	restrict access to users that are not logged in if that's required
-	    		} else if( ( is_int($perms[$object_name]) && !isSet($_SESSION[$this->user_session_key]) ) ){
-
-		    		if( isSet($_SERVER['PHP_AUTH_USER']) && isSet($_SERVER['PHP_AUTH_PW']) ){
-			    		$login = $this->route('/obray/OUsers/login/',array('ouser_email'=>$_SERVER['PHP_AUTH_USER'],'ouser_password'=>$_SERVER['PHP_AUTH_PW']),TRUE);
-			    		if( !isSet($_SESSION[$this->user_session_key]) ){ 
-						$this->throwError('You cannot access this resource.',401,'Unauthorized');
-					}
-		    		} else {
-					$this->throwError('You cannot access this resource.',401,'Unauthorized'); 
-				}
-
-		    	//	7)	restrict access to users without correct permissions (non-graduated)
-	    		} else if(
-				is_int($perms[$object_name]) &&
-				isSet($_SESSION[$this->user_session_key]) &&
-				(
-					isset($_SESSION[$this->user_session_key]->ouser_permission_level)
-					&& !defined("__OBRAY_GRADUATED_PERMISSIONS__") 
-					&& $_SESSION[$this->user_session_key]->ouser_permission_level != $perms[$object_name]
-				)
-			){
-
-				$this->throwError('You cannot access this resource.',403,'Forbidden'); 
-
-			//	8)	restrict access to users without correct permissions (graduated)
-			} else if( 
-				is_int($perms[$object_name]) &&
-				isSet($_SESSION[$this->user_session_key]) &&
-				(
-					isset($_SESSION[$this->user_session_key]->ouser_permission_level) 
-					&& defined("__OBRAY_GRADUATED_PERMISSIONS__") 
-					&& $_SESSION[$this->user_session_key]->ouser_permission_level > $perms[$object_name]
-				)
-			){
-
-				$this->throwError('You cannot access this resource.',403,'Forbidden'); 
-
-			//	9)	roles & permissions checks
-			} else if(
-				(
-					is_array($perms[$object_name]) && 
-					isSet($perms[$object_name]['permissions']) &&
-					is_array($perms[$object_name]['permissions']) &&
-					count(array_intersect($perms[$object_name]['permissions'],$_SESSION[$this->user_session_key]->permissions)) == 0
-				) || (
-					is_array($perms[$object_name]) && 
-					isSet($perms[$object_name]['roles']) &&
-					is_array($perms[$object_name]['roles']) &&
-					count(array_intersect($perms[$object_name]['roles'],$_SESSION[$this->user_session_key]->roles)) == 0
-				) || (
-					is_array($perms[$object_name]) && 
-					isSet($perms[$object_name]['roles']) &&
-					is_array($perms[$object_name]['roles']) &&
-					in_array("SUPER",$_SESSION[$this->user_session_key]->roles)
-				) || (
-					is_array($perms[$object_name]) && 
-					isSet($perms[$object_name]['permissions']) &&
-					!is_array($perms[$object_name]['permissions'])
-				) || (
-					is_array($perms[$object_name]) && 
-					isSet($perms[$object_name]['roles']) &&
-					!is_array($perms[$object_name]['roles'])
-				) || (
-					is_array($perms[$object_name]) &&
-					!isSet($perms[$object_name]['roles']) &&
-					!isSet($perms[$object_name]['permissions'])
-				)
-			){
-
-				$this->throwError('You cannot access this resource.',403,'Forbidden'); 
-
-			}
-			****/
-
+			
 		}
 
 		/***********************************************************************
