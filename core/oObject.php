@@ -28,32 +28,6 @@
 	namespace obray;
 	if (!class_exists( 'obray\oObject' )) { die(); }
 
-	/******************************************************
-	    SETUP DB CONNECTION - DO NOT MODIFY
-	******************************************************/
-
-	function getDatabaseConnection( $reconnect=FALSE ){
-
-		global $conn;
-		if( !isSet( $conn ) || $reconnect ){
-			try {
-		        	$conn = new PDO(
-					'mysql:host='.__OBRAY_DATABASE_HOST__.';dbname='.__OBRAY_DATABASE_NAME__.';charset=utf8',
-					__OBRAY_DATABASE_USERNAME__,
-					__OBRAY_DATABASE_PASSWORD__,
-					array(
-						PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'
-					));
-		        	$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-			} catch(PDOException $e) {
-				echo 'ERROR: ' . $e->getMessage(); 
-				exit();
-			}
-		}
-	    return $conn;
-
-	}
-
 	if (!function_exists('getallheaders')){
         function getallheaders(){
         	$headers = array();
@@ -79,11 +53,19 @@
 		private $is_error = FALSE;			// error bit
 		private $status_code = 200;			// status code - used to translate to HTTP 1.1 status codes
 		private $content_type = 'application/json';	// stores the content type of this class or how it should be represented externally
-		private $debug_mode = FALSE;			// specify if we are in debug mode or not
-		private $user_session_key = "oUser";
+		
+		protected $oDBOConnection;			// stores information about a connection or the connection itself for the purpose of establishing a connection to DB
+		protected $debug_mode = FALSE;			// specify if we are in debug mode or not
+		protected $user_session_key = "oUser";		// the users table
 
 		// public data members
 		public $object = '';                            // stores the name of the class
+
+		public function __construct(){
+
+			
+
+		}
 
 		/***********************************************************************
 
@@ -244,12 +226,13 @@
 				$obj->setObject(get_class($obj));
 				$obj->setContentType($obj->content_type);
 				$obj->path_to_object = $path;
+				if( $this->debug_mode ){ $obj->enableDebugMode(); }
 
 				//	3)	check object permissions
 				$obj->checkPermissions('object',$direct);
 
 				//	4)	setup Database connection
-				if( method_exists($obj,'setDatabaseConnection') ){ $obj->setDatabaseConnection(getDatabaseConnection()); }
+				if( method_exists($obj,'setDatabaseConnection') ){ $obj->setDatabaseConnection( $this->oDBOConnection ); }
 
 			} catch (Exception $e){
 				$obj->throwError($e->getMessage());
@@ -340,8 +323,8 @@
 
 		protected function checkPermissions($object_name,$direct){
 
-			if ( class_exists( '\obray\oUsers' ) ) { 
-				$oUsers = new \obray\oUsers();
+			if ( class_exists( '\obray\oUsers' ) ) {
+				$oUsers = new \obray\oUsers( NULL, $direct, $this->oDBOConnection, $this->debug_mode );
 				$oUsers->checkPermissions($object_name,$direct);
 				if( !empty($oUsers->errors) ){
 					$this->throwError('');
@@ -556,6 +539,12 @@
 		public function setContentType($type){ if($this->content_type != 'text/html'){ $this->content_type = $type; } }
 		public function getPermissions(){ return isset($this->permissions) ? $this->permissions : array(); }
 		public function redirect($location="/"){ header( 'Location: '.$location ); die(); }
+		public function enableDebugMode(){
+			$this->debug_mode = TRUE;
+		}
+		public function setDatabaseConnection( $oDBOConnection ){
+			$this->oDBOConnection = $oDBOConnection;
+		}
 
 		public function switchDB($db,$uname,$psswd){
 			global $conn;
@@ -580,9 +569,11 @@
 
 		/***********************************************************************
 
-		LOGGING FUNCTIONS
+			LOGGING FUNCTIONS
 
-		 ***********************************************************************/
+		***********************************************************************/
+
+		
 
 		public function logError($oProjectEnum, Exception $exception, $customMessage="") {
 			$logger = new oLog();
