@@ -63,8 +63,11 @@
 
 		public function __construct(){
 
+			$dependencies = include "dependencies/config.php";
+			forEach( $dependencies as $key => $dependency ){
+				$this->$key = $dependency;
+			}
 			
-
 		}
 
 		/***********************************************************************
@@ -232,7 +235,7 @@
 				$obj->checkPermissions('object',$direct);
 
 				//	4)	setup Database connection
-				if( method_exists($obj,'setDatabaseConnection') ){ $obj->setDatabaseConnection( $this->oDBOConnection ); }
+				//if( method_exists($obj,'setDatabaseConnection') ){ $obj->setDatabaseConnection( $this->oDBOConnection ); }
 
 			} catch (Exception $e){
 				$obj->throwError($e->getMessage());
