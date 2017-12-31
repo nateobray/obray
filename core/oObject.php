@@ -68,6 +68,8 @@
 				$this->$key = $dependency;
 			}
 			
+			return $this;
+			
 		}
 
 		/***********************************************************************
@@ -219,7 +221,7 @@
 			} catch (Exception $e){
 				$this->throwError($e->getMessage());
 				$this->logError(oCoreProjectEnum::OOBJECT,$e);
-				exit();
+				return;
 			}
 
 			try{
@@ -230,10 +232,10 @@
 				$obj->setContentType($obj->content_type);
 				$obj->path_to_object = $path;
 				if( $this->debug_mode ){ $obj->enableDebugMode(); }
-
+				
 				//	3)	check object permissions
 				$obj->checkPermissions('object',$direct);
-
+				
 				//	4)	setup Database connection
 				//if( method_exists($obj,'setDatabaseConnection') ){ $obj->setDatabaseConnection( $this->oDBOConnection ); }
 
@@ -242,12 +244,12 @@
 				$obj->logError(oCoreProjectEnum::OOBJECT,$e);
 				return $obj;
 			}
-
+			
 			//	5)	if there is a function to call, then execute method
 			if( !empty($function) ){
 				$this->executeMethod($obj,$function,$params,$direct);
 			}
-
+			
 			return $obj;
 
 		}
@@ -268,6 +270,7 @@
 		private function executeMethod( $obj,$function,$params,$direct=FALSE ){
 
 			try {
+				
 				//	1)	check permission on function call (return if not permitted)
 				$obj->checkPermissions($function, $direct);
 				if ( $obj->isError() ) { return; }
@@ -326,8 +329,10 @@
 
 		protected function checkPermissions($object_name,$direct){
 
-			if ( class_exists( '\obray\oUsers' ) ) {
-				$oUsers = new \obray\oUsers( NULL, $direct, $this->oDBOConnection, $this->debug_mode );
+			if ( !empty($this->oUsers) ) {
+				print_r('blah');
+				exit();
+				$this->oUsers->setPermissions( $this->permissions );
 				$oUsers->checkPermissions($object_name,$direct);
 				if( !empty($oUsers->errors) ){
 					$this->throwError('');
@@ -335,7 +340,7 @@
 					return;
 				}
 			}
-
+			
 			//	1)	only restrict permissions if the call is coming from and HTTP request through router $direct === FALSE
 			if( $direct ){ return; }
 
