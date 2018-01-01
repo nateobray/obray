@@ -53,24 +53,13 @@
 		private $is_error = FALSE;			// error bit
 		private $status_code = 200;			// status code - used to translate to HTTP 1.1 status codes
 		private $content_type = 'application/json';	// stores the content type of this class or how it should be represented externally
-		
+
 		protected $oDBOConnection;			// stores information about a connection or the connection itself for the purpose of establishing a connection to DB
 		protected $debug_mode = FALSE;			// specify if we are in debug mode or not
 		protected $user_session_key = "oUser";		// the users table
 
 		// public data members
 		public $object = '';                            // stores the name of the class
-
-		public function __construct(){
-
-			$dependencies = include "dependencies/config.php";
-			forEach( $dependencies as $key => $dependency ){
-				$this->$key = $dependency;
-			}
-			
-			return $this;
-			
-		}
 
 		/***********************************************************************
 
@@ -104,7 +93,7 @@
 			//	1)	parase path
 			***************************************************************/
 			//		a)	merge our paramf rom $_GET and $_POST
-			if( !$direct ){ 
+			if( !$direct ){
 				$params = array_merge($params,$_GET,$_POST); 
 			}
 
@@ -217,6 +206,16 @@
 
 			//	1)	create and setup object
 			try{
+				$reflector = new \ReflectionClass($path);
+				$constructor = $reflector->getConstructor();
+				$parameters = $constructor->getParameters();
+				$constructor_parameters = array();
+				forEach( $parameters as $parameter ){
+					$type = $parameter->getType();
+					print_r($type->__toString());
+				}
+				print_r( $parameters );
+				exit();
 				$obj = new $path($params,$direct);
 			} catch (Exception $e){
 				$this->throwError($e->getMessage());
@@ -232,10 +231,10 @@
 				$obj->setContentType($obj->content_type);
 				$obj->path_to_object = $path;
 				if( $this->debug_mode ){ $obj->enableDebugMode(); }
-				
+
 				//	3)	check object permissions
 				$obj->checkPermissions('object',$direct);
-				
+
 				//	4)	setup Database connection
 				//if( method_exists($obj,'setDatabaseConnection') ){ $obj->setDatabaseConnection( $this->oDBOConnection ); }
 
@@ -244,7 +243,7 @@
 				$obj->logError(oCoreProjectEnum::OOBJECT,$e);
 				return $obj;
 			}
-			
+
 			//	5)	if there is a function to call, then execute method
 			if( !empty($function) ){
 				$this->executeMethod($obj,$function,$params,$direct);
