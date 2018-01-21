@@ -8,9 +8,7 @@
     },
     "autoload": {
         "psr-4": {
-            "obray\\": "src",
-            "obray\\": "src/interfaces",
-            "obray\\": "src/exceptions"
+            "obray\\": "src"
         }
     }
 }
