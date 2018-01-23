@@ -64,7 +64,7 @@
 
             if( isSet($components['host']) && $direct ){
                 if (!class_exists( 'obray\oCURL' )) { 
-                    throw \Exception("obray\oCURL is not defined/installed.",500)
+                    throw new \Exception("obray\oCURL is not defined/installed.",500);
                 }
                 $this->data = new obray\oCURL($components);
                 return $this;
@@ -81,8 +81,9 @@
 
             // use the factory and invoker to create an object invoke its methods
             try {
-                $this->checkPermissions($obj,null,$direct);
+                
                 $obj = $this->factory->make('\\' . implode('\\',$path_array));
+                $this->checkPermissions($obj,null,$direct);
                 if( method_exists($obj,"index") ){
                     $this->checkPermissions($obj,"index",$direct);
                     return $this->invoker->invoke($obj,"index",$params);
@@ -90,14 +91,14 @@
                 return $obj;
             } catch( ClassNotFound $e ) {
                 $function = array_pop($path_array);
-                $this->checkPermissions($obj,null,$direct);
                 $obj = $this->factory->make('\\' . implode('\\',$path_array));
+                $this->checkPermissions($obj,null,$direct);
                 $this->checkPermissions($obj,$function,$direct);
                 return $this->invoker->invoke($obj,$function,$params);
             }
 
             // if we're unsuccessful in anything above then throw error
-            throw \Exception("Could not find " . $components['path'],404);
+            throw new \Exception("Could not find " . $components['path'],404);
             return $this;
 
         }
@@ -111,11 +112,11 @@
          */
 
         public function validateRemoteApplication(&$direct){
-            $headers = getallheaders();
-            if( isSet($headers['Obray-Token']) ){
-                $otoken = $headers['Obray-Token']; unset($headers['Obray-Token']);
-                if( defined('__OBRAY_TOKEN__') && $otoken === __OBRAY_TOKEN__ && __OBRAY_TOKEN__ != '' ){ $direct = true;  }
-            }
+            //$headers = getallheaders();
+            //if( isSet($headers['Obray-Token']) ){
+            //    $otoken = $headers['Obray-Token']; unset($headers['Obray-Token']);
+            //    if( defined('__OBRAY_TOKEN__') && $otoken === __OBRAY_TOKEN__ && __OBRAY_TOKEN__ != '' ){ $direct = true;  }
+            //}
         }
 
         /**
@@ -127,13 +128,11 @@
          * 
          */
 
-        protected function checkPermissions($obj,$direct){
+        protected function checkPermissions($obj,$fn=null,$direct){
             if( $direct ){ return; }
                 $perms = $obj->getPermissions();
-                if( !isSet($perms[$object_name]) ){
-                throw \Exception('You cannot access this resource.',403)
-            } else if ( isSet($perms[$object_name]) && $perms[$object_name] !== 'any' ){
-                throw \Exception('You cannot access this resource.',403)
+                if( ($fn===null && !isSet($perms["object"])) || ($fn!==null && !isSet($perms[$fn])) ){
+                throw new \Exception('You cannot access this resource.',403);
             }
         }
 
@@ -309,7 +308,7 @@
 
         private function setObject($obj){ $this->object = $obj;}
         public function getStatusCode(){ return $this->status_code; }
-        public function setStatusCode($code){ $this->status_code =; }
+        public function setStatusCode($code){ $this->status_code = $code; }
         public function getContentType(){ return $this->content_type; }
         public function setContentType($type){ if($this->content_type != 'text/html'){ $this->content_type = $type; } }
         public function getPermissions(){ return isset($this->permissions) ? $this->permissions : array(); }
@@ -331,7 +330,7 @@
 
         ***********************************************************************/
 
-        public function logError($oProjectEnum, Exception $exception, $customMessage="") {
+        public function logError($oProjectEnum, \Exception $exception, $customMessage="") {
             $logger = new oLog();
             $logger->logError($oProjectEnum, $exception, $customMessage);
             return;

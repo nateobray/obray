@@ -6,17 +6,36 @@
 
 namespace obray;
 
+/**
+ * This class implements the oFactoryInterface is uses the factory method design
+ * patter to generate objects.  It also takes a container to generate and map
+ * dependencies,
+ */
+
 Class oFactory implements oFactoryInterface
 {
-
+    /** @var \Psr\Container\ContainerInterface Stores the available container */
     protected $container;
     
+    /**
+     * The constructor assigns the available container
+     * 
+     * @param \Psr\Container\ContainerInterface $container Variable that contains the container
+     */
+
     public function __construct( \Psr\Container\ContainerInterface $container )
     {
         $this->container = $container;
     }
 
-    public function make($path, $parameters=[])
+    /**
+     * This function is the factory method and spits out objects based on the path that's pased
+     * in
+     * 
+     * @param string $path The path that describes the object to create
+     */
+
+    public function make($path)
     {
         if(!class_exists($path)){ throw new \obray\ClassNotFound("Unable to find Class ".$path, 404); }
         
