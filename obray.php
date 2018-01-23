@@ -37,6 +37,7 @@
 
 	require_once __OBRAY_PATH_TO_CORE__ . 'ORouter.php';    	// include ORouter
 	$router = new ORouter();                                   	// instatiate ORouter
+	$router->addEncoder("application/json", new \obray\encoders\oJSONEncoder());
 	$router->useContainer(new \obray\oDIContainer('dependencies\config.php'));
 	$router->route($_SERVER["REQUEST_URI"]);                   	// call ORouter's "route" function
 
