@@ -6,11 +6,11 @@ namespace obray\encoders;
  * This class is used to invoke or call a method on a specified object
  */
 
-Class oJSONEncoder implements \obray\interfaces\oEncoderInterface
+Class oHTMLEncoder implements \obray\interfaces\oEncoderInterface
 {
 
     /**
-     * Takes some data and encodes it to json.
+     * Takes some data and encodes it to html.
      * 
      * @param mixed $data The data to be encoded
      * 
@@ -18,10 +18,7 @@ Class oJSONEncoder implements \obray\interfaces\oEncoderInterface
      */
     public function encode($data, $start_time)
     {
-        $data->runtime = (microtime(TRUE) - $start_time)*1000;
-        $json = json_encode($data,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK);
-        if( $json === FALSE ){ $json = json_encode($data,JSON_PRETTY_PRINT); }
-        if( $json ){ echo $json; } else { echo 'There was en error encoding JSON.'; }
+        return $data->html;
     }
 
     /**
@@ -31,10 +28,9 @@ Class oJSONEncoder implements \obray\interfaces\oEncoderInterface
      * 
      * @return mixed
      */
-
     public function decode($data)
     {
-        return json_decode($data);
+        return false;
     }
 
     /**
@@ -44,9 +40,8 @@ Class oJSONEncoder implements \obray\interfaces\oEncoderInterface
      * 
      * @return null
      */
-
     public function out($data)
-    {    
+    {
         echo $data;
     }
 

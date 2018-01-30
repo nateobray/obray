@@ -3,7 +3,7 @@
  * @license http://www.opensource.org/licenses/mit-license.php MIT (see the LICENSE file)
  */
 
-namespace obray;
+namespace obray\interfaces;
 
 /**
  * Describes the interface of an obray factory
@@ -17,7 +17,7 @@ interface oEncoderInterface
      *
      * @return mixed encoded data.
      */
-    public function encode($data);
+    public function encode($data, $start_time);
 
     /**
      * Takes some data and decodes that data

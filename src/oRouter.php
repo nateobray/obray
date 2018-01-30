@@ -29,12 +29,13 @@ Class oRouter extends oObject
      * @param \Psr\Container\ContainerInterface $container Variable that contains the container
      */
 
-    public function __construct( \obray\oFactoryInterface $factory, \obray\oInvokerInterface $invoker, \Psr\Container\ContainerInterface $container, $debug=false )
+    public function __construct( \obray\interfaces\oFactoryInterface $factory, \obray\interfaces\oInvokerInterface $invoker, \Psr\Container\ContainerInterface $container, $debug=false )
     {
         $this->factory = $factory;
         $this->invoker = $invoker;
         $this->container = $container;
         $this->debug_mode = $debug;
+        $this->mode = "http";
     }
 
     /**
@@ -48,20 +49,92 @@ Class oRouter extends oObject
 
     public function route($path,$params=array(),$direct=false){
         
+        // record application start time
         $this->start_time = microtime(TRUE);
+        // conslidate all POST and GET into params
         $this->consolidateParams($params);
+        // set the mode
+        if( PHP_SAPI === 'cli' ){ 
+            $this->mode = 'console'; 
+        }
 
+        // attempt to route the request with the set factory, invoker, and container
         try{
-            $obj = parent::route($path,$params,$direct);                                                // Call the parent class default route function
+            $obj = parent::route($path,$params,$direct);
         } catch( \Exception $e ){
             $obj = new \obray\oObject();
             $obj->throwError($e->getMessage(), $e->getCode());
             if( $this->debug_mode ){
-                $obj->throwError($e->getFile(), $e->getCode());
-                $obj->throwError($e->getLine(), $e->getCode());
-                $obj->throwError($e->getTrace(), $e->getCode());
+                $obj->throwError($e->getFile(), $e->getCode(),"file");
+                $obj->throwError($e->getLine(), $e->getCode(),"line");
+                $obj->throwError($e->getTrace(), $e->getCode(),"trace");
             }
         }
+
+        // prepare output method
+        switch( $this->mode ){
+            case 'http':
+                $this->prepareHTTP($obj);
+                break;
+            case 'console':
+                $this->prepareConsole($obj);
+                break;
+        }
+        
+        // encode data and output
+        if( !empty($this->encoders[$this->content_type]) ){
+            $encoder = $this->encoders[$this->content_type];
+            $encoded = $encoder->encode($obj, $this->start_time);
+            $encoder->out($encoded);
+        } else {
+            throw new \Exception("Unable to find encoder for this content type.");
+        }
+        
+        // return object
+        return $obj;
+
+    }
+
+    /**
+     * This function is used to add to the list of encodres for a given content
+     * type.  Only one encoder per type is allowed.
+     * 
+     * @param string $content_type This should be a valid HTTP content type
+     * @param \obray\encoders\oEncoderInterface $encoder Stores the object that will be used to encode/decode/out
+     */
+
+    public function addEncoder($content_type,$encoder)
+    {
+        $this->encoders[$content_type] = $encoder;
+    }
+
+    /**
+     * This function takes the parameters passed in and combines them with
+     * posted data.  I also will decode any incoming json and put it in as
+     * data in the params.
+     * 
+     * @param array $params This should contain a keyed list of parameters
+     */
+
+    private function consolidateParams( &$params ){
+        $php_input = file_get_contents("php://input");
+        if( !empty($php_input) && empty($params['data']) ){
+            if( $_SERVER["CONTENT_TYPE"] === 'application/json' ){
+                $params = (array)json_decode($php_input);
+            } else {
+                $params["data"] = $php_input;
+            }                
+        }
+    }
+
+    /**
+     * The pepareHTTP function sets up headers for and HTTP response
+     * back to the client.
+     * 
+     * @param mixed $obj This should contain the obj off of which we will formulate a response
+     */
+
+    private function prepareHTTP($obj){
 
         $status_codes = include("oRouterStatusCodes.php");
         if( method_exists($obj,'getStatusCode') && $obj->getStatusCode() == 401 ) {
@@ -75,85 +148,31 @@ Class oRouter extends oObject
             $this->content_type = $obj->getContentType();
         }
         
-        if(!headers_sent()){ header('HTTP/1.1 '.$obj->getStatusCode().' ' . $status_codes[$obj->getStatusCode()] );}    // set HTTP Header
-        if( $this->content_type == 'text/table' ){ $tmp_type = 'text/table'; $content_type = 'text/html';  }
-        if(!headers_sent()){ header('Content-Type: ' . $this->content_type ); }                                                  // set Content-Type
-        if( !empty($tmp_type) ){ $this->content_type = $tmp_type; }
-
-        print_r($this->content_type);
-        if( !empty($this->encoders[$this->content_type]) ){
-            $encoder = $this->encoders[$this->content_type];
-            $encoded = $encoder->encode($obj);
-            $encoder->output($encoded);
-        } else {
-            print_r("Encoder not found.");
-        }
-        
-        return $obj;
-
-    }
-
-    private function consolidateParams( &$params ){
-        $php_input = file_get_contents("php://input");
-        if( !empty($php_input) && empty($params['data']) ){
-            if( $_SERVER["CONTENT_TYPE"] === 'application/json' ){
-                $params = (array)json_decode($php_input);
-            } else {
-                $params["data"] = $php_input;
-            }                
-        }
-    }
-
-    public function addEncoder($content_type,$encoder)
-    {
-        print_r($content_type);
-        exit();
-        $this->encoders[$content_type] = $encoder;
-    }
-    
-    private function putTableRow( $row,$r='tr',$d='td' ){
-        echo '<'.$r.'>';
-        forEach( $row as $value ){ echo '<'.$d.' style="white-space: nowrap;">'.$value.'</'.$d.'>'; }
-        echo '</'.$r.'>';
-    }
-    
-    private function getCSVRows( $data ){
-        
-        $columns = array();
-        $rows = array();
-        if( is_array($data) ){
-            forEach( $data as $row => $obj ){
-                $rows[] = $this->flattenForCSV($obj,'',$columns);
+        if(!headers_sent()){ 
+            header('HTTP/1.1 '.$obj->getStatusCode().' ' . $status_codes[$obj->getStatusCode()] );
+            if( $this->content_type == 'text/table' ){ 
+                $tmp_type = 'text/table'; $content_type = 'text/html';  
             }
-            
-        } else {
-            $rows[] = $this->flattenForCSV($data,'',$columns);
-        }
-        return $rows;
-        
-    }
-    
-    private function flattenForCSV($obj,$prefix='',$columns=array()){
-        
-        $prefix .= (!empty($prefix)?'_':'');
-        $flat = array_fill_keys($columns,'');
-        if( is_object($obj) || is_array($obj) ){
-            forEach( $obj as $key => $value ){
-                if( is_object($value) || is_array($value) ){  
-                    $flat = array_merge($flat,$this->flattenForCSV($value,$prefix.$key));
-                } else {
-                    $flat[$prefix.$key] = $value;
-                }
-                
+            header('Content-Type: ' . $this->content_type );
+            if( !empty($tmp_type) ){ 
+                $this->content_type = $tmp_type; 
             }
         }
-        return $flat;
-        
-        
+
+        if( method_exists($obj,'cleanUp') ){
+            $obj->cleanUp();
+        }
+
     }
 
-    
+    /**
+     * This will prepare for output to console by setting content_type to console
+     * 
+     * @param mixed $obj This should contain the obj off of which we will formulate a response
+     */
 
+    private function prepareConsole($obj){
+        $this->content_type = "console";
+    }
     
-
 }

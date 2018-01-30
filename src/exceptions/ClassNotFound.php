@@ -1,6 +1,6 @@
 <?php
 
-namespace obray;
+namespace obray\exceptions;
 
 Class ClassNotFound extends \Exception
 {

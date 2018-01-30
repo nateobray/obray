@@ -12,7 +12,7 @@ namespace obray;
  * dependencies,
  */
 
-Class oFactory implements oFactoryInterface
+Class oFactory implements \obray\interfaces\oFactoryInterface
 {
     /** @var \Psr\Container\ContainerInterface Stores the available container */
     protected $container;
@@ -37,15 +37,19 @@ Class oFactory implements oFactoryInterface
 
     public function make($path)
     {
-        if(!class_exists($path)){ throw new \obray\ClassNotFound("Unable to find Class ".$path, 404); }
+        if($path == '\\'){ throw new \obray\exceptions\ClassNotFound("Unable to find Class ".$path, 404); }
+        if(!class_exists($path)){ throw new \obray\exceptions\ClassNotFound("Unable to find Class ".$path, 404); }
         
+        $constructor_parameters = array();
         $reflector = new \ReflectionClass($path);
         $constructor = $reflector->getConstructor();
-        $parameters = $constructor->getParameters();
-        
-        forEach( $parameters as $parameter ){
-            $constructor_parameters[] = $this->container->get( $parameter->getType()->__toString() );
+        if( !empty($constructor) ){
+            $parameters = $constructor->getParameters();
+            forEach( $parameters as $parameter ){
+                $constructor_parameters[] = $this->container->get( $parameter->getType()->__toString() );
+            }
         }
+
         return new $path(...$constructor_parameters);
         
     }

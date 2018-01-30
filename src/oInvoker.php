@@ -6,7 +6,7 @@ namespace obray;
  * This class is used to invoke or call a method on a specified object
  */
 
-Class oInvoker implements oInvokerInterface
+Class oInvoker implements \obray\interfaces\oInvokerInterface
 {
 
     /**

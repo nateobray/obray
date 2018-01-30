@@ -6,7 +6,7 @@ namespace obray\encoders;
  * This class is used to invoke or call a method on a specified object
  */
 
-Class oJSONEncoder implements \obray\interfaces\oEncoderInterface
+Class oConsoleEncoder implements \obray\interfaces\oEncoderInterface
 {
 
     /**
@@ -19,9 +19,7 @@ Class oJSONEncoder implements \obray\interfaces\oEncoderInterface
     public function encode($data, $start_time)
     {
         $data->runtime = (microtime(TRUE) - $start_time)*1000;
-        $json = json_encode($data,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK);
-        if( $json === FALSE ){ $json = json_encode($data,JSON_PRETTY_PRINT); }
-        if( $json ){ echo $json; } else { echo 'There was en error encoding JSON.'; }
+        return $data;
     }
 
     /**
@@ -31,7 +29,6 @@ Class oJSONEncoder implements \obray\interfaces\oEncoderInterface
      * 
      * @return mixed
      */
-
     public function decode($data)
     {
         return json_decode($data);
@@ -44,10 +41,16 @@ Class oJSONEncoder implements \obray\interfaces\oEncoderInterface
      * 
      * @return null
      */
-
     public function out($data)
-    {    
-        echo $data;
+    {
+        $obj = new \obray\oObject();
+        $obj->cleanUp();
+        if( isSet($data->object) ){ $obj->object = $data->object; } else { $obj->object = ""; }
+        if( isSet($data->data) ){ $obj->data = $data->data; }
+        if( isSet($data->errors) ){ $obj->errors = $data->errors; }
+        if( isSet($data->html) ){ $obj->errors = $data->html; }
+        if( isSet($data->runtime) ){ $obj->runtime = $data->runtime; }
+        print_r($obj);
     }
 
 }
