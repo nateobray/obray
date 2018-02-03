@@ -21,11 +21,21 @@ Class oInvoker implements \obray\interfaces\oInvokerInterface
     
     public function invoke($object, $method, $params=[]){
 
-        // reflect the object and method to retreive parameter data
-        $reflector = new \ReflectionClass($object);
-        $reflection_method = $reflector->getMethod($method);
-        $parameters = $reflection_method->getParameters();
+        // reflect the object 
+        try{
+            $reflector = new \ReflectionClass($object);
+        } catch (\ReflectionException $e) {
+            throw new \obray\exceptions\ClassNotFound("Unable to find object.",404);
+        }
 
+        // reflect method and extract parameters
+        try{
+            $reflection_method = $reflector->getMethod($method);
+            $parameters = $reflection_method->getParameters();
+        } catch (\ReflectionException $e) {
+            throw new \obray\exceptions\ClassMethodNotFound("Unable to find object method.",404);
+        }
+        
         // support legacy style methods
         if( count($parameters) === 1 && is_array($parameters[0]->getDefaultValue()) && count($parameters[0]->getDefaultValue()) === 0 ){
             $object->$method($params);

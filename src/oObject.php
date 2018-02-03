@@ -70,10 +70,6 @@ Class oObject {
             return $this;
         }
 
-        if( $direct === FALSE ){
-            $this->validateRemoteApplication($direct);
-        }
-
         // set content type with these special parameters
         if( isset($params['ocsv']) ){ $this->setContentType('text/csv'); unset($params['ocsv']); }
         if( isset($params['otsv']) ){ $this->setContentType('text/tsv'); unset($params['otsv']); }
@@ -86,12 +82,22 @@ Class oObject {
         
         // use the factory and invoker to create an object invoke its methods
         try{
-            $this->createObject($path_array,$params,$direct);
+            try {
+                return $this->make($path_array,$params,$direct);
+            } catch(\obray\exceptions\PermissionDenied $e) {
+                throw $e;
+            } catch( \obray\exceptions\ClassNotFound $e ) {
+                $function = array_pop($path_array);
+                return $this->make($path_array,$params,$direct,$function);
+                
+            }
+        } catch(\obray\exceptions\PermissionDenied $e) {
+            throw $e;
         } catch(\Exception $e){
-            if(!empty($function)){
+            if (!empty($function)) {
                 $path_array[] = $function;
             }
-            return $this->isController($path_array,$params,$direct);
+            return $this->searchForController($path_array,$params,$direct);
         }
 
         // if we're unsuccessful in anything above then throw error
@@ -100,69 +106,107 @@ Class oObject {
 
     }
 
-    private function createObject($path_array,$params,$direct){
-        try {
-            print_r('\\' . implode('\\',$path_array));
-            $obj = $this->factory->make('\\' . implode('\\',$path_array));
-            $obj->object = '\\' . implode('\\',$path_array);
-            $obj->factory = $this->factory;
-            $obj->container = $this->container;
-            $obj->invoker = $this->invoker;
-            $this->checkPermissions($obj,null,$direct);
-            if( method_exists($obj,"index") ){
-                $this->checkPermissions($obj,"index",$direct);
-                return $this->invoker->invoke($obj,"index",$params);
-            }
-            return $obj;
-        } catch( \obray\exceptions\ClassNotFound $e ) {
-            $function = array_pop($path_array);
-            $obj = $this->factory->make('\\' . implode('\\',$path_array));
-            $obj->object = '\\' . implode('\\',$path_array);
-            $obj->factory = $this->factory;
-            $obj->container = $this->container;
-            $obj->invoker = $this->invoker;
-            $this->checkPermissions($obj,null,$direct);
-            $this->checkPermissions($obj,$function,$direct);
-            return $this->invoker->invoke($obj,$function,$params);
-        }
-    }
-
-    private function isController($path_array,$params,$direct,$function='',$remaining=array())
-    {
-        
-        $object = array_pop($path_array);
-        $path = 'c\\' . (!empty($path_array)?implode('\\',$path_array). '\\': '')  . 'c' . ucfirst($object) ;
-        $this->console("Checking if exists: " . $path . "\n" );
-        if( class_exists('\\'.$path) ){
-            $path_array = explode('\\',$path);
-            if( !empty($function) ){
-                $path_array[] = $function;
-            }
-            
-            $params["remaining"] = $remaining;
-            return $this->createObject($path_array,$params,$direct);
-        }
-        if( $function != '' ){
-            $remaining[] = $function;
-        }
-        print_r($path_array);
-        $this->isController($path_array,$params,$direct,$object,$remaining);
-    }
-
     /**
-     * This method checks to see if the remote call has permissions to access
-     * routes.  If so full permissions granted by setting direct to true
+     * This method creates an object based on the supplied parameters with
+     * the classes factory object
      *
-     * @param bool $direct Determines if application is being called from a remote source
+     * @param array $path_array Array containing the path
+     * @param array $params Array containing the parameters to be passed the called method
+     * @param bool $direct Specifies if the is is being called directly (skips permission check)
+     * @param string $method The name of the method on the object we want to call
      * 
      */
 
-    public function validateRemoteApplication(&$direct){
-        //$headers = getallheaders();
-        //if( isSet($headers['Obray-Token']) ){
-        //    $otoken = $headers['Obray-Token']; unset($headers['Obray-Token']);
-        //    if( defined('__OBRAY_TOKEN__') && $otoken === __OBRAY_TOKEN__ && __OBRAY_TOKEN__ != '' ){ $direct = true;  }
-        //}
+    private function make($path_array,$params,$direct,$method='')
+    {
+        $obj = $this->factory->make('\\' . implode('\\',$path_array));
+        $obj->object = '\\' . implode('\\',$path_array);
+        $obj->factory = $this->factory;
+        $obj->container = $this->container;
+        $obj->invoker = $this->invoker;
+        $this->checkPermissions($obj,null,$direct);
+        if( !empty($method) ){
+            $this->invoke($obj, $method, $params, $direct);
+        } else if( method_exists($obj,"index") ){
+            $this->invoke($obj, 'index', $params, $direct);
+        }
+        return $obj;
+    }
+
+    /**
+     * The invoke method checks permission on the method we want to call and then uses
+     * the class invoker to call the method
+     *
+     * @param mixed $obj The object containing the method we want to call
+     * @param string $method The name of the method on the object we want to call
+     * @param array $params Array of the parameters to be passed to our method
+     * @param bool $direct Specifies if the is is being called directly (skips permission check)
+     * 
+     */
+
+    private function invoke($obj,$method,$params,$direct){
+        if(method_exists($obj,$method)){
+            $this->checkPermissions($obj,$method,$direct);
+            return $this->invoker->invoke($obj,$method,$params);
+        } else {
+            throw new \obray\exceptions\ClassMethodNotFound("Unabel to find method ".$method,404);
+        }
+    }
+
+    /**
+     * Searches recursively for a controller class based on the path_array and then
+     * creates that controller and calls the specified method if any
+     *
+     * @param array $path_array Array containing the path
+     * @param array $params Array containing the parameters to be passed the called method
+     * @param bool $direct Specifies if the is is being called directly (skips permission check)
+     * @param string $method The name of the method to be called on the created object
+     * @param array $remaining An array of the remaining path (useful for dynamic page genration)
+     * @param int $depth The depth of the recursive call.  Currenly has a hardcoded max
+     * 
+     */
+
+    private function searchForController($path_array,$params,$direct,$method='',$remaining=array(),$depth=0)
+    {
+        // prevent the posobility of an infinite loop (this should not happen, but is here just in case)
+        if( $depth > 20 ){ throw new \Exception("Depth limit for controller search reached.",500); }
+
+        // setup path to controller class
+        $object = array_pop($path_array);
+        $path = 'c\\' . (!empty($path_array)?implode('\\',$path_array). '\\': '')  . 'c' . ucfirst($object) ;
+        $index_path = 'c\\' . (!empty($path_array)?implode('\\',$path_array). '\\': '')  . (!empty($object)?$object.'\\':'') . 'cIndex' ;
+
+        // check if path to controller exists, if so create object
+        if(class_exists('\\'.$path)) {
+            $path_array = explode('\\', $path);
+            $params["remaining"] = $remaining;
+            try{
+                $obj = $this->make($path_array,$params,$direct,$method);
+            } catch (\obray\exceptions\ClassMethodNotFound $e) {
+                $obj = $this->make($path_array,$params,$direct,'');
+            }
+            return $obj;
+        
+        // check if index path to contorller exists, if so create object
+        } else if (class_exists('\\'.$index_path)) {
+            $path_array = explode('\\', $index_path);
+            $params["remaining"] = $remaining;
+            try{
+                $obj = $this->make($path_array,$params,$direct,$method);
+            } catch (\obray\exceptions\ClassMethodNotFound $e) {
+                $obj = $this->make($path_array,$params,$direct,'');
+            }
+            return $obj;
+        
+        // if unable to objects specified by either path, throw exception
+        } else {
+            $remaining[] = $object;
+            if( empty($path_array) ){
+                throw new \obray\exceptions\ClassNotFound("Path not found.",404);
+            }
+        }
+        return $this->searchForController($path_array,$params,$direct,$object,$remaining,++$depth);
+        
     }
 
     /**
@@ -178,7 +222,7 @@ Class oObject {
         if( $direct ){ return; }
             $perms = $obj->getPermissions();
             if( ($fn===null && !isSet($perms["object"])) || ($fn!==null && !isSet($perms[$fn])) ){
-            throw new \Exception('You cannot access this resource.',403);
+            throw new \obray\exceptions\PermissionDenied('You cannot access this resource.',403);
         }
     }
 
@@ -214,52 +258,29 @@ Class oObject {
         }
     }
 
-    /***********************************************************************
+    /**
+     * Set the error state on the class and stores a serios of error messages.  This
+     * function is useful if you want to throw a serios of errors without stopping
+     * execution, and then report those errors back to the client.
+     * 
+     * @param string $message Message to be stored in array of error messages
+     * @param int $status_code The is the status code to report back out to the client
+     * @param string $type This is the type of error, influences the output to client
+     */
 
-        ERROR HANDLING FUNCTIONS
-
-        //    1)    Throw Error
-        //        a)    Set is_error to TRUE
-        //        b)    initialize this->errors if not intialized
-        //        c)    add error of type to errors array
-        //        d)    set status code
-
-        //    2)    Is Error: returns TRUE/FALSE if error on object
-
-        //    3)    Get Stack Trace
-
-    ***********************************************************************/
-
-    ////////////////////////////////////////////////////////////////////////
-    //
-    //    1)    Throw Error
-            //        a)    Set is_error to TRUE
-            //        b)    initialize this->errors if not intialized
-            //        c)    add error of type to errors array
-            //        d)      set status code
-    //
-    ////////////////////////////////////////////////////////////////////////
-
-    public function throwError($message,$status_code=500,$type='general'){
-
-        //              a)      Set is_error to TRUE
+    public function throwError($message,$status_code=500,$type='general')
+    {    
         $this->is_error = TRUE;
-        //              b)      initialize this->errors if not intialized
-        if( empty($this->errors) || !is_array($this->errors) ){
+        if (empty($this->errors) || !is_array($this->errors)) {
             $this->errors = [];
         }
-        //              c)      add error of type to errors array
-            $this->errors[$type][] = $message;
-        //              d)      set status code
-            $this->status_code = $status_code;
+        $this->errors[$type][] = $message;
+        $this->status_code = $status_code;
+    }
 
-        }
-
-    ////////////////////////////////////////////////////////////////////////
-    //
-    //      2)      Is Error: returns TRUE/FALSE if error on object
-    //
-    ////////////////////////////////////////////////////////////////////////
+    /**
+     * Simply returns if the error state on the class
+     */
 
     public function isError(){
         return $this->is_error;
@@ -404,59 +425,59 @@ Class oObject {
             } else if( count($args) === 3 && $args[1] !== NULL && $args[2] !== NULL ){
                 $colors = array(
                     // text color
-                    "Black" =>            "\033[30m",
-                    "Red" =>             "\033[31m",
-                    "Green" =>            "\033[32m",
+                    "Black" =>              "\033[30m",
+                    "Red" =>                "\033[31m",
+                    "Green" =>              "\033[32m",
                     "Yellow" =>             "\033[33m",
-                    "Blue" =>             "\033[34m",
+                    "Blue" =>               "\033[34m",
                     "Purple" =>             "\033[35m",
-                    "Cyan" =>            "\033[36m",
-                    "White" =>             "\033[37m",
+                    "Cyan" =>               "\033[36m",
+                    "White" =>              "\033[37m",
                     // text color bold
-                    "BlackBold" =>             "\033[30m",
-                    "RedBold" =>             "\033[1;31m",
-                    "GreenBold" =>             "\033[1;32m",
+                    "BlackBold" =>          "\033[30m",
+                    "RedBold" =>            "\033[1;31m",
+                    "GreenBold" =>          "\033[1;32m",
                     "YellowBold" =>         "\033[1;33m",
-                    "BlueBold" =>             "\033[1;34m",
+                    "BlueBold" =>           "\033[1;34m",
                     "PurpleBold" =>         "\033[1;35m",
-                    "CyanBold" =>             "\033[1;36m",
-                    "WhiteBold" =>             "\033[1;37m",
+                    "CyanBold" =>           "\033[1;36m",
+                    "WhiteBold" =>          "\033[1;37m",
                     // text color muted
-                    "RedMuted" =>             "\033[2;31m",
+                    "RedMuted" =>           "\033[2;31m",
                     "GreenMuted" =>         "\033[2;32m",
-                    "YellowMuted" =>         "\033[2;33m",
-                    "BlueMuted" =>             "\033[2;34m",
-                    "PurpleMuted" =>         "\033[2;35m",
-                    "CyanMuted" =>             "\033[2;36m",
+                    "YellowMuted" =>        "\033[2;33m",
+                    "BlueMuted" =>          "\033[2;34m",
+                    "PurpleMuted" =>        "\033[2;35m",
+                    "CyanMuted" =>          "\033[2;36m",
                     "WhiteMuted" =>         "\033[2;37m",
                     // text color underlined
-                    "BlackUnderline" =>         "\033[4;30m",
-                    "RedUnderline" =>         "\033[4;31m",
-                    "GreenUnderline" =>         "\033[4;32m",
-                    "YellowUnderline" =>         "\033[4;33m",
-                    "BlueUnderline" =>         "\033[4;34m",
-                    "PurpleUnderline" =>         "\033[4;35m",
-                    "CyanUnderline" =>         "\033[4;36m",
-                    "WhiteUnderline" =>         "\033[4;37m",
+                    "BlackUnderline" =>     "\033[4;30m",
+                    "RedUnderline" =>       "\033[4;31m",
+                    "GreenUnderline" =>     "\033[4;32m",
+                    "YellowUnderline" =>    "\033[4;33m",
+                    "BlueUnderline" =>      "\033[4;34m",
+                    "PurpleUnderline" =>    "\033[4;35m",
+                    "CyanUnderline" =>      "\033[4;36m",
+                    "WhiteUnderline" =>     "\033[4;37m",
                     // text color blink
                     "BlackBlink" =>         "\033[5;30m",
-                    "RedBlink" =>             "\033[5;31m",
+                    "RedBlink" =>           "\033[5;31m",
                     "GreenBlink" =>         "\033[5;32m",
-                    "YellowBlink" =>         "\033[5;33m",
-                    "BlueBlink" =>             "\033[5;34m",
-                    "PurpleBlink" =>         "\033[5;35m",
-                    "CyanBlink" =>            "\033[5;36m",
+                    "YellowBlink" =>        "\033[5;33m",
+                    "BlueBlink" =>          "\033[5;34m",
+                    "PurpleBlink" =>        "\033[5;35m",
+                    "CyanBlink" =>          "\033[5;36m",
                     "WhiteBlink" =>         "\033[5;37m",
                     // text color background
-                    "RedBackground" =>         "\033[7;31m",
-                    "GreenBackground" =>         "\033[7;32m",
-                    "YellowBackground" =>         "\033[7;33m",
-                    "BlueBackground" =>         "\033[7;34m",
-                    "PurpleBackground" =>         "\033[7;35m",
-                    "CyanBackground" =>         "\033[7;36m",
-                    "WhiteBackground" =>         "\033[7;37m",
+                    "RedBackground" =>      "\033[7;31m",
+                    "GreenBackground" =>    "\033[7;32m",
+                    "YellowBackground" =>   "\033[7;33m",
+                    "BlueBackground" =>     "\033[7;34m",
+                    "PurpleBackground" =>   "\033[7;35m",
+                    "CyanBackground" =>     "\033[7;36m",
+                    "WhiteBackground" =>    "\033[7;37m",
                     // reset - auto called after each of the above by default
-                    "Reset"=>             "\033[0m"
+                    "Reset"=>               "\033[0m"
                 );
                 $color = $colors[$args[2]];
                 printf($color.array_shift($args)."\033[0m",array_shift($args) );

@@ -37,9 +37,10 @@ Class oFactory implements \obray\interfaces\oFactoryInterface
 
     public function make($path)
     {
+        // handle errors
         if($path == '\\'){ throw new \obray\exceptions\ClassNotFound("Unable to find Class ".$path, 404); }
         if(!class_exists($path)){ throw new \obray\exceptions\ClassNotFound("Unable to find Class ".$path, 404); }
-        
+
         $constructor_parameters = array();
         $reflector = new \ReflectionClass($path);
         $constructor = $reflector->getConstructor();
@@ -49,9 +50,7 @@ Class oFactory implements \obray\interfaces\oFactoryInterface
                 $constructor_parameters[] = $this->container->get( $parameter->getType()->__toString() );
             }
         }
-
         return new $path(...$constructor_parameters);
-        
     }
 
 }
