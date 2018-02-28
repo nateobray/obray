@@ -12,6 +12,25 @@ Class oCSVEncoder implements \obray\interfaces\oEncoderInterface
     private $extension = "csv";
     private $separator = ",";
 
+    /**
+     * returns the class property that if found will envoke
+     * the encoder
+     *
+     * @return string The name of the class property.
+     */
+    public function getProperty(){
+        return 'table';
+    }
+
+    /**
+     * returns the content type for the encoder
+     *
+     * @return string the valid content type that will be returned in the response.
+     */
+    public function getContentType(){
+        return 'text/html';
+    }
+
     public function __construct($extension="csv", $separator=",")
     {
         $this->extension = $extension;

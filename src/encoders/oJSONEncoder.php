@@ -10,6 +10,25 @@ Class oJSONEncoder implements \obray\interfaces\oEncoderInterface
 {
 
     /**
+     * returns the class property that if found will envoke
+     * the encoder
+     *
+     * @return string The name of the class property.
+     */
+    public function getProperty(){
+        return 'data';
+    }
+
+    /**
+     * returns the content type for the encoder
+     *
+     * @return string the valid content type that will be returned in the response.
+     */
+    public function getContentType(){
+        return 'application/json';
+    }
+
+    /**
      * Takes some data and encodes it to json.
      * 
      * @param mixed $data The data to be encoded
@@ -18,9 +37,14 @@ Class oJSONEncoder implements \obray\interfaces\oEncoderInterface
      */
     public function encode($data, $start_time)
     {
-        $data->runtime = (microtime(TRUE) - $start_time)*1000;
-        $json = json_encode($data,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK);
-        if( $json === FALSE ){ $json = json_encode($data,JSON_PRETTY_PRINT); }
+        $obj = new \stdClass();
+        $obj->object = $data->object;
+        if (!empty($data->data)) {
+            $obj->data = $data->data;
+        }
+        $obj->runtime = (microtime(TRUE) - $start_time)*1000;
+        $json = json_encode($obj,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK);
+        if( $json === FALSE ){ $json = json_encode($obj,JSON_PRETTY_PRINT); }
         if( $json ){ echo $json; } else { echo 'There was en error encoding JSON.'; }
     }
 

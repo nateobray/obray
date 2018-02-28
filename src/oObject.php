@@ -168,6 +168,7 @@ Class oObject {
 
     private function searchForController($path_array,$params,$direct,$method='',$remaining=array(),$depth=0)
     {
+        
         // prevent the posobility of an infinite loop (this should not happen, but is here just in case)
         if( $depth > 20 ){ throw new \Exception("Depth limit for controller search reached.",500); }
 
@@ -227,38 +228,6 @@ Class oObject {
     }
 
     /**
-     * the cleanUp method removes class properties that we don't want output
-     */
-
-    public function cleanUp(){
-        if( !in_array($this->content_type,['text/csv','text/tsv','text/table']) ){
-
-            //     1)     remove all object keys not white listed for
-                        //         output - this is so we don't expose unnecessary
-                        //              information
-
-            $keys = ['object','errors','data','runtime','html','recordcount'];
-
-            //    2)    if in debug mode allow some additiona information
-            //        through
-
-            if( $this->debug_mode ){
-                $keys[] = 'sql'; $keys[] = 'filter'; 
-            }
-
-            //    3)    based on our allowed keys unset valus from public
-            //        data members
-
-            foreach($this as $key => $value) {
-                if( !in_array($key,$keys) ){
-                    unset($this->$key);
-                }
-            }
-
-        }
-    }
-
-    /**
      * Set the error state on the class and stores a serios of error messages.  This
      * function is useful if you want to throw a serios of errors without stopping
      * execution, and then report those errors back to the client.
@@ -286,56 +255,9 @@ Class oObject {
         return $this->is_error;
     }
 
-    ////////////////////////////////////////////////////////////////////////
-    //
-    //      3)      Get Stack Trace
-    //
-    ////////////////////////////////////////////////////////////////////////
-
-    public function getStackTrace($exception) {
-
-        $stackTrace = "";
-        $count = 0;
-        foreach ($exception->getTrace() as $frame) {
-            $args = "";
-            if (isset($frame['args'])) {
-                $args = array();
-                foreach ($frame['args'] as $arg) {
-                    if (is_string($arg)) {
-                        $args[] = "'" . $arg . "'";
-                    } elseif (is_array($arg)) {
-                        $args[] = "Array";
-                    } elseif (is_null($arg)) {
-                        $args[] = 'NULL';
-                    } elseif (is_bool($arg)) {
-                        $args[] = ($arg) ? "true" : "false";
-                    } elseif (is_object($arg)) {
-                        $args[] = get_class($arg);
-                    } elseif (is_resource($arg)) {
-                        $args[] = get_resource_type($arg);
-                    } else {
-                        $args[] = $arg;
-                    }
-                }
-                $args = join(", ", $args);
-            }
-            $stackTrace .= sprintf( "#%s %s(%s): %s(%s)\n",
-                $count,
-                $frame['file'],
-                $frame['line'],
-                $frame['function'],
-                $args );
-            $count++;
-        }
-        return $stackTrace;
-
-    }
-
-    /***********************************************************************
-
-        ROLES & PERMISSIONS FUNCTIONS
-
-    ***********************************************************************/
+    /**
+     * Checks if a user has a specific role
+     */    
 
     public function hasRole( $code ){
         if( ( !empty($_SESSION['ouser']->roles) && in_array($code,$_SESSION["ouser"]->roles) ) || ( !empty($_SESSION["ouser"]->roles) && in_array("SUPER",$_SESSION["ouser"]->roles) ) ){
@@ -344,13 +266,19 @@ Class oObject {
         return FALSE;
     }
 
+    /**
+     * Check the user role, and if the user does not have the one specified throws an error
+     */
+
     public function errorOnRole( $code ){
         if( !$this->hasRole($code) ){
-            $this->throwError( "Permission denied", 403 );
-            return true;
+            throw new \obray\exceptions\PermissionDenied("Permission denied", 403);
         }
-        return false;
     }
+
+    /**
+     * Simply returns if the user has permission
+     */
 
     public function hasPermission( $code ){
         if( ( !empty($_SESSION['ouser']->permissions) && in_array($code,$_SESSION["ouser"]->permissions) ) || ( !empty($_SESSION["ouser"]->roles) && in_array("SUPER",$_SESSION["ouser"]->roles) ) ){
@@ -359,27 +287,53 @@ Class oObject {
         return FALSE;
     }
 
+    /**
+     * Checks permissions, if the user doesn't have them it throws an error
+     */
+
     public function errorOnPermission( $code ){
         if( !$this->hasPermission($code) ){
-            $this->throwError( "Permission denied", 403 );
-            return true;
+            throw new \obray\exceptions\PermissionDenied("Permission denied", 403);
         }
-        return false;
     }
 
-    /***********************************************************************
+    /**
+     * Simply returns the status code set on the object
+     */
 
-        GETTER AND SETTER FUNCTIONS
+    public function getStatusCode()
+    { 
+        return $this->status_code; 
+    }
 
-    ***********************************************************************/
+    /**
+     * Simply returns the content type set ont he object
+     */
 
-    private function setObject($obj){ $this->object = $obj;}
-    public function getStatusCode(){ return $this->status_code; }
-    public function setStatusCode($code){ $this->status_code = $code; }
-    public function getContentType(){ return $this->content_type; }
-    public function setContentType($type){ if($this->content_type != 'text/html'){ $this->content_type = $type; } }
-    public function getPermissions(){ return isset($this->permissions) ? $this->permissions : array(); }
-    public function redirect($location="/"){ header( 'Location: '.$location ); die(); }
+    public function getContentType()
+    { 
+        return $this->content_type; 
+    }
+
+    /**
+     * Simply sets the content type on the object
+     */
+
+    public function setContentType($type)
+    { 
+        if ($this->content_type != 'text/html') { 
+            $this->content_type = $type; 
+        }
+    }
+
+    /**
+     * Gets the permissions array and returns it if exists
+     */
+
+    public function getPermissions()
+    { 
+        return isset($this->permissions) ? $this->permissions : array(); 
+    }
     
     /***********************************************************************
 
@@ -388,103 +342,7 @@ Class oObject {
     ***********************************************************************/
 
     public function routeBackground( $route ){
-        shell_exec("php -d memory_limit=-1 ".__SELF__."tasks.php \"".$route."\" > /dev/null 2>&1 &");
-    }
-
-    /***********************************************************************
-
-        LOGGING FUNCTIONS
-
-    ***********************************************************************/
-
-    public function logError($oProjectEnum, \Exception $exception, $customMessage="") {
-        $logger = new oLog();
-        $logger->logError($oProjectEnum, $exception, $customMessage);
-        return;
-    }
-
-    public function logInfo($oProjectEnum, $message) {
-        $logger = new oLog();
-        $logger->logInfo($oProjectEnum, $message);
-        return;
-    }
-
-    public function logDebug($oProjectEnum, $message) {
-        $logger = new oLog();
-        $logger->logDebug($oProjectEnum, $message);
-        return;
-    }
-
-    public function console(){
-
-        $args = func_get_args();
-        if( PHP_SAPI === 'cli' && !empty($args) ){
-
-            if( is_array($args[0]) || is_object($args[0]) ) {
-                print_r($args[0]);
-            } else if( count($args) === 3 && $args[1] !== NULL && $args[2] !== NULL ){
-                $colors = array(
-                    // text color
-                    "Black" =>              "\033[30m",
-                    "Red" =>                "\033[31m",
-                    "Green" =>              "\033[32m",
-                    "Yellow" =>             "\033[33m",
-                    "Blue" =>               "\033[34m",
-                    "Purple" =>             "\033[35m",
-                    "Cyan" =>               "\033[36m",
-                    "White" =>              "\033[37m",
-                    // text color bold
-                    "BlackBold" =>          "\033[30m",
-                    "RedBold" =>            "\033[1;31m",
-                    "GreenBold" =>          "\033[1;32m",
-                    "YellowBold" =>         "\033[1;33m",
-                    "BlueBold" =>           "\033[1;34m",
-                    "PurpleBold" =>         "\033[1;35m",
-                    "CyanBold" =>           "\033[1;36m",
-                    "WhiteBold" =>          "\033[1;37m",
-                    // text color muted
-                    "RedMuted" =>           "\033[2;31m",
-                    "GreenMuted" =>         "\033[2;32m",
-                    "YellowMuted" =>        "\033[2;33m",
-                    "BlueMuted" =>          "\033[2;34m",
-                    "PurpleMuted" =>        "\033[2;35m",
-                    "CyanMuted" =>          "\033[2;36m",
-                    "WhiteMuted" =>         "\033[2;37m",
-                    // text color underlined
-                    "BlackUnderline" =>     "\033[4;30m",
-                    "RedUnderline" =>       "\033[4;31m",
-                    "GreenUnderline" =>     "\033[4;32m",
-                    "YellowUnderline" =>    "\033[4;33m",
-                    "BlueUnderline" =>      "\033[4;34m",
-                    "PurpleUnderline" =>    "\033[4;35m",
-                    "CyanUnderline" =>      "\033[4;36m",
-                    "WhiteUnderline" =>     "\033[4;37m",
-                    // text color blink
-                    "BlackBlink" =>         "\033[5;30m",
-                    "RedBlink" =>           "\033[5;31m",
-                    "GreenBlink" =>         "\033[5;32m",
-                    "YellowBlink" =>        "\033[5;33m",
-                    "BlueBlink" =>          "\033[5;34m",
-                    "PurpleBlink" =>        "\033[5;35m",
-                    "CyanBlink" =>          "\033[5;36m",
-                    "WhiteBlink" =>         "\033[5;37m",
-                    // text color background
-                    "RedBackground" =>      "\033[7;31m",
-                    "GreenBackground" =>    "\033[7;32m",
-                    "YellowBackground" =>   "\033[7;33m",
-                    "BlueBackground" =>     "\033[7;34m",
-                    "PurpleBackground" =>   "\033[7;35m",
-                    "CyanBackground" =>     "\033[7;36m",
-                    "WhiteBackground" =>    "\033[7;37m",
-                    // reset - auto called after each of the above by default
-                    "Reset"=>               "\033[0m"
-                );
-                $color = $colors[$args[2]];
-                printf($color.array_shift($args)."\033[0m",array_shift($args) );
-            } else {
-                printf( array_shift($args),array_shift($args) );
-            }
-        }
+        shell_exec("php -d memory_limit=-1 ".__SELF__."obray.php \"".$route."\" > /dev/null 2>&1 &");
     }
 
 }

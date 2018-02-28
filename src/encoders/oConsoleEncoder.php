@@ -10,6 +10,25 @@ Class oConsoleEncoder implements \obray\interfaces\oEncoderInterface
 {
 
     /**
+     * returns the class property that if found will envoke
+     * the encoder
+     *
+     * @return string The name of the class property.
+     */
+    public function getProperty(){
+        return 'console';
+    }
+
+    /**
+     * returns the content type for the encoder
+     *
+     * @return string the valid content type that will be returned in the response.
+     */
+    public function getContentType(){
+        return 'console';
+    }
+
+    /**
      * Takes some data and encodes it to json.
      * 
      * @param mixed $data The data to be encoded
@@ -18,8 +37,14 @@ Class oConsoleEncoder implements \obray\interfaces\oEncoderInterface
      */
     public function encode($data, $start_time)
     {
-        $data->runtime = (microtime(TRUE) - $start_time)*1000;
-        return $data;
+        $obj = new \stdClass();
+        forEach( $data as $key => $value ){
+            if (in_array($key,['data','sql','params','html','object'])) {
+                $obj->$key = $value;
+            }
+        }
+        $obj->runtime = (microtime(TRUE) - $start_time)*1000;
+        return $obj;
     }
 
     /**
@@ -43,14 +68,7 @@ Class oConsoleEncoder implements \obray\interfaces\oEncoderInterface
      */
     public function out($data)
     {
-        $obj = new \obray\oObject();
-        $obj->cleanUp();
-        if( isSet($data->object) ){ $obj->object = $data->object; } else { $obj->object = ""; }
-        if( isSet($data->data) ){ $obj->data = $data->data; }
-        if( isSet($data->errors) ){ $obj->errors = $data->errors; }
-        if( isSet($data->html) ){ $obj->errors = $data->html; }
-        if( isSet($data->runtime) ){ $obj->runtime = $data->runtime; }
-        print_r($obj);
+        print_r($data);
     }
 
 }

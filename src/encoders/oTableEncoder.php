@@ -10,6 +10,25 @@ Class oHTMLEncoder implements \obray\interfaces\oEncoderInterface
 {
 
     /**
+     * returns the class property that if found will envoke
+     * the encoder
+     *
+     * @return string The name of the class property.
+     */
+    public function getProperty(){
+        return 'table';
+    }
+
+    /**
+     * returns the content type for the encoder
+     *
+     * @return string the valid content type that will be returned in the response.
+     */
+    public function getContentType(){
+        return 'text/html';
+    }
+
+    /**
      * Takes some data and encodes it to html.
      * 
      * @param mixed $data The data to be encoded

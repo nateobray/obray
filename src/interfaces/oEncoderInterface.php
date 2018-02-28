@@ -10,6 +10,22 @@ namespace obray\interfaces;
  */
 interface oEncoderInterface
 {
+
+    /**
+     * returns the class property that if found will envoke
+     * the encoder
+     *
+     * @return string The name of the class property.
+     */
+    public function getProperty();
+
+    /**
+     * returns the content type for the encoder
+     *
+     * @return string the valid content type that will be returned in the response.
+     */
+    public function getContentType();
+
     /**
      * Takes some data and encodes that data
      *

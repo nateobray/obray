@@ -18,7 +18,9 @@ Class oRouter extends oObject
     private $status_code = 200;
     private $content_type = "application/json";
     private $start_time = 0;
-    private $encoders = [];
+    private $encodersByClassProperty = [];
+    private $encodersByContentType = [];
+    private $encoder = '';
 
     /**
      * The constructor take a a factory, invoker, and container.  Debug mode is also set in
@@ -47,10 +49,10 @@ Class oRouter extends oObject
      * @param bool $direct Specifies if this is a direct calls (all permissions), or remote (specified permissions)
      */
 
-    public function route($path,$params=array(),$direct=false){
+    public function route($path,$params=array(),$direct=false,$starttime=NULL){
         
         // record application start time
-        $this->start_time = microtime(TRUE);
+        $this->start_time = !empty($starttime)?$starttime:microtime(TRUE);
         // conslidate all POST and GET into params
         $this->consolidateParams($params);
         // set the mode
@@ -70,29 +72,66 @@ Class oRouter extends oObject
                 $obj->throwError($e->getTrace(), $e->getCode(),"trace");
             }
         }
-
+        
         // prepare output method
-        switch( $this->mode ){
+        switch ($this->mode) {
             case 'http':
+                // set encoder by class property
+                $this->setEncoderByClassProperty($obj);
+                // prepare headers for HTTP
                 $this->prepareHTTP($obj);
                 break;
             case 'console':
+                // prepare for console output
                 $this->prepareConsole($obj);
+                // set encoer by content type
+                $this->setEncoderByContentType($this->content_type);
                 break;
         }
-        
+
         // encode data and output
-        if( !empty($this->encoders[$this->content_type]) ){
-            $encoder = $this->encoders[$this->content_type];
-            $encoded = $encoder->encode($obj, $this->start_time);
-            $encoder->out($encoded);
+        if (!empty($this->encoder)) {
+            $encoded = $this->encoder->encode($obj, $this->start_time);
+            $this->encoder->out($encoded);
         } else {
-            throw new \Exception("Unable to find encoder for this content type.");
+            throw new \Exception("Unable to find encoder for this request.");
         }
         
         // return object
         return $obj;
 
+    }
+
+    /**
+     * Sets the encoder by the content properties found on the class.  The property
+     * that triggers the encoder must be set when calling addEncoder function
+     * on this class.
+     * 
+     * @param mixed $obj This is the object to be encoded
+     */
+
+    private function setEncoderByClassProperty($obj) {
+        forEach ( $obj as $key => $value ) {
+            if (array_key_exists($key,$this->encodersByClassProperty)) {
+                $encoder = $this->encodersByClassProperty[$key];
+                $this->encoder = new $encoder();
+                $this->content_type = $this->encoder->getContentType();
+            }
+        }
+    }
+
+    /**
+     * Sets the encoder by the content type.  The is used exclusively for console output
+     * 
+     * @param string $content_type This should be a valid HTTP content type
+     */
+
+    private function setEncoderByContentType($content_type){
+        if (array_key_exists($content_type,$this->encodersByContentType)) {
+            $encoder = $this->encodersByContentType[$content_type];
+            $this->encoder = new $encoder();
+            $this->content_type = $this->encoder->getContentType();
+        }
     }
 
     /**
@@ -103,9 +142,10 @@ Class oRouter extends oObject
      * @param \obray\encoders\oEncoderInterface $encoder Stores the object that will be used to encode/decode/out
      */
 
-    public function addEncoder($content_type,$encoder)
+    public function addEncoder($encoder,$property,$content_type)
     {
-        $this->encoders[$content_type] = $encoder;
+        $this->encodersByClassProperty[$property] = $encoder;
+        $this->encodersByContentType[$content_type] = $encoder;
     }
 
     /**
@@ -144,25 +184,19 @@ Class oRouter extends oObject
             }
         }
     
-        if( method_exists($obj,'getContentType') ){
-            $this->content_type = $obj->getContentType();
-        }
-        
         if(!headers_sent()){ 
             header('HTTP/1.1 '.$obj->getStatusCode().' ' . $status_codes[$obj->getStatusCode()] );
             if( $this->content_type == 'text/table' ){ 
                 $tmp_type = 'text/table'; $content_type = 'text/html';  
             }
+            
             header('Content-Type: ' . $this->content_type );
             if( !empty($tmp_type) ){ 
                 $this->content_type = $tmp_type; 
             }
         }
-
-        if( method_exists($obj,'cleanUp') ){
-            $obj->cleanUp();
-        }
-
+        
+        
     }
 
     /**
