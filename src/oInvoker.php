@@ -19,21 +19,22 @@ Class oInvoker implements \obray\interfaces\oInvokerInterface
      * @return mixed
      */
 
-    public function invoke($object, $method, $params=[]){
+    public function invoke($object, $method, $params = [])
+    {
 
         // reflect the object 
-        try{
+        try {
             $reflector = new \ReflectionClass($object);
         } catch (\ReflectionException $e) {
-            throw new \obray\exceptions\ClassNotFound("Unable to find object.",404);
+            throw new \obray\exceptions\ClassNotFound("Unable to find object.", 404);
         }
 
         // reflect method and extract parameters
-        try{
+        try {
             $reflection_method = $reflector->getMethod($method);
             $parameters = $reflection_method->getParameters();
         } catch (\ReflectionException $e) {
-            throw new \obray\exceptions\ClassMethodNotFound("Unable to find object method.",404);
+            throw new \obray\exceptions\ClassMethodNotFound("Unable to find object method.", 404);
         }
 
         // support legacy style methods
@@ -49,16 +50,22 @@ Class oInvoker implements \obray\interfaces\oInvokerInterface
 
         // support fully parameratized methods with default values
         $method_parameters = [];
-        forEach( $parameters as $parameter ){
+        forEach ($parameters as $parameter) {
             if (!empty($params[$parameter->getName()])) {
                 $method_parameters[] = $params[$parameter->getName()];
-            } else if ($parameter->isDefaultValueAvailable() && !$parameter->isDefaultValueConstant()) {
-                $method_parameters[] = $parameter->getDefaultValue();
-            } else if ($parameter->isDefaultValueAvailable() && $parameter->isDefaultValueConstant()) {
-                $constant = $parameter->getDefaultValueConstantName();
-                $method_parameters[] = constant($constant);
-            } else if (!$parameter->isOptional() && !$parameter->isDefaultValueAvailable()) {
-                throw new \Exception("Missing parameter ".$parameter->getName().".",500);
+            } else {
+                if ($parameter->isDefaultValueAvailable() && !$parameter->isDefaultValueConstant()) {
+                    $method_parameters[] = $parameter->getDefaultValue();
+                } else {
+                    if ($parameter->isDefaultValueAvailable() && $parameter->isDefaultValueConstant()) {
+                        $constant = $parameter->getDefaultValueConstantName();
+                        $method_parameters[] = constant($constant);
+                    } else {
+                        if (!$parameter->isOptional() && !$parameter->isDefaultValueAvailable()) {
+                            throw new \Exception("Missing parameter " . $parameter->getName() . ".", 500);
+                        }
+                    }
+                }
             }
         }
 
