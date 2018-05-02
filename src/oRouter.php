@@ -139,7 +139,7 @@ Class oRouter extends oObject
      * type.  Only one encoder per type is allowed.
      * 
      * @param string $content_type This should be a valid HTTP content type
-     * @param \obray\encoders\oEncoderInterface $encoder Stores the object that will be used to encode/decode/out
+     * @param string $encoder Stores the object that will be used to encode/decode/out
      */
 
     public function addEncoder($encoder,$property,$content_type)
