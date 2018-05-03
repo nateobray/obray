@@ -84,16 +84,11 @@ Class oObject {
         try{
             try {
                 return $this->make($path_array,$params,$direct);
-            } catch(\obray\exceptions\PermissionDenied $e) {
-                throw $e;
             } catch( \obray\exceptions\ClassNotFound $e ) {
                 $function = array_pop($path_array);
                 return $this->make($path_array,$params,$direct,$function);
-                
             }
-        } catch(\obray\exceptions\PermissionDenied $e) {
-            throw $e;
-        } catch(\Exception $e){
+        } catch( \obray\exceptions\ClassNotFound $e ) {
             if (!empty($function)) {
                 $path_array[] = $function;
             }
@@ -114,7 +109,8 @@ Class oObject {
      * @param array $params Array containing the parameters to be passed the called method
      * @param bool $direct Specifies if the is is being called directly (skips permission check)
      * @param string $method The name of the method on the object we want to call
-     * 
+     *
+     * @throws \obray\exceptions\ClassNotFound
      */
 
     private function make($path_array,$params,$direct,$method='')
