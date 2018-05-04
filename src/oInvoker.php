@@ -53,19 +53,13 @@ Class oInvoker implements \obray\interfaces\oInvokerInterface
         forEach ($parameters as $parameter) {
             if (!empty($params[$parameter->getName()])) {
                 $method_parameters[] = $params[$parameter->getName()];
-            } else {
-                if ($parameter->isDefaultValueAvailable() && !$parameter->isDefaultValueConstant()) {
-                    $method_parameters[] = $parameter->getDefaultValue();
-                } else {
-                    if ($parameter->isDefaultValueAvailable() && $parameter->isDefaultValueConstant()) {
-                        $constant = $parameter->getDefaultValueConstantName();
-                        $method_parameters[] = constant($constant);
-                    } else {
-                        if (!$parameter->isOptional() && !$parameter->isDefaultValueAvailable()) {
-                            throw new \Exception("Missing parameter " . $parameter->getName() . ".", 500);
-                        }
-                    }
-                }
+            } else if ($parameter->isDefaultValueAvailable() && !$parameter->isDefaultValueConstant()) {
+                $method_parameters[] = $parameter->getDefaultValue();
+            } else if ($parameter->isDefaultValueAvailable() && $parameter->isDefaultValueConstant()) {
+                $constant = $parameter->getDefaultValueConstantName();
+                $method_parameters[] = constant($constant);
+            } else if (!$parameter->isOptional() && !$parameter->isDefaultValueAvailable()) {
+                throw new \Exception("Missing parameter " . $parameter->getName() . ".", 500);
             }
         }
 
