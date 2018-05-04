@@ -51,20 +51,37 @@ Class oInvoker implements \obray\interfaces\oInvokerInterface
         // support fully parameratized methods with default values
         $method_parameters = [];
         forEach ($parameters as $parameter) {
-            if (!empty($params[$parameter->getName()])) {
-                $method_parameters[] = $params[$parameter->getName()];
-            } else if ($parameter->isDefaultValueAvailable() && !$parameter->isDefaultValueConstant()) {
-                $method_parameters[] = $parameter->getDefaultValue();
-            } else if ($parameter->isDefaultValueAvailable() && $parameter->isDefaultValueConstant()) {
-                $constant = $parameter->getDefaultValueConstantName();
-                $method_parameters[] = constant($constant);
-            } else if (!$parameter->isOptional() && !$parameter->isDefaultValueAvailable()) {
-                throw new \Exception("Missing parameter " . $parameter->getName() . ".", 500);
-            }
+            $method_parameters[] = self::getParameterValue($params, $parameter);
         }
 
         $object->$method(...$method_parameters);
         return $object;
+    }
+
+    /**
+     * @param array $params
+     * @param ReflectionParameter $parameter
+     * @return mixed
+     * @throws \Exception
+     */
+    private static function getParameterValue($params, ReflectionParameter $parameter): array
+    {
+        if (!empty($params[$parameter->getName()])) {
+            return $params[$parameter->getName()];
+        }
+
+        if ($parameter->isDefaultValueAvailable() && !$parameter->isDefaultValueConstant()) {
+            return $parameter->getDefaultValue();
+        }
+
+        if ($parameter->isDefaultValueAvailable() && $parameter->isDefaultValueConstant()) {
+            $constant = $parameter->getDefaultValueConstantName();
+            return constant($constant);
+        }
+
+        if (!$parameter->isOptional() && !$parameter->isDefaultValueAvailable()) {
+            throw new \Exception("Missing parameter " . $parameter->getName() . ".", 500);
+        }
     }
 
 }
