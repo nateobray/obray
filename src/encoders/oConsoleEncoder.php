@@ -39,7 +39,7 @@ Class oConsoleEncoder implements \obray\interfaces\oEncoderInterface
     {
         $obj = new \stdClass();
         forEach( $data as $key => $value ){
-            if (in_array($key,['data','sql','params','html','object'])) {
+            if (in_array($key,['data','sql','params','html','object','errors'])) {
                 $obj->$key = $value;
             }
         }

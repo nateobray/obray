@@ -6,7 +6,7 @@ namespace obray\encoders;
  * This class is used to invoke or call a method on a specified object
  */
 
-Class oHTMLEncoder implements \obray\interfaces\oEncoderInterface
+Class oTableEncoder implements \obray\interfaces\oEncoderInterface
 {
 
     /**

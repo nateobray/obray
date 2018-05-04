@@ -33,6 +33,8 @@ Class oFactory implements \obray\interfaces\oFactoryInterface
      * in
      * 
      * @param string $path The path that describes the object to create
+     *
+     * @throws \obray\exceptions\ClassNotFound
      */
 
     public function make($path)
@@ -47,7 +49,8 @@ Class oFactory implements \obray\interfaces\oFactoryInterface
         if( !empty($constructor) ){
             $parameters = $constructor->getParameters();
             forEach( $parameters as $parameter ){
-                $constructor_parameters[] = $this->container->get( $parameter->getType()->__toString() );
+                if( !$parameter->hasType() ) continue;
+                $constructor_parameters[] = $this->container->get($parameter->getType()->getName());
             }
         }
         return new $path(...$constructor_parameters);
