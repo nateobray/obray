@@ -64,7 +64,7 @@ Class oInvoker implements \obray\interfaces\oInvokerInterface
      * @return mixed
      * @throws \Exception
      */
-    private static function getParameterValue($params, ReflectionParameter $parameter): array
+    private static function getParameterValue($params, $parameter)
     {
         if (!empty($params[$parameter->getName()])) {
             return $params[$parameter->getName()];
