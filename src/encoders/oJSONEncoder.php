@@ -39,7 +39,7 @@ Class oJSONEncoder implements \obray\interfaces\oEncoderInterface
     {
         $obj = new \stdClass();
         $obj->object = $data->object;
-        if (!empty($data->data)) {
+        if (isSet($data->data)) {
             $obj->data = $data->data;
         }
         $obj->runtime = (microtime(TRUE) - $start_time)*1000;
