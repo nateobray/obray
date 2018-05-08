@@ -46,10 +46,6 @@ Class oObject {
      * @return \obray\oObject
      */
 
-    public function __construct(\obray\oSession $oSession){
-        $this->oSession = $oSession;
-    }
-
     public function route( $path , $params = array(), $direct = TRUE ) {
 
         if( !$direct ){
