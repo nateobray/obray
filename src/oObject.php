@@ -46,6 +46,10 @@ Class oObject {
      * @return \obray\oObject
      */
 
+    public function __construct(\obray\oSession $oSession){
+        $this->oSession = $oSession;
+    }
+
     public function route( $path , $params = array(), $direct = TRUE ) {
 
         if( !$direct ){
@@ -141,11 +145,12 @@ Class oObject {
      */
 
     private function invoke($obj,$method,$params,$direct){
+        
         if(method_exists($obj,$method)){
             $this->checkPermissions($obj,$method,$direct);
             return $this->invoker->invoke($obj,$method,$params);
         } else {
-            throw new \obray\exceptions\ClassMethodNotFound("Unabel to find method ".$method,404);
+            throw new \obray\exceptions\ClassMethodNotFound("Unable to find method ".$method,404);
         }
     }
 
@@ -216,9 +221,9 @@ Class oObject {
      */
 
     protected function checkPermissions($obj,$fn=null,$direct){
-        if( $direct ){ return; }
-            $perms = $obj->getPermissions();
-            if( ($fn===null && !isSet($perms["object"])) || ($fn!==null && !isSet($perms[$fn])) ){
+        if( $direct ) return;
+        $perms = $obj->getPermissions();
+        if( ($fn===null && !isSet($perms["object"])) || ($fn!==null && !isSet($perms[$fn])) ){
             throw new \obray\exceptions\PermissionDenied('You cannot access this resource.',403);
         }
     }
@@ -256,7 +261,7 @@ Class oObject {
      */    
 
     public function hasRole( $code ){
-        if( ( !empty($_SESSION['ouser']->roles) && in_array($code,$_SESSION["ouser"]->roles) ) || ( !empty($_SESSION["ouser"]->roles) && in_array("SUPER",$_SESSION["ouser"]->roles) ) ){
+        if( ( !empty($this->oSession->oUser->roles) && in_array($code,$this->oSession->oUser->roles) ) || ( !empty($this->oSession->oUser->roles) && in_array("SUPER",$this->oSession->oUser->roles) ) ){
             return TRUE;
         }
         return FALSE;
@@ -277,7 +282,7 @@ Class oObject {
      */
 
     public function hasPermission( $code ){
-        if( ( !empty($_SESSION['ouser']->permissions) && in_array($code,$_SESSION["ouser"]->permissions) ) || ( !empty($_SESSION["ouser"]->roles) && in_array("SUPER",$_SESSION["ouser"]->roles) ) ){
+        if( ( !empty($this->oSession->oUser->permissions) && in_array($code,$this->oSession->oUser->permissions) ) || ( !empty($this->oSession->oUser->roles) && in_array("SUPER",$this->oSession->oUser->roles) ) ){
             return TRUE;
         }
         return FALSE;
