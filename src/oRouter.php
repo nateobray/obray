@@ -65,7 +65,7 @@ Class oRouter extends oObject
         if (PHP_SAPI === 'cli') {
             $this->mode = 'console';
         }
-
+        
         // attempt to route the request with the set factory, invoker, and container
         try {
             $obj = parent::route($path, $params, $direct);
