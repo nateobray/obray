@@ -225,7 +225,7 @@ Class oObject {
         if( 
             ($fn===null && !isSet($perms["object"])) || 
             ($fn!==null && !isSet($perms[$fn])) || 
-            ( isSet($perms[$fn]) && !empty($_SESSION["user"]) && $perms[$fn] != $_SESSION["user"]->ouser_permission_level ) 
+            ( isSet($perms[$fn]) && !empty($_SESSION["user"]) && !in_array($perms[$fn],[$_SESSION["user"]->ouser_permission_level,'any'])  ) 
         ){
             throw new \obray\exceptions\PermissionDenied('You cannot access this resource.',403);
         }
