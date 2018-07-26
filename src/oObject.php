@@ -221,8 +221,8 @@ Class oObject {
     protected function checkPermissions($obj,$fn=null,$direct){
         if( $direct ) return;
         $perms = $obj->getPermissions();
-        if( ($fn===null && !isSet($perms["object"])) || ($fn!==null && !isSet($perms[$fn])) ){
-            throw new \obray\exceptions\PermissionDenied('You cannot access this resource.',403);
+        if( ($fn===null && !isSet($perms["object"])) || ($fn!==null && !isSet($perms[$fn])) || ( isSet($perms[$fn]) && $perms[$fn] == $_SESSION["user"]->ouser_permission_level ) ){
+            throw new \obray\except ions\PermissionDenied('You cannot access this resource.',403);
         }
     }
 
