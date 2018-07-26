@@ -222,7 +222,7 @@ Class oObject {
         if( $direct ) return;
         $perms = $obj->getPermissions();
         \session_start();
-        if( ($fn===null && !isSet($perms["object"])) || ($fn!==null && !isSet($perms[$fn])) || ( isSet($perms[$fn]) && $perms[$fn] == $_SESSION["user"]->ouser_permission_level ) ){
+        if( ($fn===null && !isSet($perms["object"])) || ($fn!==null && !isSet($perms[$fn])) || ( isSet($perms[$fn]) && !empty($_SESSION["user"]) && $perms[$fn] != $_SESSION["user"]->ouser_permission_level ) ){
             throw new \obray\exceptions\PermissionDenied('You cannot access this resource.',403);
         }
         \session_write_close();
