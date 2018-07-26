@@ -231,7 +231,7 @@ Class oObject {
         }
 
         if(
-            isSet($perms[$fn]) && empty($_SESSION["user"])
+            isSet($perms[$fn]) && empty($_SESSION["user"]) && $perms[$fn] != 'any'
         ){
             throw new \obray\exceptions\PermissionDenied('You cannot access this resource.',401);
         }
