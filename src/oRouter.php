@@ -186,7 +186,7 @@ Class oRouter extends oObject
     private function prepareHTTP($obj)
     {
         $status_codes = include("oRouterStatusCodes.php");
-        if (method_exists($obj, 'getStatusCode') && $obj->getStatusCode() == 401 && empty($_ENV["AUTHENTICATION_HEADER"]) || method_exists($obj, 'getStatusCode') && $obj->getStatusCode() == 401 && !empty($_ENV["AUTHENTICATION_HEADER"]) && $_ENV["AUTHENTICATION_HEADER"] == true) {
+        if ( (method_exists($obj, 'getStatusCode') && $obj->getStatusCode() == 401 && empty($_ENV["AUTHENTICATION_HEADER"])) || (method_exists($obj, 'getStatusCode') && $obj->getStatusCode() == 401 && !empty($_ENV["AUTHENTICATION_HEADER"]) && $_ENV["AUTHENTICATION_HEADER"] == true) ) {
             header('WWW-Authenticate: Basic realm="application"');
             if (method_exists($obj, "auth")) {
                 $obj->auth();
