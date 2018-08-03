@@ -50,10 +50,12 @@ p{
 
 table {
     border-collapse: collapse;
+    font-size: 13px;
+    line-height: 19px;
 }
 
 table>thead>tr>td, table>tbody>tr>td {
-    padding: 10px;
+    padding: 10px 15px 10px 15px;
     margin: 0px;
 }
 
@@ -122,6 +124,9 @@ div {
 .code h1, .code h2, .code h3, .code h4, .code h5, .code h6 {
     color: #58f;
 }
+h1{
+    border-bottom: 1px solid #447;
+}
 
 .code p {
     color: #999;
@@ -133,5 +138,5 @@ div {
     background-color: #2a2a2e;
     border-radius: 10px;
     padding: 15px;
-    color: #cccccf;
+    
 }

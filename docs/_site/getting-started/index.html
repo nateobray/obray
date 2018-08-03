@@ -3,6 +3,7 @@
         <title>Getting Started</title>
         <meta name="description" content="How to get up and running with obray PHP.">
         <link rel="stylesheet" href="/assets/main.css">
+        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css" integrity="sha384-hWVjflwFxL6sNzntih27bfxkr27PmbbK/iSvJ+a4+0owXq79v+lsFkW54bOGbiDQ" crossorigin="anonymous">
     </head>
     <body>
         <div class="nav">
@@ -42,9 +43,10 @@
         This version is not composer enabled, so the best way to get started is to download the source files from github 
         and use them as the root of your project. Here's a guide to getting started and making your first requests.
     </p>
-    <h2>Download The Source</h2>
-    <p>To get the source download it or clone it from github.com</p>
-    <h2>Configure Web Server</h2>
+    <h2>Get the Source</h2>
+    <p>To get the source download it or clone it from <a target="_blank" href="https://github.com/nateobray/obray"><i class="fab fa-github fa-lg"></i> github.com </a></p>
+    
+    <h2>Configure Webserver</h2>
     <p>
         An obray application will generally run all the incoming requests from the webserver through obray.php.  To accomplish
         this it requires configuring the web server to server the obray.php files unless it's able to find the actual files
@@ -138,23 +140,28 @@
     <p></p>
 </div>
 <div class="code">
+    <h1>Clone Git Repository</h1>
+    <p>Run this command with git to clone the obray repository</p>
+    <figure class="highlight"><pre><code class="language-git" data-lang="git">git clone https://github.com/nateobray/obray.git</code></pre></figure>
+    <br/>
+    <h1>Configure Webserver</h1>
     <h3>Apache</h3>
     <p>To configure Apache you can either do it on the site level or through and .htaccess file.  The basic configuration should be something like the following:</p>
-    <figure class="highlight"><pre><code class="language-php" data-lang="php"><span class="nt">&lt;IfModule</span> <span class="na">mod_rewrite</span><span class="err">.</span><span class="na">c</span><span class="nt">&gt;</span>
-    RewriteEngine On
-    RewriteBase /
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^.+$ obray.php [QSA,L]
-<span class="nt">&lt;/IfModule&gt;</span></code></pre></figure>
+    <figure class="highlight"><pre><code class="language-apache" data-lang="apache"><span class="p">&lt;</span><span class="nl">IfModule</span><span class="sr"> mod_rewrite.c</span><span class="p">&gt;
+</span>    <span class="nc">RewriteEngine</span> On
+    <span class="nc">RewriteBase</span> /
+    <span class="nc">RewriteCond</span> %{REQUEST_FILENAME} !-f
+    <span class="nc">RewriteCond</span> %{REQUEST_FILENAME} !-d
+    <span class="nc">RewriteRule</span> ^.+$ obray.php [QSA,L]
+<span class="p">&lt;/</span><span class="nl">IfModule</span><span class="p">&gt;</span></code></pre></figure>
     <h3>NGINX</h3>
     <p>To configure NGINX add the following to the config of your site:</p>
-    <figure class="highlight"><pre><code class="language-php" data-lang="php"><span class="nx">location</span> <span class="o">/</span> <span class="p">{</span>
-    <span class="nx">try_files</span> <span class="nv">$uri</span> <span class="nv">$uri</span><span class="o">/</span> <span class="o">@</span><span class="nx">rewrite</span><span class="p">;</span>
+    <figure class="highlight"><pre><code class="language-nginx" data-lang="nginx"><span class="k">location</span> <span class="n">/</span> <span class="p">{</span>
+    <span class="kn">try_files</span> <span class="nv">$uri</span> <span class="nv">$uri</span><span class="n">/</span> <span class="s">@rewrite</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="nx">location</span> <span class="o">@</span><span class="nx">rewrite</span> <span class="p">{</span>
-    <span class="nx">rewrite</span> <span class="o">^.+</span><span class="err">$</span> <span class="o">/</span><span class="nx">obray</span><span class="o">.</span><span class="nx">php</span><span class="p">;</span>
+<span class="k">location</span> <span class="s">@rewrite</span> <span class="p">{</span>
+    <span class="kn">rewrite</span> <span class="s">^.+</span>$ <span class="n">/obray.php</span><span class="p">;</span>
 <span class="p">}</span></code></pre></figure>
 </div>
 

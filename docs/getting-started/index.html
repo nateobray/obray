@@ -10,9 +10,10 @@ id: getting-started
         This version is not composer enabled, so the best way to get started is to download the source files from github 
         and use them as the root of your project. Here's a guide to getting started and making your first requests.
     </p>
-    <h2>Download The Source</h2>
-    <p>To get the source download it or clone it from github.com</p>
-    <h2>Configure Web Server</h2>
+    <h2>Get the Source</h2>
+    <p>To get the source download it or clone it from <a target="_blank" href="https://github.com/nateobray/obray"><i class="fab fa-github fa-lg"></i> github.com </a></p>
+    
+    <h2>Configure Webserver</h2>
     <p>
         An obray application will generally run all the incoming requests from the webserver through obray.php.  To accomplish
         this it requires configuring the web server to server the obray.php files unless it's able to find the actual files
@@ -106,9 +107,14 @@ id: getting-started
     <p></p>
 </div>
 <div class="code">
+    <h1>Clone Git Repository</h1>
+    <p>Run this command with git to clone the obray repository</p>
+    {% highlight git %}git clone https://github.com/nateobray/obray.git{% endhighlight %}
+    <br/>
+    <h1>Configure Webserver</h1>
     <h3>Apache</h3>
     <p>To configure Apache you can either do it on the site level or through and .htaccess file.  The basic configuration should be something like the following:</p>
-    {% highlight php %}
+    {% highlight apache %}
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /
@@ -118,7 +124,7 @@ id: getting-started
 </IfModule>{% endhighlight %}
     <h3>NGINX</h3>
     <p>To configure NGINX add the following to the config of your site:</p>
-    {% highlight php %}
+    {% highlight nginx %}
 location / {
     try_files $uri $uri/ @rewrite;
 }
