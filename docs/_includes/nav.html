@@ -5,11 +5,11 @@
 <ul>
     <li><a {% if page.id == "introduction" %}class="active"{% endif %}href="{{ "/" | relative_url }}">Introduction</a></li>
     <li><a {% if page.id == "getting-started" %}class="active"{% endif %} href="{{ "/getting-started/" | relative_url }}">Getting Started</a></li>
-    <li><a href="{{ "/request-lifecycle/" | relative_url }}">Request Lifecycle</a></li>
-    <li><a href="{{ "/web-server-config/" | relative_url }}">Web Server Configuration</a></li>
-    <li><a href="{{ "/permissions/" | relative_url }}">Permissions</a></li>
-    <li><a href="{{ "/database/" | relative_url }}">Database</a></li>
-    <li><a href="{{ "/command-line-interface/" | relative_url }}">Command Line Interface</a></li>
+    <li><a {% if page.id == "request-lifecycle" %}class="active"{% endif %} href="{{ "/request-lifecycle/" | relative_url }}">Request Lifecycle</a></li>
+    <li><a {% if page.id == "permissions" %}class="active"{% endif %} href="{{ "/permissions/" | relative_url }}">Permissions</a></li>
+    <li><a {% if page.id == "database" %}class="active"{% endif %} href="{{ "/database/" | relative_url }}">Database</a></li>
+    <li><a {% if page.id == "command-line-interface" %}class="active"{% endif %} href="{{ "/command-line-interface/" | relative_url }}">Command Line Interface</a></li>
+    <li><a {% if page.id == "mvc" %}class="active"{% endif %} href="{{ "/mvc/" | relative_url }}">MVC</a></li>
 </ul>
 <h4>Class Reference</h4>
 <ul>
