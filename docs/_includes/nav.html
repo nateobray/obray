@@ -3,27 +3,27 @@
 </div>
 <h4>Topics</h4>
 <ul>
-    <li><a href="{{ "/" | relative_url }}">Introduction</a></li>
-    <li><a class="active" href="{{ "/getting-started/" | relative_url }}">Getting Started</a></li>
-    <li><a href="/obray/request-lifecycle/">Request Lifecycle</a></li>
-    <li><a href="/obray/web-server-config/">Web Server Configuration</a></li>
-    <li><a href="/obray/permissions/">Permissions</a></li>
-    <li><a href="/obray/database/">Database</a></li>
-    <li><a href="/obray/command-line-interface/">Command Line Interface</a></li>
+    <li><a {% if page.id == "introduction" %}class="active"{% endif %}href="{{ "/" | relative_url }}">Introduction</a></li>
+    <li><a {% if page.id == "getting-started" %}class="active"{% endif %} href="{{ "/getting-started/" | relative_url }}">Getting Started</a></li>
+    <li><a href="{{ "/request-lifecycle/" | relative_url }}">Request Lifecycle</a></li>
+    <li><a href="{{ "/web-server-config/" | relative_url }}">Web Server Configuration</a></li>
+    <li><a href="{{ "/permissions/" | relative_url }}">Permissions</a></li>
+    <li><a href="{{ "/database/" | relative_url }}">Database</a></li>
+    <li><a href="{{ "/command-line-interface/" | relative_url }}">Command Line Interface</a></li>
 </ul>
 <h4>Class Reference</h4>
 <ul>
-    <li><a href="/obray/reference/orouter/">oRouter</a></li>
-    <li><a href="/obray/reference/oobject/">oObject</a></li>
-    <li><a href="/obray/reference/odbo/">oDBO</a></li>
-    <li><a href="/obray/reference/ousers/">oUsers</a></li>
-    <li><a href="/obray/reference/opermissions/">oPermissions</a></li>
-    <li><a href="/obray/reference/oroles/">oRoles</a></li>
-    <li><a href="/obray/reference/orolespermissions/">oRolePermissions</a></li>
-    <li><a href="/obray/reference/ouserpermissions/">oUserPermissions</a></li>
-    <li><a href="/obray/reference/ouserroles/">oUserRoles</a></li>
-    <li><a href="/obray/reference/olog/">oLog</a></li>
-    <li><a href="/obray/reference/ocli/">oCLI</a></li>
-    <li><a href="/obray/reference/owebsocketclient/">oWebSocketClient</a></li>
-    <li><a href="/obray/reference/owebsocketserver/">oWebSocketServer</a></li>
+    <li><a href="{{ "/reference/orouter/" | relative_url }}">oRouter</a></li>
+    <li><a href="{{ "/reference/oobject/" | relative_url }}">oObject</a></li>
+    <li><a href="{{ "/reference/odbo/" | relative_url }}">oDBO</a></li>
+    <li><a href="{{ "/reference/ousers/" | relative_url }}">oUsers</a></li>
+    <li><a href="{{ "/reference/opermissions/" | relative_url }}">oPermissions</a></li>
+    <li><a href="{{ "/reference/oroles/" | relative_url }}">oRoles</a></li>
+    <li><a href="{{ "/reference/orolespermissions/" | relative_url }}">oRolePermissions</a></li>
+    <li><a href="{{ "/reference/ouserpermissions/" | relative_url }}">oUserPermissions</a></li>
+    <li><a href="{{ "/reference/ouserroles/" | relative_url }}">oUserRoles</a></li>
+    <li><a href="{{ "/reference/olog/" | relative_url }}">oLog</a></li>
+    <li><a href="{{ "/reference/ocli/" | relative_url }}">oCLI</a></li>
+    <li><a href="{{ "/reference/owebsocketclient/" | relative_url }}">oWebSocketClient</a></li>
+    <li><a href="{{ "/reference/owebsocketserver/" | relative_url }}">oWebSocketServer</a></li>
 </ul>
