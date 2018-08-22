@@ -45,7 +45,7 @@
 
 	********************************************************************************************************************/
 
-	Class oWebSocketClient extends obray\oDBO {
+	Class oWebSocketClient extends ODBO {
 
 		public function __construct($params){
 
