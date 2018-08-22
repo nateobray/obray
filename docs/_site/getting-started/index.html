@@ -1,10 +1,43 @@
----
-layout: default
-title: Getting Started
-description: How to get up and running with obray PHP.
-id: getting-started
----
-<div class="content">
+<html>
+    <head>
+        <title>Getting Started</title>
+        <meta name="description" content="How to get up and running with obray PHP.">
+        <link rel="stylesheet" href="/assets/main.css">
+        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css" integrity="sha384-hWVjflwFxL6sNzntih27bfxkr27PmbbK/iSvJ+a4+0owXq79v+lsFkW54bOGbiDQ" crossorigin="anonymous">
+    </head>
+    <body>
+        <div class="nav">
+            <div class="logo">
+    <span class="main">obray</span><span class="sub small">/docs</span>
+</div>
+<h4>Topics</h4>
+<ul>
+    <li><a href="/">Introduction</a></li>
+    <li><a class="active" href="/getting-started/">Getting Started</a></li>
+    <li><a  href="/request-lifecycle/">Request Lifecycle</a></li>
+    <li><a  href="/permissions/">Permissions</a></li>
+    <li><a  href="/database/">Database</a></li>
+    <li><a  href="/command-line-interface/">Command Line Interface</a></li>
+    <li><a  href="/mvc/">MVC</a></li>
+</ul>
+<h4>Class Reference</h4>
+<ul>
+    <li><a href="/reference/orouter/">oRouter</a></li>
+    <li><a href="/reference/oobject/">oObject</a></li>
+    <li><a href="/reference/odbo/">oDBO</a></li>
+    <li><a href="/reference/ousers/">oUsers</a></li>
+    <li><a href="/reference/opermissions/">oPermissions</a></li>
+    <li><a href="/reference/oroles/">oRoles</a></li>
+    <li><a href="/reference/orolespermissions/">oRolePermissions</a></li>
+    <li><a href="/reference/ouserpermissions/">oUserPermissions</a></li>
+    <li><a href="/reference/ouserroles/">oUserRoles</a></li>
+    <li><a href="/reference/olog/">oLog</a></li>
+    <li><a href="/reference/ocli/">oCLI</a></li>
+    <li><a href="/reference/owebsocketclient/">oWebSocketClient</a></li>
+    <li><a href="/reference/owebsocketserver/">oWebSocketServer</a></li>
+</ul>
+        </div>
+        <div class="content">
     <h1>Getting Started</h1>
     <p>
         This version is not composer enabled, so the best way to get started is to download the source files from github 
@@ -109,27 +142,29 @@ id: getting-started
 <div class="code">
     <h1>Clone Git Repository</h1>
     <p>Run this command with git to clone the obray repository</p>
-    {% highlight git %}git clone https://github.com/nateobray/obray.git{% endhighlight %}
+    <figure class="highlight"><pre><code class="language-git" data-lang="git">git clone https://github.com/nateobray/obray.git</code></pre></figure>
     <br/>
     <h1>Configure Webserver</h1>
     <h3>Apache</h3>
     <p>To configure Apache you can either do it on the site level or through and .htaccess file.  The basic configuration should be something like the following:</p>
-    {% highlight apache %}
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteBase /
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^.+$ obray.php [QSA,L]
-</IfModule>{% endhighlight %}
+    <figure class="highlight"><pre><code class="language-apache" data-lang="apache"><span class="p">&lt;</span><span class="nl">IfModule</span><span class="sr"> mod_rewrite.c</span><span class="p">&gt;
+</span>    <span class="nc">RewriteEngine</span> On
+    <span class="nc">RewriteBase</span> /
+    <span class="nc">RewriteCond</span> %{REQUEST_FILENAME} !-f
+    <span class="nc">RewriteCond</span> %{REQUEST_FILENAME} !-d
+    <span class="nc">RewriteRule</span> ^.+$ obray.php [QSA,L]
+<span class="p">&lt;/</span><span class="nl">IfModule</span><span class="p">&gt;</span></code></pre></figure>
     <h3>NGINX</h3>
     <p>To configure NGINX add the following to the config of your site:</p>
-    {% highlight nginx %}
-location / {
-    try_files $uri $uri/ @rewrite;
-}
+    <figure class="highlight"><pre><code class="language-nginx" data-lang="nginx"><span class="k">location</span> <span class="n">/</span> <span class="p">{</span>
+    <span class="kn">try_files</span> <span class="nv">$uri</span> <span class="nv">$uri</span><span class="n">/</span> <span class="s">@rewrite</span><span class="p">;</span>
+<span class="p">}</span>
 
-location @rewrite {
-    rewrite ^.+$ /obray.php;
-}{% endhighlight %}
+<span class="k">location</span> <span class="s">@rewrite</span> <span class="p">{</span>
+    <span class="kn">rewrite</span> <span class="s">^.+</span>$ <span class="n">/obray.php</span><span class="p">;</span>
+<span class="p">}</span></code></pre></figure>
 </div>
+
+        
+    </body>
+</html>
