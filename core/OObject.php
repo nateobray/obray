@@ -874,31 +874,5 @@
 			return;
 		}
 
-		public function getMessageQueue( $queue ){
-			$this->message_queue = msg_get_queue($queue);
-		}
-
-		public function messageQueueSend( $msgType, $message ){
-
-
-			if( empty($this->message_queue) || !msg_send( $this->message_queue, $msgType, $message, FALSE, TRUE, $error_code ) ){
-				$this->throwError("Error (".$error_code."): Unable to queue message.");
-			}
-		}
-
-		function messageQueueReceive( $msgType ){
-			$received_type = 0;
-			$error_code;
-			$message = FALSE;
-			if( empty($this->message_queue) || msg_receive( $this->message_queue, $msgType, $received_type, 8192000, $message, FALSE, MSG_IPC_NOWAIT, $error_code ) ){
-				return $message;
-			} else {
-				if( $error_code !== 42 ){
-					$this->console("%s","Error receiving message from queue (".$error_code.")!\n","RedBold");
-				}
-				return FALSE;
-			}
-		}
-
 	}
 ?>
