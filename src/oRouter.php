@@ -36,7 +36,7 @@ Class oRouter extends oObject
     public function __construct(
         \obray\interfaces\oFactoryInterface $factory,
         \obray\interfaces\oInvokerInterface $invoker,
-        \Psr\Container\ContainerInterface $container,
+        \Psr\Container\ContainerInterface $container=NULL,
         $debug = false,
         $start_time = null
     ) {
