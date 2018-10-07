@@ -83,14 +83,16 @@ Class oRouter extends oObject
         switch ($this->mode) {
             case 'http':
                 // set encoder by class property
+                $this->setEncoderByError($obj);
                 $this->setEncoderByClassProperty($obj);
+                $this->setEncoderByContentType($this->content_type);
                 // prepare headers for HTTP
                 $this->prepareHTTP($obj);
                 break;
             case 'console':
                 // prepare for console output
                 $this->prepareConsole($obj);
-                // set encoer by content type
+                // set encoder by content type
                 $this->setEncoderByContentType($this->content_type);
                 break;
         }
@@ -100,12 +102,20 @@ Class oRouter extends oObject
             $encoded = $this->encoder->encode($obj, $this->start_time);
             $this->encoder->out($encoded);
         } else {
+            header('Content-Type: text/html' );
             throw new \Exception("Unable to find encoder for this request.");
         }
 
         // return object
         return $obj;
 
+    }
+
+    private function setEncoderByError($obj)
+    {
+        if(!empty($obj->errors)){
+            $this->contentType = 'application/json';
+        }
     }
 
     /**
