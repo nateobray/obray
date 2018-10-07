@@ -220,7 +220,11 @@ Class oObject {
 
     protected function checkPermissions($obj,$fn=null,$direct){
         if( $direct ) return;
-        $perms = $obj->getPermissions();
+        $perms = [];
+        if( method_exists($obj, 'getPermissions') ){
+            $perms = $obj->getPermissions();
+        }
+        
         \session_start();
         if( 
             ($fn===null && !isSet($perms["object"])) || 
