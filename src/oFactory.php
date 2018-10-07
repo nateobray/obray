@@ -57,7 +57,8 @@ Class oFactory implements \obray\interfaces\oFactoryInterface
                     try{
                         $constructor_parameters[] = $this->make("\\".$parameter->getType()->getName(),1);
                     } catch(\obray\exceptions\ClassNotFound $e){
-                        throw new \obray\exceptions\DependencyNotFound("Unable to find class dependency.");
+                        exit();
+                        throw new \obray\exceptions\DependencyNotFound("Unable to find class dependency.",501);
                     }
                 }
             }
