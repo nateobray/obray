@@ -23,7 +23,7 @@ Class oFactory implements \obray\interfaces\oFactoryInterface
      * @param \Psr\Container\ContainerInterface $container Variable that contains the container
      */
 
-    public function __construct( \Psr\Container\ContainerInterface $container )
+    public function __construct( \Psr\Container\ContainerInterface $container=NULL )
     {
         $this->container = $container;
     }
@@ -37,12 +37,12 @@ Class oFactory implements \obray\interfaces\oFactoryInterface
      * @throws \obray\exceptions\ClassNotFound
      */
 
-    public function make($path)
+    public function make($path,$index=0)
     {
         // handle errors
         if($path == '\\'){ throw new \obray\exceptions\ClassNotFound("Unable to find Class ".$path, 404); }
         if(!class_exists($path)){ throw new \obray\exceptions\ClassNotFound("Unable to find Class ".$path, 404); }
-
+        
         $constructor_parameters = array();
         $reflector = new \ReflectionClass($path);
         $constructor = $reflector->getConstructor();
@@ -50,7 +50,16 @@ Class oFactory implements \obray\interfaces\oFactoryInterface
             $parameters = $constructor->getParameters();
             forEach( $parameters as $parameter ){
                 if( !$parameter->hasType() ) continue;
-                $constructor_parameters[] = $this->container->get($parameter->getType()->getName());
+                if($this->container !== NULL){
+                    $constructor_parameters[] = $this->container->get($parameter->getType()->getName());
+                } else {
+                    // if we have a factory then make object and return it
+                    try{
+                        $constructor_parameters[] = $this->make("\\".$parameter->getType()->getName(),1);
+                    } catch(\obray\exceptions\ClassNotFound $e){
+                        throw new \obray\exceptions\DependencyNotFound("Unable to find class dependency.");
+                    }
+                }
             }
         }
         return new $path(...$constructor_parameters);

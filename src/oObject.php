@@ -31,6 +31,7 @@ Class oObject {
     protected $debug_mode = false;
     /** @var string the users table */
     protected $user_session_key = "oUser";
+    protected $startingPath = "";
 
     /** @var string stores the name of the class */
     public $object = '';
@@ -84,7 +85,6 @@ Class oObject {
         
         try{
             try {
-                
                 return $this->make($path_array,$params,$direct);
             } catch( \obray\exceptions\ClassNotFound $e ) {
                 $function = array_pop($path_array);
@@ -96,7 +96,6 @@ Class oObject {
             }
             return $this->searchForController($path_array,$params,$direct);
         }
-
         // if we're unsuccessful in anything above then throw error
         throw new \Exception("Could not find " . $components['path'],404);
         return $this;
@@ -117,6 +116,7 @@ Class oObject {
 
     private function make($path_array,$params,$direct,$method='')
     {
+        $this->startingPath = '\\' . implode('\\',$path_array);
         $obj = $this->factory->make('\\' . implode('\\',$path_array));
         $obj->object = '\\' . implode('\\',$path_array);
         $obj->factory = $this->factory;
@@ -202,7 +202,7 @@ Class oObject {
         } else {
             $remaining[] = $object;
             if( empty($path_array) ){
-                throw new \obray\exceptions\ClassNotFound("Path not found.",404);
+                throw new \obray\exceptions\ClassNotFound("Path not found (".$this->startingPath.").",404);
             }
         }
         return $this->searchForController($path_array,$params,$direct,$object,$remaining,++$depth);
