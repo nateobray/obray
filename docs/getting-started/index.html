@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Getting Started
+title: obray | Getting Started
 description: How to get up and running with obray PHP.
 id: getting-started
 ---
@@ -12,104 +12,30 @@ id: getting-started
     </p>
     <h2>Get the Source</h2>
     <p>To get the source download it or clone it from <a target="_blank" href="https://github.com/nateobray/obray"><i class="fab fa-github fa-lg"></i> github.com </a></p>
-    
+    <h2>Using Composer</h2>
+    <p>
+        Alternatively you can include obray as a dependency of your project using composer.  Just include the obray package
+        from <packagist class="org">packagist.org</packagist> obray/obray in your list of dependencies.
+    </p>
     <h2>Configure Webserver</h2>
     <p>
         An obray application will generally run all the incoming requests from the webserver through obray.php.  To accomplish
         this it requires configuring the web server to server the obray.php files unless it's able to find the actual files
         or resource specified in the URI.  The following is a guide on how to configure Apache and NGINX to do this.
     </p>
-    
-    <h2>Configure Settings File</h2>
-    <p>The settings.php files contains a list of global constants that your application will need to run.</p>
-    <table class="striped">
-        <thead>
-            <tr>
-                <td>Constant</td>
-                <td>Default</td>
-                <td>Description</td>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td class="inline-code">__OBRAY_PATH_TO_CORE__</td>
-                <td class="inline-code">n/a</td>
-                <td>This is the path to the obray folder containing the core folder.</td>
-            </tr>
-            <tr>
-                <td class="inline-code">__OBRAY_DEBUG_MODE__</td>
-                <td>false</td>
-                <td>Specifies if the application is in debug mode or not.  Additional information is returned in each request if debug mode is enabled.</td>
-            </tr>
-            <tr>
-                <td class="inline-code">__OBRAY_TOKEN__</td>
-                <td>n/a</td>
-                <td>An obray token is used to allow obray apps to communicate with other obray apps using this token.  By default this is not need.</td>
-            </tr>
-            <tr>
-                <td class="inline-code">__AUTHENTICATION_HEADER__</td>
-                <td>true</td>
-                <td>The authentication header is added to a response whenever an error is thrown with the code 401.  This will trigger the browser to show an authentication screen.</td>
-            </tr>
-            <tr>
-                <td class="inline-code">__OBRAY_ROUTES__</td>
-                <td>array</td>
-                <td>This is where routes are defined.  You can specify the starting path of a route and map that to a folder in your application.  From that point on it will use the folder structure in the specified folder as the route.</td>
-            </tr>
-            <tr>
-                <td class="inline-code">__OBRAY_MAX_FAILED_LOGIN_ATTEMPTS__</td>
-                <td>10</td>
-                <td>Defines the maximium number of failed login attempts before the system will automatically lock the user out.  Once this threshold is exceeded every attempt to login will fail.</td>
-            </tr>
-            <tr>
-                <td class="inline-code">__OBRAY_DATABASE_HOST__</td>
-                <td>n/a</td>
-                <td>Specify the host for you MySQL database here.</td>
-            </tr>
-            <tr>
-                <td class="inline-code">__OBRAY_DATABASE_PORT__</td>
-                <td>3306</td>
-                <td>Specify the port for you MySQL database here.</td>
-            </tr>
-            <tr>
-                <td class="inline-code">__OBRAY_DATABASE_USERNAME__</td>
-                <td>n/a</td>
-                <td>Specify the username for you MySQL database here.</td>
-            </tr>
-            <tr>
-                <td class="inline-code">__OBRAY_DATABASE_PASSWORD__</td>
-                <td>n/a</td>
-                <td>Specify the password for you MySQL database here.</td>
-            </tr>
-            <tr>
-                <td class="inline-code">__OBRAY_DATABASE_NAME__</td>
-                <td>n/a</td>
-                <td>Specify the database name for you MySQL database here.</td>
-            </tr>
-            <tr>
-                <td class="inline-code">__OBRAY_DATABASE_ENGINE__</td>
-                <td>MyISAM</td>
-                <td>Specify the default database engine for you MySQL database here.</td>
-            </tr>
-            <tr>
-                <td class="inline-code">__OBRAY_DATABASE_CHARACTER_SET__</td>
-                <td>utf8</td>
-                <td>Specify the default character set for you MySQL database here.</td>
-            </tr>
-            <tr>
-                <td class="inline-code">__OBRAY_DATATYPES__</td>
-                <td>n/a</td>
-                <td>This is a simplified list of database types obray will use when scripting tables.  If you need a type not specified you may add it.  This will not effect queries retreiving data.</td>
-            </tr>
-        </tbody>
-    </table>
-    <h2>Test Requests</h2>
-    <p></p>
 </div>
 <div class="code">
     <h1>Clone Git Repository</h1>
     <p>Run this command with git to clone the obray repository</p>
     {% highlight git %}git clone https://github.com/nateobray/obray.git{% endhighlight %}
+    <br/>
+    <h1>Using Composer</h1>
+    
+    {% highlight git %}{
+    "require": {
+        "obray/obray": "v3.0.*"
+    }
+}{% endhighlight %}
     <br/>
     <h1>Configure Webserver</h1>
     <h3>Apache</h3>

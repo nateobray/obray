@@ -1,6 +1,6 @@
 <html>
     <head>
-        <title>Introduction</title>
+        <title>Obray | Introduction</title>
         <meta name="description" content="Introduction to obray PHP">
         <link rel="stylesheet" href="/assets/main.css">
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css" integrity="sha384-hWVjflwFxL6sNzntih27bfxkr27PmbbK/iSvJ+a4+0owXq79v+lsFkW54bOGbiDQ" crossorigin="anonymous">
@@ -15,46 +15,86 @@
     <li><a class="active"href="/">Introduction</a></li>
     <li><a  href="/getting-started/">Getting Started</a></li>
     <li><a  href="/request-lifecycle/">Request Lifecycle</a></li>
-    <li><a  href="/permissions/">Permissions</a></li>
-    <li><a  href="/database/">Database</a></li>
     <li><a  href="/command-line-interface/">Command Line Interface</a></li>
     <li><a  href="/mvc/">MVC</a></li>
 </ul>
 <h4>Class Reference</h4>
 <ul>
-    <li><a href="/reference/orouter/">oRouter</a></li>
+    <li><a href="/reference/orolespermissions/">oFactory</a></li>
+    <li><a href="/reference/ouserpermissions/">oInvoker</a></li>
+    <li><a href="/reference/ouserroles/">oLogger</a></li>
     <li><a href="/reference/oobject/">oObject</a></li>
-    <li><a href="/reference/odbo/">oDBO</a></li>
-    <li><a href="/reference/ousers/">oUsers</a></li>
-    <li><a href="/reference/opermissions/">oPermissions</a></li>
-    <li><a href="/reference/oroles/">oRoles</a></li>
-    <li><a href="/reference/orolespermissions/">oRolePermissions</a></li>
-    <li><a href="/reference/ouserpermissions/">oUserPermissions</a></li>
-    <li><a href="/reference/ouserroles/">oUserRoles</a></li>
-    <li><a href="/reference/olog/">oLog</a></li>
-    <li><a href="/reference/ocli/">oCLI</a></li>
-    <li><a href="/reference/owebsocketclient/">oWebSocketClient</a></li>
-    <li><a href="/reference/owebsocketserver/">oWebSocketServer</a></li>
+    <li><a href="/reference/orouter/">oRouter</a></li>
+    <li><a href="/reference/orouter/">oRouterStatusCodes</a></li>
 </ul>
         </div>
         <div class="content">
     <h1>Introduction</h1>
     <p>
-        The obray PHP framework was developed as a minimalistic approach to building web based applications.  The
-        basic tasks the framework is attempting to accomplish are the following:
-        <ol>
-            <li>Receive URI (universal resource identifier) and translate that into a class and function to be executed by PHP</li>
-            <li>Enforce permissions on each of those URIs</li>
-            <li>Provide basic access to the database and handle the database connection</li>
-        </ol>
+        The obray PHP framework was developed as a minimalistic approach to building high performance web based 
+        applications.  It accomplishes this through a simple namespace based routing, parameter mapping, native 
+        error handling, and automatic dependency injection.
     </p>
     <p>
-        Based on the approach above the framework provides a simple groundwork for more complex tasks to be accomplished.
+        How is this different than other frameworks you ask? Obray has very low overhead and does very little 
+        besides find your namespace, class, and function and excute it quickly.  No library of functions or
+        features to remember, no middleware, just simple.
     </p>
+    <h2>Namespace Routing</h2>
+    <p>
+        Obray does not require any manual mapping for the router to work.  It simply checks the given path to see
+        if it matches a given namespace, class name, and function name.  When a match is found, it's executed.
+    </p>
+    
+    <p>
+        This approach does give up some flexibility, but in turn gains consistency.  The URI path will always closely
+        match the given namespace, class name, and function you use within the code itself.  It also has the added
+        advantage of easily allowing all of your classes to be called (with permission) via URI wether through an 
+        HTTP request or through PHP CLI.
+    </p>
+    <h2>Parameter Mapping</h2>
+    <p>
+        Obray will also take any parameters passed in a URI and map that to a corresponding parameter in your function
+        call.  This allows for native error handling on those paramters.  Need to require a parameter: simply specify
+        it with no default value.  Need to make sure it's an integer: simply add a type.  This gives a powerful, fast,
+        and native way to enable parameters from a URI.
+    </p>
+    <p>
+        In some cases you may need more flexibility.  Obray also allows you to accept all the parameters from a URI
+        in a $params array to hande these any way you would like.
+    </p>
+    <h2>Native Error Handling</h2>
+    <p>
+        Throwing and catching errors is simply done through throw, try, and catch native to PHP.  Obray will catch
+        all the errors thrown and encode them to the end user or application in the way you specify.  This ensures
+        nothing goes unhandled.
+    </p>
+    <h2>Automatic Dependency Injection</h2>
+    <p>
+        Specifying class dependencies in the constructor of a class will invoke automatic dependency injection. When
+        coupled with a DI container it's possible to share dependencies across classes.  The encourages clean and
+        modular code.
+    </p>
+    
 </div>
 <div class="code">
-    <figure class="highlight"><pre><code class="language-php" data-lang="php">    <span class="nx">Hellow</span> <span class="nx">World</span>
-    </code></pre></figure>
+<br/><br/><br/><br/><br/>
+<br/><br/><br/><br/><br/>
+<br/><br/><br/><br/><br/>
+<br/><br/><br/><br/><br/>
+<p>URL gets mapped to namespace, class function: https://www.mydomain.com/my/name/space/className/functionName/</p>
+<figure class="highlight"><pre><code class="language-php" data-lang="php"><span class="c1">// The above url is the same as:
+</span><span class="nv">$MyClass</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">\my\name\space\className</span><span class="p">();</span>
+<span class="nv">$results</span> <span class="o">=</span> <span class="nx">MyClass</span><span class="o">-&gt;</span><span class="na">functionName</span><span class="p">();</span></code></pre></figure>
+<br/><br/><br/><br/><br/>
+<br/><br/><br/><br/><br/>
+<p>Parameters are mapped to corresponding parameters in your function declaration: https://www.mydomain.com/my/name/space/className/functionName/?param1=valu1&param2=5</p>
+<figure class="highlight"><pre><code class="language-php" data-lang="php"><span class="c1">// function declaration
+</span><span class="k">public</span> <span class="k">function</span> <span class="nf">functionName</span><span class="p">(</span><span class="nv">$param1</span><span class="p">,</span> <span class="nv">$param2</span><span class="p">)</span>
+
+<span class="c1">// The above url is the same as:
+</span><span class="nv">$MyClass</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">\my\name\space\className</span><span class="p">();</span>
+<span class="nv">$results</span> <span class="o">=</span> <span class="nx">MyClass</span><span class="o">-&gt;</span><span class="na">functionName</span><span class="p">(</span><span class="s1">'value1'</span><span class="p">,</span> <span class="mi">5</span><span class="p">);</span></code></pre></figure>
 </div>
 
 

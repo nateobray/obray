@@ -1,27 +1,79 @@
 ---
 layout: default
-title: Introduction
+title: Obray | Introduction
 description: Introduction to obray PHP
 id: introduction
 ---
 <div class="content">
     <h1>Introduction</h1>
     <p>
-        The obray PHP framework was developed as a minimalistic approach to building web based applications.  The
-        basic tasks the framework is attempting to accomplish are the following:
-        <ol>
-            <li>Receive URI (universal resource identifier) and translate that into a class and function to be executed by PHP</li>
-            <li>Enforce permissions on each of those URIs</li>
-            <li>Provide basic access to the database and handle the database connection</li>
-        </ol>
+        The obray PHP framework was developed as a minimalistic approach to building high performance web based 
+        applications.  It accomplishes this through a simple namespace based routing, parameter mapping, native 
+        error handling, and automatic dependency injection.
     </p>
     <p>
-        Based on the approach above the framework provides a simple groundwork for more complex tasks to be accomplished.
+        How is this different than other frameworks you ask? Obray has very low overhead and does very little 
+        besides find your namespace, class, and function and excute it quickly.  No library of functions or
+        features to remember, no middleware, just simple.
     </p>
+    <h2>Namespace Routing</h2>
+    <p>
+        Obray does not require any manual mapping for the router to work.  It simply checks the given path to see
+        if it matches a given namespace, class name, and function name.  When a match is found, it's executed.
+    </p>
+    
+    <p>
+        This approach does give up some flexibility, but in turn gains consistency.  The URI path will always closely
+        match the given namespace, class name, and function you use within the code itself.  It also has the added
+        advantage of easily allowing all of your classes to be called (with permission) via URI wether through an 
+        HTTP request or through PHP CLI.
+    </p>
+    <h2>Parameter Mapping</h2>
+    <p>
+        Obray will also take any parameters passed in a URI and map that to a corresponding parameter in your function
+        call.  This allows for native error handling on those paramters.  Need to require a parameter: simply specify
+        it with no default value.  Need to make sure it's an integer: simply add a type.  This gives a powerful, fast,
+        and native way to enable parameters from a URI.
+    </p>
+    <p>
+        In some cases you may need more flexibility.  Obray also allows you to accept all the parameters from a URI
+        in a $params array to hande these any way you would like.
+    </p>
+    <h2>Native Error Handling</h2>
+    <p>
+        Throwing and catching errors is simply done through throw, try, and catch native to PHP.  Obray will catch
+        all the errors thrown and encode them to the end user or application in the way you specify.  This ensures
+        nothing goes unhandled.
+    </p>
+    <h2>Automatic Dependency Injection</h2>
+    <p>
+        Specifying class dependencies in the constructor of a class will invoke automatic dependency injection. When
+        coupled with a DI container it's possible to share dependencies across classes.  The encourages clean and
+        modular code.
+    </p>
+    
 </div>
 <div class="code">
-    {% highlight php %}
-    Hellow World
-    {% endhighlight %}
+<br/><br/><br/><br/><br/>
+<br/><br/><br/><br/><br/>
+<br/><br/><br/><br/><br/>
+<br/><br/><br/><br/><br/>
+<p>URL gets mapped to namespace, class function: https://www.mydomain.com/my/name/space/className/functionName/</p>
+{% highlight php %}
+// The above url is the same as:
+$MyClass = new \my\name\space\className();
+$results = MyClass->functionName();
+{% endhighlight %}
+<br/><br/><br/><br/><br/>
+<br/><br/><br/><br/><br/>
+<p>Parameters are mapped to corresponding parameters in your function declaration: https://www.mydomain.com/my/name/space/className/functionName/?param1=valu1&param2=5</p>
+{% highlight php %}
+// function declaration
+public function functionName($param1, $param2)
+
+// The above url is the same as:
+$MyClass = new \my\name\space\className();
+$results = MyClass->functionName('value1', 5);
+{% endhighlight %}
 </div>
 
