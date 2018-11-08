@@ -335,7 +335,7 @@
 				if( empty($base_path) && count($path_array) == 1 && !empty($this->object) && $this->object != $path_array[0] ){
 					return $this->executeMethod($path,$path_array,$direct,$params);
 				}
-				
+
 				/*********************************
 					CREATE OBJECT
 				*********************************/
@@ -372,6 +372,23 @@
 			}
 		}
 
+        private function _namespacedClassExists($path,$obj_name){
+            $namespace_components = explode("/",$this->path);
+            $namespace_components  = array_filter($namespace_components, function($item){
+            	return $item !== "app";
+			});
+            array_pop($namespace_components);
+            $namespace_str = implode("/", $namespace_components);
+            $namespace = str_replace("/","\\", str_replace(__OBRAY_NAMESPACE_ROOT__,'',$namespace_str));
+            $namespaced_path = "\\".$namespace."\\".$obj_name;
+            $exists = class_exists($namespaced_path);
+            if($exists){
+                $this->namespaced_path = $namespaced_path;
+                return true;
+            }
+            return false;
+        }
+
 		/***********************************************************************
 
 			CREATE OBJECT
@@ -381,41 +398,86 @@
 		private function createObject($path_array,$path,$base_path,&$params,$direct){
 			
 			$path = '';
+
+			$deprecatedControllersPath = "controllers/";
+			$namespacedControllersPath = "app/controllers/";
+			$namespacedModelsPath = "app/models/";
 			$rPath = array();
 
 			if( empty($path_array) && empty($this->object) && empty($base_path)){
 				if(empty($path_array)){	$path_array[] = "index";	}
 			}
-			
+
 			while(count($path_array)>0){
 
-				if( empty($base_path) ){
-					if(is_dir(__OBRAY_SITE_ROOT__.'controllers/'.implode('/',$path_array))){	$path_array[] = $path_array[count($path_array)-1];		}
-				}
+                if(empty($base_path)){
+                    if(is_dir(__OBRAY_SITE_ROOT__.$deprecatedControllersPath.implode('/',$path_array))){
+                        $path_array[] = $path_array[(count($path_array)-1)];
+                    }
+                    if(is_dir(__OBRAY_SITE_ROOT__.$namespacedControllersPath.implode('/',$path_array))){
+                        if(!$deprecatedControllersDirectoryExists){
+                            $path_array[] = $path_array[(count($path_array)-1)];
+                        }
+                    }
+                }
 
-				$obj_name = array_pop($path_array);
-				$this->controller_path = __OBRAY_SITE_ROOT__."controllers/".implode('/',$path_array).'/c'.str_replace(' ','',ucWords( str_replace('-',' ',$obj_name) ) ).'.php';
-				$this->model_path = $base_path . implode('/',$path_array).'/'.$obj_name.'.php';
 
-				if( file_exists( $this->model_path ) ){
+                $obj_name = array_pop($path_array);
+
+				$this->namespaced_controller_path = __OBRAY_SITE_ROOT__.$namespacedControllersPath.implode('/',$path_array).'/c'.str_replace(' ','',ucWords( str_replace('-',' ',$obj_name) ) ).'.php';
+				$this->deprecated_controller_path = __OBRAY_SITE_ROOT__.$deprecatedControllersPath.implode('/',$path_array).'/c'.str_replace(' ','',ucWords( str_replace('-',' ',$obj_name) ) ).'.php';
+
+				$this->namespaced_model_path = __OBRAY_SITE_ROOT__.$namespacedModelsPath.implode('/',$path_array).'/'.$obj_name.'.php';
+				$this->deprecated_model_path = $base_path . implode('/',$path_array).'/'.$obj_name.'.php';
+
+                if(file_exists($this->namespaced_model_path)){
+                    $objectType = "model";
+                    $this->path = $this->namespaced_model_path;
+                }
+				else if(file_exists($this->deprecated_model_path)){
 					$objectType = "model";
-					$this->path = $this->model_path;
-				} else if( file_exists( $this->controller_path ) ){
+					$this->path = $this->deprecated_model_path;
+				}
+				else if(file_exists($this->namespaced_controller_path) ){
 					$objectType = "controller";
 					$obj_name = "c".str_replace(' ','',ucWords( str_replace('-',' ',$obj_name) ) );
-					$this->path = $this->controller_path;
+					$this->path = $this->namespaced_controller_path;
 					// include the root controller
-					if( file_exists( __OBRAY_SITE_ROOT__ . "controllers/cRoot.php" ) ){ require_once __OBRAY_SITE_ROOT__."controllers/cRoot.php"; }
-					if( empty($path) ){ $path = "/index/"; }
+					if(file_exists(__OBRAY_SITE_ROOT__ . "controllers/cRoot.php")){
+						require_once __OBRAY_SITE_ROOT__."controllers/cRoot.php";
+					}
+					if(empty($path)){
+						$path = "/index/";
+					}
 				}
+				else if(file_exists($this->deprecated_controller_path)){
+                    $objectType = "controller";
+                    $obj_name = "c".str_replace(' ','',ucWords( str_replace('-',' ',$obj_name) ) );
+                    $this->path = $this->deprecated_controller_path;
+                    // include the root controller
+                    if(file_exists(__OBRAY_SITE_ROOT__ . "controllers/cRoot.php")){
+                    	require_once __OBRAY_SITE_ROOT__."controllers/cRoot.php";
+                    }
+                    if(empty($path)){
+                    	$path = "/index/";
+                    }
+                }
 
-				
-				if ( !empty($objectType) ) {
-					
+				if (!empty($objectType)){
+
 					require_once $this->path;
-					
-					if (!class_exists( $obj_name )) { $this->throwError("File exists, but could not find object: $obj_name",404,'notfound'); return $this; } else {
-						
+					$class_exists = false;
+
+                    if (class_exists( $obj_name )) {
+                        $class_exists = true;
+                    }
+                    else if($this->_namespacedClassExists($this->path, $obj_name)){
+                        $class_exists = true;
+                        $obj_name = $this->namespaced_path;
+                    }
+
+					if ($class_exists){
+
 						try{
 
 				    		//	CREATE OBJECT
@@ -431,11 +493,14 @@
 				    		$params = array_merge($obj->checkPermissions('object',$direct),$params);
 
 				    		//	SETUP DATABASE CONNECTION
-				    		if( method_exists($obj,'setDatabaseConnection') ){ $obj->setDatabaseConnection(getDatabaseConnection()); }
+				    		if(method_exists($obj,'setDatabaseConnection')){
+				    			$obj->setDatabaseConnection(getDatabaseConnection());
+				    		}
 
 				    		//	ROUTE REMAINING PATH - function calls
-							if(!empty($path))
-								$obj->route($path,$params,$direct);
+							if(!empty($path)){
+                                $obj->route($path,$params,$direct);
+                            }
 
 					        return $obj;
 
