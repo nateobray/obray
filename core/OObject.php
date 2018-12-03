@@ -532,30 +532,7 @@
 				try {
 					$params = array_merge($this->checkPermissions($path, $direct), $params);
 					if (!$this->isError()) {
-						
-						$reflector = new ReflectionMethod($this, $path);
-						$function_parameters = $reflector->getParameters();
-						
-						if( count($function_parameters) === 1 && $function_parameters[0]->name === 'params' ){
-							$this->$path($params);
-						} else if( count($function_parameters) > 0 ) {
-
-							$parameters = array();
-							forEach( $function_parameters as $function_parameter ){
-								if( !empty($params[$function_parameter->name]) ){
-									$parameters[] = $params[$function_parameter->name];
-								} else if( !$function_parameter->isOptional() ) {
-									$this->throwError("Missing method parameter.", 500, $function_parameter->name );
-								}
-							}
-							if( !empty($parameters) && empty($this->errors) ){
-								call_user_func_array(array($this, $path), $parameters);
-							}
-							
-						} else {
-							$this->$path();
-						}
-						
+						$this->$path($params);
 					}
 				} catch (Exception $e) {
 					$this->throwError($e->getMessage());
