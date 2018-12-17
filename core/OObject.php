@@ -75,6 +75,8 @@
 
 	********************************************************************************************************************/
 
+	use DI\Container;
+
 	Class OObject {
 
 		// private data members
@@ -394,7 +396,7 @@
 		private function createObject($path_array,$path,$base_path,&$params,$direct){
 			
 			$path = '';
-
+			$isNamespacedPath = false;
 			$deprecatedControllersPath = "controllers/";
 			$namespacedControllersPath = "app/controllers/";
 			$namespacedModelsPath = "app/models/";
@@ -429,6 +431,7 @@
                 if(file_exists($this->namespaced_model_path)){
                     $objectType = "model";
                     $this->path = $this->namespaced_model_path;
+                    $isNamespacedPath = true;
                 }
 				else if(file_exists($this->deprecated_model_path)){
 					$objectType = "model";
@@ -445,6 +448,7 @@
 					if(empty($path)){
 						$path = "/index/";
 					}
+					$isNamespacedPath = true;
 				}
 				else if(file_exists($this->deprecated_controller_path)){
                     $objectType = "controller";
@@ -477,7 +481,13 @@
 						try{
 
 				    		//	CREATE OBJECT
-				    		$obj = new $obj_name($params,$direct,$rPath);
+							if($isNamespacedPath){
+								$container = new Container();
+								$obj = $container->get($obj_name);
+							}
+							else {
+								$obj = new $obj_name($params,$direct,$rPath);
+							}
 				    		$obj->objectType = $objectType;
 				    		$obj->setObject(get_class($obj));
 				    		$obj->setContentType($obj->content_type);

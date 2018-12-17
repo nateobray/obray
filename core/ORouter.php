@@ -151,11 +151,6 @@
 			if(!headers_sent()){ header('Content-Type: ' . $content_type ); }                              					// set Content-Type
 			if( !empty($tmp_type) ){ $content_type = $tmp_type; }
 
-			//if(!headers_sent()){ header('Content-Type: ' . 'application/json' ); }
-			//$content_type = 'text/csv';
-			
-			//if(!headers_sent()){ header('Access-Control-Allow-Origin: *'); }
-			//if(!headers_sent()){ header('Access-Control-Allow-Headers: Obray-Token'); }
 
 			/*****************************************************************************************
 
