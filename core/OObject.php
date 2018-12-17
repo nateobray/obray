@@ -75,7 +75,7 @@
 
 	********************************************************************************************************************/
 
-	use DI\Container;
+	use DI\ContainerBuilder;
 
 	Class OObject {
 
@@ -441,10 +441,7 @@
 					$objectType = "controller";
 					$obj_name = "c".str_replace(' ','',ucWords( str_replace('-',' ',$obj_name) ) );
 					$this->path = $this->namespaced_controller_path;
-					// include the root controller
-					if(file_exists(__OBRAY_SITE_ROOT__ . "controllers/cRoot.php")){
-						require_once __OBRAY_SITE_ROOT__."controllers/cRoot.php";
-					}
+
 					if(empty($path)){
 						$path = "/index/";
 					}
@@ -482,7 +479,8 @@
 
 				    		//	CREATE OBJECT
 							if($isNamespacedPath){
-								$container = new Container();
+								$builder = new ContainerBuilder();
+								$container = $builder->build();
 								$obj = $container->get($obj_name);
 							}
 							else {
