@@ -480,6 +480,7 @@
 				    		//	CREATE OBJECT
 							if($isNamespacedPath){
 								$builder = new ContainerBuilder();
+								$builder->addDefinitions(__OBRAY_SITE_ROOT__.'di-config.php');
 								$container = $builder->build();
 								$obj = $container->get($obj_name);
 							}
