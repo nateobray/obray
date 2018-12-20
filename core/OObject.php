@@ -75,8 +75,6 @@
 
 	********************************************************************************************************************/
 
-	use DI\ContainerBuilder;
-
 	Class OObject {
 
 		// private data members
@@ -89,6 +87,7 @@
 		private $missing_path_handler;																// if path is not found by router we can pass it to this handler for another attempt
 		private $missing_path_handler_path;															// the path of the missing handler
 		private $access;
+		private static $container = null;
 
 		// public data members
 		public $object = '';                                                                        // stores the name of the class
@@ -393,6 +392,15 @@
 
 		***********************************************************************/
 
+		private function getContainerSingleton() {
+			if(self::$container == null){
+				$builder = new \DI\ContainerBuilder();
+				$builder->addDefinitions(__OBRAY_SITE_ROOT__.'di-config.php');
+				return self::$container = $builder->build();
+			}
+			return self::$container;
+		}
+
 		private function createObject($path_array,$path,$base_path,&$params,$direct){
 			
 			$path = '';
@@ -400,6 +408,7 @@
 			$deprecatedControllersPath = "controllers/";
 			$namespacedControllersPath = "app/controllers/";
 			$namespacedModelsPath = "app/models/";
+			$deprecatedControllersDirectoryExists = false;
 			$rPath = array();
 
 			if( empty($path_array) && empty($this->object) && empty($base_path)){
@@ -410,6 +419,7 @@
 
                 if(empty($base_path)){
                     if(is_dir(__OBRAY_SITE_ROOT__.$deprecatedControllersPath.implode('/',$path_array))){
+						$deprecatedControllersDirectoryExists = true;
                         $path_array[] = $path_array[(count($path_array)-1)];
                     }
                     if(is_dir(__OBRAY_SITE_ROOT__.$namespacedControllersPath.implode('/',$path_array))){
@@ -479,9 +489,7 @@
 
 				    		//	CREATE OBJECT
 							if($isNamespacedPath){
-								$builder = new ContainerBuilder();
-								$builder->addDefinitions(__OBRAY_SITE_ROOT__.'di-config.php');
-								$container = $builder->build();
+								$container = $this->getContainerSingleton();
 								$obj = $container->get($obj_name);
 							}
 							else {
