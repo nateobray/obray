@@ -78,13 +78,14 @@ Class oRouter extends oObject
                 $obj->throwError($e->getTrace(), $e->getCode(), "trace");
             }
         }
-        
+
         // prepare output method
         switch ($this->mode) {
             case 'http':
                 // set encoder by class property
-                $this->setEncoderByClassProperty($obj);
-                $this->setEncoderByContentType($this->content_type);
+                if(!$this->setEncoderByClassProperty($obj)){
+		    $this->setEncoderByContentType($this->content_type);
+		}
                 // prepare headers for HTTP
                 $this->prepareHTTP($obj);
                 break;
@@ -125,8 +126,10 @@ Class oRouter extends oObject
                 $encoder = $this->encodersByClassProperty[$key];
                 $this->encoder = new $encoder();
                 $this->content_type = $this->encoder->getContentType();
+		return true;
             }
         }
+	return false;
     }
 
     /**
