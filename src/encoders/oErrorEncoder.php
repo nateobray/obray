@@ -43,6 +43,7 @@ Class oErrorEncoder extends oJSONEncoder
             echo $json;
         } else {
             echo 'There was en error encoding JSON.';
+            print_r($obj->errors);
         }
     }
 

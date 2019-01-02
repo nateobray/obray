@@ -175,7 +175,7 @@ Class oObject {
         $object = array_pop($path_array);
         $path = 'c\\' . (!empty($path_array)?implode('\\',$path_array). '\\': '')  . 'c' . ucfirst($object) ;
         $index_path = 'c\\' . (!empty($path_array)?implode('\\',$path_array). '\\': '')  . (!empty($object)?$object.'\\':'') . 'cIndex' ;
-	print_r($path);
+        
         // check if path to controller exists, if so create object
         if(class_exists('\\'.$path)) {
             $path_array = explode('\\', $path);
@@ -319,6 +319,15 @@ Class oObject {
     public function getStatusCode()
     { 
         return $this->status_code; 
+    }
+
+    /**
+     * Simply returns the status code set on the object
+     */
+
+    public function setStatusCode($code)
+    { 
+        $this->status_code = $code;
     }
 
     /**

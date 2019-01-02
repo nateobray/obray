@@ -77,15 +77,18 @@ Class oRouter extends oObject
                 $obj->throwError($e->getLine(), $e->getCode(), "line");
                 $obj->throwError($e->getTrace(), $e->getCode(), "trace");
             }
+            if(empty($obj->getStatusCode())){
+                $obj->setStatusCode(500);
+            }
         }
-
+        
         // prepare output method
         switch ($this->mode) {
             case 'http':
                 // set encoder by class property
                 if(!$this->setEncoderByClassProperty($obj)){
-		    $this->setEncoderByContentType($this->content_type);
-		}
+                    $this->setEncoderByContentType($this->content_type);
+		        }
                 // prepare headers for HTTP
                 $this->prepareHTTP($obj);
                 break;
@@ -96,7 +99,7 @@ Class oRouter extends oObject
                 $this->setEncoderByContentType($this->content_type);
                 break;
         }
-
+        
         // encode data and output
         if (!empty($this->encoder)) {
             $encoded = $this->encoder->encode($obj, $this->start_time);
@@ -197,8 +200,9 @@ Class oRouter extends oObject
                 $obj->auth();
             }
         }
-
+        
         if (!headers_sent()) {
+            //if(!empty())
             header('HTTP/1.1 ' . $obj->getStatusCode() . ' ' . $status_codes[$obj->getStatusCode()]);
             if ($this->content_type == 'text/table') {
                 $tmp_type = 'text/table';
