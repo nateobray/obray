@@ -400,6 +400,7 @@
 			$namespacedControllersPath = "app/controllers/";
 			$namespacedModelsPath = "app/models/";
 			$rPath = array();
+			$deprecatedControllersDirectoryExists = false;
 
 			if( empty($path_array) && empty($this->object) && empty($base_path)){
 				if(empty($path_array)){	$path_array[] = "index";	}
@@ -408,14 +409,16 @@
 			while(count($path_array)>0){
 
                 if(empty($base_path)){
-                    if(is_dir(__OBRAY_SITE_ROOT__.$deprecatedControllersPath.implode('/',$path_array))){
+                	if(is_dir(__OBRAY_SITE_ROOT__.$deprecatedControllersPath.implode('/',$path_array))){
                         $path_array[] = $path_array[(count($path_array)-1)];
+                        $deprecatedControllersDirectoryExists = true;
                     }
-                    if(is_dir(__OBRAY_SITE_ROOT__.$namespacedControllersPath.implode('/',$path_array))){
-                        if(!$deprecatedControllersDirectoryExists){
-                            $path_array[] = $path_array[(count($path_array)-1)];
-                        }
-                    }
+					if(is_dir(__OBRAY_SITE_ROOT__.$namespacedControllersPath.implode('/',$path_array))){
+						if(!$deprecatedControllersDirectoryExists){
+							$path_array[] = $path_array[(count($path_array)-1)];
+						}
+					}
+
                 }
 
 
