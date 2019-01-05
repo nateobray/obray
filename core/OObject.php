@@ -369,14 +369,15 @@
 		}
 
         private function _namespacedClassExists($path,$obj_name){
+			
             $namespace_components = explode("/",$this->path);
             $namespace_components  = array_filter($namespace_components, function($item){
             	return $item !== "app";
 			});
             array_pop($namespace_components);
-            $namespace_str = implode("/", $namespace_components);
-            $namespace = str_replace("/","\\", str_replace(__OBRAY_NAMESPACE_ROOT__,'',$namespace_str));
-            $namespaced_path = "\\".$namespace."\\".$obj_name;
+			$namespace_str = implode("/", $namespace_components);
+			$namespace = str_replace("/","\\", str_replace(__OBRAY_NAMESPACE_ROOT__,'hq\\',$namespace_str));
+			$namespaced_path = "\\".$namespace."\\".$obj_name;
             $exists = class_exists($namespaced_path);
             if($exists){
                 $this->namespaced_path = $namespaced_path;
