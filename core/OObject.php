@@ -375,9 +375,9 @@
             	return $item !== "app";
 			});
             array_pop($namespace_components);
-            $namespace_str = implode("/", $namespace_components);
-            $namespace = str_replace("/","\\", str_replace(__OBRAY_NAMESPACE_ROOT__,'',$namespace_str));
-            $namespaced_path = "\\".$namespace."\\".$obj_name;
+			$namespace_str = implode("/", $namespace_components);
+			$namespace = str_replace("/","\\", str_replace(__OBRAY_NAMESPACE_ROOT__,'hq\\',$namespace_str));
+			$namespaced_path = "\\".$namespace."\\".$obj_name;
             $exists = class_exists($namespaced_path);
             if($exists){
                 $this->namespaced_path = $namespaced_path;
@@ -422,11 +422,11 @@
 						$deprecatedControllersDirectoryExists = true;
                         $path_array[] = $path_array[(count($path_array)-1)];
                     }
-                    if(is_dir(__OBRAY_SITE_ROOT__.$namespacedControllersPath.implode('/',$path_array))){
-                        if(!$deprecatedControllersDirectoryExists){
-                            $path_array[] = $path_array[(count($path_array)-1)];
-                        }
-                    }
+					if(is_dir(__OBRAY_SITE_ROOT__.$namespacedControllersPath.implode('/',$path_array))){
+						if(!$deprecatedControllersDirectoryExists){
+							$path_array[] = $path_array[(count($path_array)-1)];
+						}
+					}
                 }
 
 
