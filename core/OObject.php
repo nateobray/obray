@@ -376,7 +376,7 @@
 			});
             array_pop($namespace_components);
 			$namespace_str = implode("/", $namespace_components);
-			$namespace = str_replace("/","\\", str_replace(__OBRAY_NAMESPACE_ROOT__,'hq\\',$namespace_str));
+			$namespace = str_replace("/","\\", str_replace(__OBRAY_NAMESPACE_ROOT__,__OBRAY_APP_NAME__.'\\',$namespace_str));
 			$namespaced_path = "\\".$namespace."\\".$obj_name;
             $exists = class_exists($namespaced_path);
             if($exists){
