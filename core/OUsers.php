@@ -91,8 +91,8 @@ Class oUsers extends ODBO
 
         // get user based on credentials
         $this->get(array(
-            'ouser_email' => $params['ouser_email'],
-            'ouser_password' => $params['ouser_password'])
+                'ouser_email' => $params['ouser_email'],
+                'ouser_password' => $params['ouser_password'])
         );
 
         // if the data is empty or more than one user is found
