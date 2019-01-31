@@ -1,16 +1,17 @@
 {
-    "name": "obray/obray",
-    "description": "Simple PHP framework for websites and applications.",
-    "license": "MIT",
-    "homepage": "http://www.obray.net",
-    "require": {
-        "php": ">=5.6",
-        "php-di/php-di": "^6.0",
-        "ocramius/proxy-manager": "^2.1"
-    },
-    "autoload": {
-        "psr-4": {
-            "obray\\": "core"
-        }
+  "name": "obray/obray",
+  "description": "Simple PHP framework for websites and applications.",
+  "license": "MIT",
+  "homepage": "http://www.obray.net",
+  "require": {
+    "php": ">=5.6",
+    "php-di/php-di": "^6.0",
+    "ocramius/proxy-manager": "^2.1",
+    "ext-pdo": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "obray\\": "core"
     }
+  }
 }

@@ -43,6 +43,7 @@
 	    public $enable_system_columns = TRUE;
 
 	    public function __construct(){
+	        $this->setDatabaseConnection(self::getDatabaseConnection());
 
 	    	$this->primary_key_column = '';
 	    	$this->data_types = array();
@@ -114,13 +115,33 @@
 	    	}
 	    }
 
-	    public function setDatabaseConnection($dbh){
+        public function setDatabaseConnection($dbh)
+        {
+            $this->dbh = $dbh;
+            if (!isSet($this->table) || $this->table == '') {
+                return;
+            }
+            if (__OBRAY_DEBUG_MODE__) {
+                $this->scriptTable();
+                $this->alterTable();
+            }
+        }
 
-			$this->dbh = $dbh;
-			if( !isSet($this->table) || $this->table == '' ){ return; }
-			if(__OBRAY_DEBUG_MODE__){ $this->scriptTable(); $this->alterTable(); }
-
-	    }
+        public static function getDatabaseConnection($reconnect = FALSE)
+        {
+            /* TODO - REFACTOR USAGE OF GLOBAL */
+            global $conn;
+            if (!isSet($conn) || $reconnect) {
+                try {
+                    $conn = new PDO('mysql:host=' . __OBRAY_DATABASE_HOST__ . ';dbname=' . __OBRAY_DATABASE_NAME__ . ';charset=utf8', __OBRAY_DATABASE_USERNAME__, __OBRAY_DATABASE_PASSWORD__, array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'));
+                    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                } catch (PDOException $e) {
+                    echo 'ERROR: ' . $e->getMessage();
+                    exit();
+                }
+            }
+            return $conn;
+        }
 
         /*************************************************************************************************************
 
@@ -414,7 +435,7 @@
 				if( !empty($option_is_set) ){ $get_params["with"] = "options"; }
 				$this->get( $get_params );
 			}
-			
+
 
         }
 
@@ -473,15 +494,15 @@
 	        	}
 	        	if( !empty($columns) ){ $order_by = ' ORDER BY ' . implode(',',$columns); } else { $order_by = ''; }
         	}
-        	
+
 	        $withs = array(); $original_withs = array();
-	        
+
 	        if( !empty($params['with']) ){ $withs = explode('|',$params['with']); $original_withs = $withs; }
-	        
+
 	        $columns = array();
 	        $withs_to_pass = array();
 	        $filter_columns = array();
-	        
+
 	        forEach($this->table_definition as $column => $def){
 	        	if( isSet($def['data_type']) && $def['data_type'] == "filter" ){ $filter_columns[] = $columns; continue; }
 	        	if( isSet($def['data_type']) && $def['data_type'] == 'password' && isSet($params[$column]) ){ $password_column = $column; $password_value = $params[$column]; unset($params[$column]); }
@@ -533,7 +554,7 @@
 			$statement->execute();
 			$statement->setFetchMode(PDO::FETCH_NUM);
 			$data = $statement->fetchAll(PDO::FETCH_OBJ);
-			
+
 	        $this->data = $data;
 
 	        if( !empty($withs) && !empty($this->data) ){
@@ -600,7 +621,7 @@
 		        	unset($data->ouser_password);
 	        	}
         	}
-			
+
 			//Restructure the result set to be keyed by the column name provided
 			if(!empty($original_params['keyed']) && !empty($this->data[0]->{$original_params['keyed']}))
 			{
@@ -610,7 +631,7 @@
 					if(isset($data->{$original_params['keyed']}))
 						$keyed_data[strtolower($data->{$original_params['keyed']})] = $data;
 				}
-				
+
 				if(count($keyed_data))
 					$this->data = $keyed_data;
 			}
@@ -931,18 +952,18 @@
             }
             return $this;
         }
-		
+
 		public function explain( $sql ){
 
 			$this->console( 'EXPLAIN ' . $sql );
-			
+
             try {
-				
+
 				$result = $this->dbh->query('EXPLAIN ' . $sql);
 				forEach( $result as $r ){
 					$this->console($r);
 				}
-                
+
             }
             catch (Exception $e) {
                 if (isset($this->is_transaction) && $this->is_transaction) {
