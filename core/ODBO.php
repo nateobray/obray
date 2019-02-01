@@ -37,14 +37,18 @@ Class ODBO extends OObject
 {
 
     /**
-     * @var PDO $dbh PDO Connection
+     * @var PDO $dbh DB Handle
      */
     public $dbh;
     public $enable_system_columns = TRUE;
 
-    public function __construct()
+    public function __construct(\oDBConnection $oDBConnection = null)
     {
-        $this->setDatabaseConnection(self::getDatabaseConnection());
+        if ($oDBConnection !== null) {
+            $this->setDatabaseConnection($oDBConnection);
+        } else {
+            $this->setDatabaseConnection(self::getDatabaseConnection());
+        }
 
         $this->primary_key_column = '';
         $this->data_types = array();

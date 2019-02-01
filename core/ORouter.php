@@ -34,6 +34,7 @@ require_once 'oUserRoles.php';
 require_once 'oCLI.php';                                                            // object that provides a command line interface to obray applications
 require_once 'OUsers.php';                                                          // provides user authentication and permissions
 require_once 'oLog.php';
+require_once 'oDBConnection.php';
 
 if (!class_exists('OObject')) {
     die();
