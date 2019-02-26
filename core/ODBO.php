@@ -42,13 +42,9 @@ Class ODBO extends OObject
     public $dbh;
     public $enable_system_columns = TRUE;
 
-    public function __construct(\oDBConnection $oDBConnection = null)
+    public function __construct()
     {
-        if ($oDBConnection !== null) {
-            $this->setDatabaseConnection($oDBConnection);
-        } else {
-            $this->setDatabaseConnection(self::getDatabaseConnection());
-        }
+        $this->setDatabaseConnection(self::getDatabaseConnection());
 
         $this->primary_key_column = '';
         $this->data_types = array();
@@ -144,7 +140,6 @@ Class ODBO extends OObject
 
     public static function getDatabaseConnection($reconnect = FALSE)
     {
-        /* TODO - REFACTOR USAGE OF GLOBAL */
         global $conn;
         if (!isSet($conn) || $reconnect) {
             try {
