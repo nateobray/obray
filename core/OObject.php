@@ -490,7 +490,12 @@
 				    		//	CREATE OBJECT
 							if($isNamespacedPath){
 								$container = $this->getContainerSingleton();
-								$obj = $container->get($obj_name);
+								
+								$obj = $container->make($obj_name, [
+									'params' => $params,
+									'direct' => $direct,
+									'rPath' => $rPath
+								]);
 							}
 							else {
 								$obj = new $obj_name($params,$direct,$rPath);
