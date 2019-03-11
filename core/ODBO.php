@@ -1,28 +1,29 @@
 <?php
 
 /*****************************************************************************
- *
- * The MIT License (MIT)
- *
- * Copyright (c) 2014 Nathan A Obray <nathanobray@gmail.com>
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the 'Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+
+	The MIT License (MIT)
+
+	Copyright (c) 2014 Nathan A Obray <nathanobray@gmail.com>
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the 'Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in
+	all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+	THE SOFTWARE.
+
  *****************************************************************************/
 
 if (!class_exists('OObject')) {
@@ -30,14 +31,15 @@ if (!class_exists('OObject')) {
 }
 
 /********************************************************************************************************************
- *
- * ODBO:    This is the database interface object built specifically for MySQL and MariaDB.
+
+		ODBO:	This is the database interface object built specifically for MySQL and MariaDB.
+
  ********************************************************************************************************************/
 Class ODBO extends OObject
 {
 
     /**
-     * @var PDO $dbh DB Handle
+         * @var PDO $dbh PDO Connection
      */
     public $dbh;
     public $enable_system_columns = TRUE;
@@ -158,8 +160,9 @@ Class ODBO extends OObject
     }
 
     /*************************************************************************************************************
-     *
-     * SCRIPTTABLE
+
+            SCRIPTTABLE
+
      *************************************************************************************************************/
 
     public function scriptTable($params = array())
@@ -212,8 +215,9 @@ Class ODBO extends OObject
     }
 
     /*************************************************************************************************************
-     *
-     * ALTERTABLE
+
+            ALTERTABLE
+
      *************************************************************************************************************/
 
     public function alterTable()
@@ -296,8 +300,9 @@ Class ODBO extends OObject
     }
 
     /********************************************************************
-     *
-     * GETTABLEDEFINITION
+
+            GETTABLEDEFINITION
+
      ********************************************************************/
 
     public function getTableDefinition()
@@ -328,8 +333,9 @@ Class ODBO extends OObject
     }
 
     /********************************************************************
-     *
-     * ADD function
+
+            ADD function
+
      ********************************************************************/
 
     public function add($params = array())
@@ -442,7 +448,7 @@ Class ODBO extends OObject
     }
 
     /********************************************************************
-     * UPDATE function
+            UPDATE function
      ********************************************************************/
 
     public function update($params = array())
@@ -552,8 +558,9 @@ Class ODBO extends OObject
     }
 
     /********************************************************************
-     *
-     * DELETE function
+
+            DELETE function
+
      ********************************************************************/
 
     public function delete($params = array())
@@ -588,8 +595,9 @@ Class ODBO extends OObject
     }
 
     /********************************************************************
-     *
-     * GET function
+
+            GET function
+
      ********************************************************************/
 
     public function get($params = array())
@@ -879,8 +887,9 @@ Class ODBO extends OObject
     }
 
     /********************************************************************
-     *
-     * GETWHERE
+
+            GETWHERE
+
      ********************************************************************/
 
     private function getWhere(&$params = array(), &$values = array(), &$original_params = array())
@@ -1021,8 +1030,9 @@ Class ODBO extends OObject
     }
 
     /********************************************************************
-     *
-     * DUMP
+
+            DUMP
+
      ********************************************************************/
 
     public function dump($params = array())
@@ -1033,8 +1043,9 @@ Class ODBO extends OObject
     }
 
     /********************************************************************
-     *
-     * GETDATATYPE
+
+			GETDATATYPE
+
      ********************************************************************/
 
     private function getDataType($def)
@@ -1051,8 +1062,9 @@ Class ODBO extends OObject
     }
 
     /********************************************************************
-     *
-     * GETSLUG
+
+			GETSLUG
+
      ********************************************************************/
 
     private function getSlug($slug, $column, $parent)
@@ -1084,8 +1096,9 @@ Class ODBO extends OObject
     }
 
     /********************************************************************
-     *
-     * SORT
+
+			SORT
+
      ********************************************************************/
 
     public function sort($column, $order = 'asc', $with = null, $query = '')
@@ -1186,8 +1199,9 @@ Class ODBO extends OObject
     }
 
     /********************************************************************
-     *
-     * GETFIRST
+
+			GETFIRST
+
      ********************************************************************/
 
     public function getFirst()
@@ -1207,8 +1221,9 @@ Class ODBO extends OObject
     }
 
     /********************************************************************
-     *
-     * RUN
+
+			RUN
+
      ********************************************************************/
 
     public function run($sql, $bind = array())
@@ -1262,8 +1277,9 @@ Class ODBO extends OObject
     }
 
     /********************************************************************
-     *
-     * runStoredProc
+
+        runStoredProc
+
      ********************************************************************/
 
     public function runStoredProc($proc, $params = array())
@@ -1302,8 +1318,9 @@ Class ODBO extends OObject
     }
 
     /********************************************************************
-     *
-     * COUNT
+
+			COUNT
+
      ********************************************************************/
 
     public function count($params = array())
@@ -1331,8 +1348,9 @@ Class ODBO extends OObject
     }
 
     /********************************************************************
-     *
-     * RAND
+
+			RAND
+
      ********************************************************************/
 
     public function random($params = array())
@@ -1361,8 +1379,9 @@ Class ODBO extends OObject
     }
 
     /********************************************************************
-     *
-     * MATH FUNCTIONS
+
+			MATH FUNCTIONS
+
      ********************************************************************/
 
     public function sum($params = array())
@@ -1421,8 +1440,9 @@ Class ODBO extends OObject
     }
 
     /********************************************************************
-     *
-     * UNIQUE
+
+			UNIQUE
+
      ********************************************************************/
 
     public function unique($params = array())
@@ -1454,8 +1474,9 @@ Class ODBO extends OObject
     }
 
     /********************************************************************
-     *
-     * LOG
+
+			LOG
+
      ********************************************************************/
 
     protected function log($object, $label = null)
@@ -1478,8 +1499,9 @@ Class ODBO extends OObject
     }
 
     /********************************************************************
-     *
-     * GENERATETOKEN
+
+			GENERATETOKEN
+
      ********************************************************************/
 
     private function generateToken()
