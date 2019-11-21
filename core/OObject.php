@@ -394,9 +394,12 @@
 
 		private function getContainerSingleton() {
 			if(self::$container == null){
+				$this->console("getContainerSignleton");
 				$builder = new \DI\ContainerBuilder();
 				$builder->addDefinitions(__OBRAY_SITE_ROOT__.'di-config.php');
+				$this->console("returning getContainerSignleton");
 				return self::$container = $builder->build();
+
 			}
 			return self::$container;
 		}
@@ -466,7 +469,9 @@
                     	if (class_exists( "cRoot" ) || class_exists( "\cRoot" )) {
 							// do nothing
 						} else {
+							$this->console("Requiring: " . __OBRAY_SITE_ROOT__."controllers/cRoot.php\n");
 							require_once __OBRAY_SITE_ROOT__."controllers/cRoot.php";
+							$this->console("Requiring: " . __OBRAY_SITE_ROOT__."controllers/cRoot.php done\n");
 						}
                     }
                     if(empty($path)){
@@ -477,7 +482,9 @@
 				if (!empty($objectType)){
 
 					if (!class_exists( $obj_name )) {
+						$this->console("Requiring: " . $this->path . "\n");
 						require_once $this->path;
+						$this->console("Require: " . $this->path . " done\n");
 					}
 					$class_exists = false;
 
@@ -492,16 +499,18 @@
 					if ($class_exists){
 
 						try{
-
 				    		//	CREATE OBJECT
 							if($isNamespacedPath){
+								$this->console("Creatinging container object\n");
 								$container = $this->getContainerSingleton();
+								$this->console("Calling make for: ".$obj_name."\n");
 								
 								$obj = $container->make($obj_name, [
 									'params' => $params,
 									'direct' => $direct,
 									'rPath' => $rPath
 								]);
+								$this->console("Done with make for: ".$obj_name."\n");
 							}
 							else {
 								$obj = new $obj_name($params,$direct,$rPath);
