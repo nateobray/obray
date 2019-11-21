@@ -756,7 +756,14 @@
 			$obj_name = array_pop($components['path_array']);
 			if( count($components['path_array']) > 0 ){ $seperator = '/'; } else { $seperator = ''; }
 			$path = $components['base_path'] . implode('/',$components['path_array']).$seperator.$obj_name.'.php';
-			if (file_exists( $path ) ) { require_once $path; if (class_exists( $obj_name )){ return TRUE; } }
+			if (file_exists( $path ) ) { 
+				if(!class_exists( $obj_name )){
+					require_once $path; 
+				}
+				if (class_exists( $obj_name )){ 
+					return TRUE; 
+				} 
+			}
 
 			return FALSE;
 
