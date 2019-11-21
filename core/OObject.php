@@ -481,7 +481,9 @@
 
 				if (!empty($objectType)){
 
-					if (!class_exists( $obj_name )) {
+					$doesNamespaceClassExist = $this->_namespacedClassExists($this->path, $obj_name);
+
+					if (!class_exists( $obj_name ) && !$doesNamespaceClassExist) {
 						$this->console("Requiring: " . $this->path . "\n");
 						require_once $this->path;
 						$this->console("Require: " . $this->path . " done\n");
@@ -491,7 +493,7 @@
                     if (class_exists( $obj_name )) {
                         $class_exists = true;
                     }
-                    else if($this->_namespacedClassExists($this->path, $obj_name)){
+                    else if( $doesNamespaceClassExist ){
                         $class_exists = true;
                         $obj_name = $this->namespaced_path;
                     }
