@@ -463,7 +463,11 @@
                     $this->path = $this->deprecated_controller_path;
                     // include the root controller
                     if(file_exists(__OBRAY_SITE_ROOT__ . "controllers/cRoot.php")){
-                    	require_once __OBRAY_SITE_ROOT__."controllers/cRoot.php";
+                    	if (class_exists( "cRoot" ) || class_exists( "\cRoot" )) {
+							// do nothing
+						} else {
+							require_once __OBRAY_SITE_ROOT__."controllers/cRoot.php";
+						}
                     }
                     if(empty($path)){
                     	$path = "/index/";
