@@ -472,7 +472,9 @@
 
 				if (!empty($objectType)){
 
-					require_once $this->path;
+					if (!class_exists( $obj_name )) {
+						require_once $this->path;
+					}
 					$class_exists = false;
 
                     if (class_exists( $obj_name )) {
