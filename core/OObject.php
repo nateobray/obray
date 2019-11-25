@@ -188,6 +188,8 @@
 				handle remote HTTP(S) calls
 			*********************************/
 			if( isSet($components['host']) && $direct ){
+
+				$returnObject = new \OObject();
 				
 				$timeout = 5;
 				$ch = curl_init();
@@ -258,9 +260,9 @@
 				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
 				curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
 				curl_setopt($ch, CURLOPT_TIMEOUT, 400); //timeout in seconds
-				$this->data = curl_exec($ch);
+				$returnObject->data = curl_exec($ch);
 				if( $debug ){
-					$this->console($this->data);
+					$this->console($returnObject->data);
 				}
 				
 				$headers = curl_getinfo($ch, CURLINFO_HEADER_OUT);
@@ -268,33 +270,33 @@
 				$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 				$info = curl_getinfo( $ch );
 				$this->console($info);
-				$data = json_decode($this->data);
+				$data = json_decode($returnObject->data);
 				
 				$info["http_code"] =  intval($info["http_code"]);
 				if( !( $info["http_code"] >= 200 && $info["http_code"] < 300)  ){
 					//echo "HTTP CODE IS NOT 200";
 					if( !empty($data->Message) ){
-						$this->throwError($data->Message,$info["http_code"]);
+						$returnObject->throwError($data->Message,$info["http_code"]);
 					} else if ( !empty($data->error) ){
-						$this->throwError( $data->error );
+						$returnObject->throwError( $data->error );
 					} else if ( !empty($data->errors) ){
-						$this->throwError("");
-						$this->errors = $data->errors;
-					} else if (!empty($this->data)) {
+						$returnObject->throwError("");
+						$returnObject->errors = $data->errors;
+					} else if (!empty($returnObject->data)) {
 						//$this->data = $this->data;
 					} else {
-						$this->throwError("An error has occurred with no message.",$info["http_code"]);
+						$returnObject->throwError("An error has occurred with no message.",$info["http_code"]);
 					}
-					if( empty($this->data) ){ $this->data = array(); }
-					return $this;
+					if( empty($returnObject->data) ){ $returnObject->data = array(); }
 				} else {
-					if( !empty($data) ){ $this->data = $data; } else { return $this; }
-					if( !empty($this->data) ){
-						if( isSet($this->data->errors) ){ $this->errors = $this->data->errors; }
-						if( isSet($this->data->html) ){ $this->html = $this->data->html; }
-						if( isSet($this->data->data) && empty($show_raw_data) ){ $this->data = $this->data->data; }
+					if( !empty($data) ){ $returnObject->data = $data; } else { return $returnObject; }
+					if( !empty($returnObject->data) ){
+						if( isSet($returnObject->data->errors) ){ $returnObject->errors = $returnObject->data->errors; }
+						if( isSet($returnObject->data->html) ){ $returnObject->html = $returnObject->data->html; }
+						if( isSet($returnObject->data->data) && empty($show_raw_data) ){ $returnObject->data = $returnObject->data->data; }
 					}
 				}
+				return $returnObject;
 			} else {
 
 	    		/*********************************
