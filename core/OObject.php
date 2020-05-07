@@ -413,6 +413,8 @@
 			$namespacedModelsPath = "app/models/";
 			$deprecatedControllersDirectoryExists = false;
 			$rPath = array();
+			$obj_name_loop_counter = 0;
+			$obj_name_loop_name_check = "";
 
 			if( empty($path_array) && empty($this->object) && empty($base_path)){
 				if(empty($path_array)){	$path_array[] = "index";	}
@@ -541,6 +543,15 @@
 				} else {
 					$rPath[] = strtolower($obj_name);
 					$path = '/'.$obj_name;
+
+					if($obj_name_loop_name_check === $obj_name){
+						$obj_name_loop_counter++;
+						if($obj_name_loop_counter > 10){
+							break;
+						}
+					}
+
+					$obj_name_loop_name_check = $obj_name;
 				}
 
 			}
