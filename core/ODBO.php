@@ -287,7 +287,7 @@
 
 					if( isSet($this->required[$key]) ){ unset($this->required[$key]); }
 					if( isSet($def['data_type']) && !empty($this->data_types[$data_type['data_type']]['validation_regex']) && !preg_match($this->data_types[$data_type['data_type']]['validation_regex'],$params[$key]) && $params[$key] == NULL ){
-					   $this->throwError(isSet($def['error_message'])?$def['error_message']:isSet($def['label'])?$def['label'].' is invalid.':$key.' is invalid.','500',$key);
+					   $this->throwError((isSet($def['error_message'])?$def['error_message']:isSet($def['label']))?$def['label'].' is invalid.':$key.' is invalid.','500',$key);
 					}
 
 					if( isSet($def['data_type']) && $def['data_type'] == 'password' ){ $salt = '$2a$12$'.$this->generateToken(); $data[$key] = crypt($params[$key],$salt); }
@@ -302,7 +302,7 @@
         	if( !empty($this->required) ){
 	        	forEach($this->required as $key => $value){
 	        		$def = $this->table_definition[$key];
-		        	$this->throwError(isSet($def['error_message'])?$def['error_message']:isSet($def['label'])?$key.' is required.':$key.' is required.','500',$key);
+		        	$this->throwError((isSet($def['error_message'])?$def['error_message']:isSet($def['label']))?$key.' is required.':$key.' is required.','500',$key);
 	        	}
         	}
 
@@ -369,11 +369,11 @@
 		        	$data_type = $this->getDataType($def);
 
 					if( isSet($def['required']) && $def['required'] === TRUE && (!isSet($params[$key]) || $params[$key] === NULL || $params[$key] === '') ){
-						$this->throwError(isSet($def['error_message'])?$def['error_message']:isSet($def['label'])?$def['label'].' is required.':$key.' is required.',500,$key);
+						$this->throwError((isSet($def['error_message'])?$def['error_message']:isSet($def['label']))?$def['label'].' is required.':$key.' is required.',500,$key);
 					}
 
 					if( (isSet($def['data_type']) && !empty($this->data_types[$data_type['data_type']]['validation_regex']) && !preg_match($this->data_types[$data_type['data_type']]['validation_regex'],$params[$key])) && $params[$key] == NULL ){
-						$this->throwError(isSet($def['error_message'])?$def['error_message']:isSet($def['label'])?$def['label'].' is invalid.':$key.' is invalid.',500,$key);
+						$this->throwError((isSet($def['error_message'])?$def['error_message']:isSet($def['label']))?$def['label'].' is invalid.':$key.' is invalid.',500,$key);
 					}
 
 					if( isSet($def['data_type']) && $def['data_type'] == 'password' ){ $salt = '$2a$12$'.$this->generateToken(); $data[$key] = crypt($params[$key],$salt); }
