@@ -44,7 +44,7 @@
 
 	}
 
-	function getReaderDBConnection( $reconnect=FALSE )
+	function getReaderDatabaseConnection( $reconnect=FALSE )
 	{
 		global $readConn;
 		if(!defined('__OBRAY_DATABASE_HOST_READER__')){
