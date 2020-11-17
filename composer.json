@@ -6,7 +6,6 @@
   "require": {
     "php": ">=7.1",
     "ext-pdo": "*",
-    "ext-ncurses": "*",
     "php-di/php-di": "^6.0",
     "ocramius/proxy-manager": "^2.1"
   },
