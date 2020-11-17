@@ -533,7 +533,7 @@
 	        $where_str = $this->getWhere($params,$values,$original_params);
 
 	        $this->sql = 'SELECT '.implode(',',$columns).' FROM '.$this->table . $this->getJoin() . $filter_join .$where_str . $order_by . $limit;
-	        $statement = (!empth($this->reader))?$this->reader->prepare($this->sql):$this->dbh->prepare($this->sql);
+	        $statement = (!empty($this->reader))?$this->reader->prepare($this->sql):$this->dbh->prepare($this->sql);
 	        forEach($values as $value){ if( is_integer($value) ){ $statement->bindValue($value['key'], trim($value['value']), PDO::PARAM_INT); } else { $statement->bindValue($value['key'], trim((string)$value['value']), PDO::PARAM_STR); } }
 			$statement->execute();
 			$statement->setFetchMode(PDO::FETCH_NUM);
