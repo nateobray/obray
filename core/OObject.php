@@ -44,6 +44,21 @@
 
 	}
 
+	function getReaderDBConnection( $reconnect=FALSE )
+	{
+		global $readConn;
+		if(!defined('__OBRAY_DATABASE_HOST_READER__')){
+			return false;
+		}
+		if( !isSet( $readConn ) || $reconnect ){
+			try {
+		        $readConn = new PDO('mysql:host='.__OBRAY_DATABASE_HOST_READER__.';dbname='.__OBRAY_DATABASE_NAME_READER__.';charset=utf8', __OBRAY_DATABASE_USERNAME_READER__,__OBRAY_DATABASE_PASSWORD_READER__,array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'));
+		        $readConn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+		    } catch(PDOException $e) { echo 'ERROR: ' . $e->getMessage(); exit(); }
+		}
+	    return $readConn;
+	}
+
 	/******************************************************
 	    REMOVE SPECIAL CHARS (cleans a string)
 	******************************************************/
@@ -188,7 +203,7 @@
 				handle remote HTTP(S) calls
 			*********************************/
 			if( isSet($components['host']) && $direct ){
-
+				
 				$timeout = 5;
 				$ch = curl_init();
 				curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
@@ -241,14 +256,14 @@
 					curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
 				}
 				if( $debug ){ $this->console($params); }
-
-				if( !empty($headers) ){
+				
+				if( !empty($headers) ){ 
 					if( $debug ){
 						$this->console("*****HEADERS*****");
 						$this->console($headers);
 					}
 					$this->console($headers);
-					curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+					curl_setopt($ch, CURLOPT_HTTPHEADER, $headers); 
 				} else {
 					if( $debug ){
 						$this->console("NO HEADERS SET!\n");
@@ -262,14 +277,14 @@
 				if( $debug ){
 					$this->console($this->data);
 				}
-
+				
 				$headers = curl_getinfo($ch, CURLINFO_HEADER_OUT);
 				$this->console($headers);
 				$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 				$info = curl_getinfo( $ch );
 				$this->console($info);
 				$data = json_decode($this->data);
-
+				
 				$info["http_code"] =  intval($info["http_code"]);
 				if( !( $info["http_code"] >= 200 && $info["http_code"] < 300)  ){
 					//echo "HTTP CODE IS NOT 200";
@@ -302,13 +317,13 @@
 	    		*********************************/
 
 	    		$_REQUEST = $params;
-
+				
 				$path_array = explode('/',$components['path']);
 				$path_array = array_filter($path_array);
 				$path_array = array_values($path_array);
-
+				
 				$base_path = $this->getBasePath($path_array);
-
+				
 				/*********************************
 					Validate Remote Application
 				*********************************/
@@ -316,7 +331,7 @@
 				if( $direct === FALSE ){
 					$this->validateRemoteApplication($direct);
 				}
-
+				
 				/*********************************
 					SET CONTENT TYPE FROM ROUTE
 				*********************************/
@@ -328,7 +343,7 @@
 				/*********************************
 					CALL FUNCTION
 				*********************************/
-
+				
 				if( empty($base_path) && count($path_array) == 1 && !empty($this->object) && $this->object != $path_array[0] ){
 					return $this->executeMethod($path,$path_array,$direct,$params);
 				}
@@ -397,12 +412,13 @@
 				$builder = new \DI\ContainerBuilder();
 				$builder->addDefinitions(__OBRAY_SITE_ROOT__.'di-config.php');
 				return self::$container = $builder->build();
+
 			}
 			return self::$container;
 		}
 
 		private function createObject($path_array,$path,$base_path,&$params,$direct){
-
+			
 			$path = '';
 			$isNamespacedPath = false;
 			$deprecatedControllersPath = "controllers/";
@@ -410,6 +426,8 @@
 			$namespacedModelsPath = "app/models/";
 			$deprecatedControllersDirectoryExists = false;
 			$rPath = array();
+			$obj_name_loop_counter = 0;
+			$obj_name_loop_name_check = "";
 
 			if( empty($path_array) && empty($this->object) && empty($base_path)){
 				if(empty($path_array)){	$path_array[] = "index";	}
@@ -463,7 +481,11 @@
                     $this->path = $this->deprecated_controller_path;
                     // include the root controller
                     if(file_exists(__OBRAY_SITE_ROOT__ . "controllers/cRoot.php")){
-                    	require_once __OBRAY_SITE_ROOT__."controllers/cRoot.php";
+                    	if (class_exists( "cRoot" ) || class_exists( "\cRoot" )) {
+							// do nothing
+						} else {
+							require_once __OBRAY_SITE_ROOT__."controllers/cRoot.php";
+						}
                     }
                     if(empty($path)){
                     	$path = "/index/";
@@ -472,13 +494,17 @@
 
 				if (!empty($objectType)){
 
-					require_once $this->path;
+					$doesNamespaceClassExist = $this->_namespacedClassExists($this->path, $obj_name);
+
+					if (!class_exists( $obj_name ) && !$doesNamespaceClassExist) {
+						require_once $this->path;
+					}
 					$class_exists = false;
 
                     if (class_exists( $obj_name )) {
                         $class_exists = true;
                     }
-                    else if($this->_namespacedClassExists($this->path, $obj_name)){
+                    else if( $doesNamespaceClassExist ){
                         $class_exists = true;
                         $obj_name = $this->namespaced_path;
                     }
@@ -486,11 +512,9 @@
 					if ($class_exists){
 
 						try{
-
 				    		//	CREATE OBJECT
 							if($isNamespacedPath){
 								$container = $this->getContainerSingleton();
-
 								$obj = $container->make($obj_name, [
 									'params' => $params,
 									'direct' => $direct,
@@ -510,6 +534,12 @@
 				    		//	CHECK PERMISSIONS
 				    		$params = array_merge($obj->checkPermissions('object',$direct),$params);
 
+				    		//	SETUP DATABASE CONNECTION
+				    		if(method_exists($obj,'setDatabaseConnection')){
+								$obj->setDatabaseConnection(getDatabaseConnection());
+								$obj->setReaderDatabaseConnection(getReaderDatabaseConnection());
+				    		}
+
 				    		//	ROUTE REMAINING PATH - function calls
 							if(!empty($path)){
                                 $obj->route($path,$params,$direct);
@@ -527,10 +557,19 @@
 				} else {
 					$rPath[] = strtolower($obj_name);
 					$path = '/'.$obj_name;
+
+					if($obj_name_loop_name_check === $obj_name){
+						$obj_name_loop_counter++;
+						if($obj_name_loop_counter > 10){
+							break;
+						}
+					}
+
+					$obj_name_loop_name_check = $obj_name;
 				}
 
 			}
-
+			
 			$this->throwError('Route not found object: '.$path,404,'notfound'); return $this;
 
 		}
@@ -596,9 +635,9 @@
 
 	    		// restrict permissions on undefined keys
 	    		if( !isSet($perms[$object_name]) ){
-
+					
 					$this->throwError('You cannot access this resource.',403,'Forbidden');
-
+					
 	    		// restrict access to users that are not logged in if that's required
 	    		} else if( ( $perms[$object_name] === 'user' && !isSet($_SESSION[$user_session_key]) ) || ( is_int($perms[$object_name]) && !isSet($_SESSION[$user_session_key]) ) ){
 
@@ -608,54 +647,54 @@
 		    		} else { $this->throwError('You cannot access this resource.',401,'Unauthorized'); }
 
 		    	// restrict access to users without correct permissions (non-graduated)
-	    		} else if(
-					is_int($perms[$object_name]) &&
-					isSet($_SESSION[$user_session_key]) &&
+	    		} else if( 
+					is_int($perms[$object_name]) && 
+					isSet($_SESSION[$user_session_key]) && 
 					(
-						isset($_SESSION[$user_session_key]->ouser_permission_level)
-						&& !defined("__OBRAY_GRADUATED_PERMISSIONS__")
+						isset($_SESSION[$user_session_key]->ouser_permission_level) 
+						&& !defined("__OBRAY_GRADUATED_PERMISSIONS__") 
 						&& $_SESSION[$user_session_key]->ouser_permission_level != $perms[$object_name]
 					)
-				){
+				){ 
 
-						$this->throwError('You cannot access this resource.',403,'Forbidden');
+						$this->throwError('You cannot access this resource.',403,'Forbidden'); 
 
 				// restrict access to users without correct permissions (graduated)
-				} else if(
-					is_int($perms[$object_name]) &&
-					isSet($_SESSION[$user_session_key]) &&
+				} else if( 
+					is_int($perms[$object_name]) && 
+					isSet($_SESSION[$user_session_key]) && 
 					(
-						isset($_SESSION[$user_session_key]->ouser_permission_level)
-						&& defined("__OBRAY_GRADUATED_PERMISSIONS__")
+						isset($_SESSION[$user_session_key]->ouser_permission_level) 
+						&& defined("__OBRAY_GRADUATED_PERMISSIONS__") 
 						&& $_SESSION[$user_session_key]->ouser_permission_level > $perms[$object_name]
 					)
 				){
 
-					$this->throwError('You cannot access this resource.',403,'Forbidden');
+					$this->throwError('You cannot access this resource.',403,'Forbidden'); 
 
 				// roles & permissions checks
 				} else if(
 					(
-						is_array($perms[$object_name]) &&
+						is_array($perms[$object_name]) && 
 						isSet($perms[$object_name]['permissions']) &&
 						is_array($perms[$object_name]['permissions']) &&
 						count(array_intersect($perms[$object_name]['permissions'],$_SESSION[$user_session_key]->permissions)) == 0
 					) || (
-						is_array($perms[$object_name]) &&
+						is_array($perms[$object_name]) && 
 						isSet($perms[$object_name]['roles']) &&
 						is_array($perms[$object_name]['roles']) &&
 						count(array_intersect($perms[$object_name]['roles'],$_SESSION[$user_session_key]->roles)) == 0
 					) || (
-						is_array($perms[$object_name]) &&
+						is_array($perms[$object_name]) && 
 						isSet($perms[$object_name]['roles']) &&
 						is_array($perms[$object_name]['roles']) &&
 						in_array("SUPER",$_SESSION[$user_session_key]->roles)
 					) || (
-						is_array($perms[$object_name]) &&
+						is_array($perms[$object_name]) && 
 						isSet($perms[$object_name]['permissions']) &&
 						!is_array($perms[$object_name]['permissions'])
 					) || (
-						is_array($perms[$object_name]) &&
+						is_array($perms[$object_name]) && 
 						isSet($perms[$object_name]['roles']) &&
 						!is_array($perms[$object_name]['roles'])
 					) || (
@@ -665,16 +704,16 @@
 					)
 				){
 
-					$this->throwError('You cannot access this resource.',403,'Forbidden');
-
+					$this->throwError('You cannot access this resource.',403,'Forbidden'); 
+				
 				// add user_id to params if restriction is based on user
 				} else {
-
+	
 					if( isSet($perms[$object_name]) && $perms[$object_name] === 'user' && isSet($_SESSION[$user_session_key]) ){ $params['ouser_id'] = $_SESSION['ouser']->ouser_id; }
 
 				}
 			}
-
+			
     		return $params;
 
 		}
@@ -710,8 +749,8 @@
 		private function getBasePath(&$path_array){
 			$base_path = '';
 			$routes = unserialize(__OBRAY_ROUTES__);
-			if(!empty($path_array) && isSet($routes[$path_array[0]])){
-				$base_path = $routes[array_shift($path_array)];
+			if(!empty($path_array) && isSet($routes[$path_array[0]])){ 
+				$base_path = $routes[array_shift($path_array)]; 
 			}
 			return $base_path;
 		}
@@ -745,7 +784,14 @@
 			$obj_name = array_pop($components['path_array']);
 			if( count($components['path_array']) > 0 ){ $seperator = '/'; } else { $seperator = ''; }
 			$path = $components['base_path'] . implode('/',$components['path_array']).$seperator.$obj_name.'.php';
-			if (file_exists( $path ) ) { require_once $path; if (class_exists( $obj_name )){ return TRUE; } }
+			if (file_exists( $path ) ) { 
+				if(!class_exists( $obj_name )){
+					require_once $path; 
+				}
+				if (class_exists( $obj_name )){ 
+					return TRUE; 
+				} 
+			}
 
 			return FALSE;
 
@@ -771,7 +817,10 @@
 				$params = array_merge($obj->checkPermissions('object',FALSE),$params);
 
 				//	SETUP DATABSE CONNECTION
-				if( method_exists($obj,'setDatabaseConnection') ){ $obj->setDatabaseConnection(getDatabaseConnection()); }
+				if( method_exists($obj,'setDatabaseConnection') ){ 
+					$obj->setDatabaseConnection(getDatabaseConnection()); 
+					$obj->setReaderDatabaseConnection(getReaderDatabaseConnection()); 
+				}
 
 				//	ROUTE REMAINING PATH - function calls
 				$obj->missing('/'.ltrim(rtrim($path,'/'),'/').'/',$params,FALSE);
@@ -930,3 +979,4 @@
 		}
 
 	}
+?>
