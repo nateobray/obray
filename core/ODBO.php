@@ -120,6 +120,12 @@
 			if( !isSet($this->table) || $this->table == '' ){ return; }
 			if(__OBRAY_DEBUG_MODE__){ $this->scriptTable(); $this->alterTable(); }
 
+		}
+		
+		public function setReaderDatabaseConnection($reader)
+		{
+			$this->reader = $reader;
+			if( !isSet($this->table) || $this->table == '' ){ return; }
 	    }
 
         /*************************************************************************************************************
