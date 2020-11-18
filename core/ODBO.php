@@ -915,10 +915,12 @@
                 $sql = $sql["sql"];
             }
             try {
-                $statement = $this->dbh->prepare($sql);
+                $isSelect = false;
+				if (preg_match("/^select/i", $sql)) $isSelect = true;
+                $statement = ($isSelect && !empty($this->reader))?$this->reader->prepare($sql):$this->dbh->prepare($sql);
                 $result = $statement->execute($bind);
                 $this->data = [];
-                if (preg_match("/^select/i", $sql)) {
+                if ($isSelect) {
                     $statement->setFetchMode(PDO::FETCH_OBJ);
                     while ($row = $statement->fetch()) {
                         $this->data[] = $row;
