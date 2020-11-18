@@ -536,7 +536,8 @@
 
 				    		//	SETUP DATABASE CONNECTION
 				    		if(method_exists($obj,'setDatabaseConnection')){
-				    			$obj->setDatabaseConnection(getDatabaseConnection());
+								$obj->setDatabaseConnection(getDatabaseConnection());
+								$obj->setReaderDatabaseConnection(getReaderDatabaseConnection());
 				    		}
 
 				    		//	ROUTE REMAINING PATH - function calls
@@ -816,7 +817,10 @@
 				$params = array_merge($obj->checkPermissions('object',FALSE),$params);
 
 				//	SETUP DATABSE CONNECTION
-				if( method_exists($obj,'setDatabaseConnection') ){ $obj->setDatabaseConnection(getDatabaseConnection()); }
+				if( method_exists($obj,'setDatabaseConnection') ){ 
+					$obj->setDatabaseConnection(getDatabaseConnection()); 
+					$obj->setReaderDatabaseConnection(getReaderDatabaseConnection());
+				}
 
 				//	ROUTE REMAINING PATH - function calls
 				$obj->missing('/'.ltrim(rtrim($path,'/'),'/').'/',$params,FALSE);
