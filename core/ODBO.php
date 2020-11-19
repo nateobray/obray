@@ -909,12 +909,13 @@
 
         ********************************************************************/
 
-        public function run( $sql, $bind=array(), $isSelect = false )
+        public function run( $sql, $bind=array(), $blah = false )
         {
             if (is_array($sql)) {
                 $sql = $sql["sql"];
             }
             try {
+				$isSelect = false;
 				if (preg_match("/^select/i", $sql)) $isSelect = true;
                 $statement = $this->dbh->prepare($sql);
                 $result = $statement->execute($bind);
