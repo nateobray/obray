@@ -909,7 +909,7 @@
 
         ********************************************************************/
 
-        public function run( $sql, $bind=array(), $blah = false )
+        public function run( $sql, $bind=array(), $forceReader = false )
         {
             if (is_array($sql)) {
                 $sql = $sql["sql"];
@@ -917,7 +917,7 @@
             try {
 				$isSelect = false;
 				if (preg_match("/^select/i", $sql)) $isSelect = true;
-                $statement = $this->dbh->prepare($sql);
+                $statement = ($forceReader)?$this->reader->prepare($sql):$this->dbh->prepare($sql);
                 $result = $statement->execute($bind);
                 $this->data = [];
                 if ($isSelect) {
