@@ -917,7 +917,7 @@
             try {
 				$isSelect = false;
 				if (preg_match("/^select/i", $sql)) $isSelect = true;
-                $statement = ($forceReader)?$this->reader->prepare($sql):$this->dbh->prepare($sql);
+                $statement = ($forceReader && !empty($this->reader))?$this->reader->prepare($sql):$this->dbh->prepare($sql);
                 $result = $statement->execute($bind);
                 $this->data = [];
                 if ($isSelect) {
