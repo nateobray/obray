@@ -916,7 +916,7 @@
             }
             try {
                 $isSelect = false;
-				if (preg_match("/^select/i", $sql)) $isSelect = true;
+				if (preg_match("/^select/i", $sql) || preg_match("/^set/i", $sql)) $isSelect = true;
                 $statement = ($isSelect && !empty($this->reader))?$this->reader->prepare($sql):$this->dbh->prepare($sql);
                 $result = $statement->execute($bind);
                 $this->data = [];
