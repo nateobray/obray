@@ -336,7 +336,7 @@
         	if( empty($this->is_transaction) ){
 				$get_params = array( $this->primary_key_column => $this->dbh->lastInsertId() );
 				if( !empty($option_is_set) ){ $get_params["with"] = "options"; }
-				$this->get( $get_params );
+				$this->get( $get_params, false );
 			}
 
         }
@@ -418,7 +418,7 @@
         	if( empty($this->is_transaction) ){
 				$get_params = array($this->primary_key_column=>$params[$this->primary_key_column]);
 				if( !empty($option_is_set) ){ $get_params["with"] = "options"; }
-				$this->get( $get_params );
+				$this->get( $get_params, false );
 			}
 			
 
@@ -454,7 +454,7 @@
 
         ********************************************************************/
 
-        public function get($params=array()){
+        public function get($params=array(), $useReader=true){
 
         	$original_params = $params;
 
@@ -534,7 +534,7 @@
 	        $where_str = $this->getWhere($params,$values,$original_params);
 
 	        $this->sql = 'SELECT '.implode(',',$columns).' FROM '.$this->table . $this->getJoin() . $filter_join .$where_str . $order_by . $limit;
-	        $statement = (!empty($this->reader))?$this->reader->prepare($this->sql):$this->dbh->prepare($this->sql);
+	        $statement = (!empty($this->reader) && $useReader)?$this->reader->prepare($this->sql):$this->dbh->prepare($this->sql);
 	        forEach($values as $value){ if( is_integer($value) ){ $statement->bindValue($value['key'], trim($value['value']), PDO::PARAM_INT); } else { $statement->bindValue($value['key'], trim((string)$value['value']), PDO::PARAM_STR); } }
 			$statement->execute();
 			$statement->setFetchMode(PDO::FETCH_NUM);
