@@ -34,7 +34,7 @@
 	require_once 'oUserRoles.php';
 	require_once 'oCLI.php';															// object that provides a command line interface to obray applications
 	require_once 'OUsers.php';                                                          // provides user authentication and permissions
-    require_once 'oLog.php';   
+    require_once 'oLog.php';
 
 	if (!class_exists( 'OObject' )) { die(); }
 
@@ -56,11 +56,11 @@
 
 			$php_input = file_get_contents("php://input");
 			if( !empty($php_input) && empty($params['data']) ){
-				if( $_SERVER["CONTENT_TYPE"] === 'application/json' ){
+				if( strpos($_SERVER["CONTENT_TYPE"], 'application/json' )!== -1){
 					$params = (array)json_decode($php_input);
 				} else {
 					$params["data"] = $php_input;
-				}				
+				}
 			}
 
 			$start_time = microtime(TRUE);
@@ -79,8 +79,8 @@
 			*****************************************************************************************/
 
 			$status_codes = array(																	// available status codes that the application can return to the browser
-			 
-			 // 
+
+			 //
 			 101 => 'Permission Denied',
 
 			 // Successful 2xx
@@ -135,7 +135,7 @@
 			 505 => 'HTTP Version Not Supported'													// 505 - The server does not support, or refuses to support, the HTTP protocol version that was used in the request message.
 
 			);
-			
+
 			if( $obj->getStatusCode() == 401 ) {
 				if( !empty(__OBRAY_AUTHENTICATION_HEADER__) ) {
 					header('WWW-Authenticate: Basic realm="'.__APP__.'"');
@@ -183,32 +183,32 @@
     			 	if(!headers_sent()){ header('Server-Runtime: ' . $obj->runtime . 'ms' ); }    	 // set header runtime
     			 	echo $obj->html;
 					break;
-				
+
 				case 'text/csv': $extension = 'csv'; $separator = ',';
-				case 'text/tsv': 
-					
+				case 'text/tsv':
+
 					if( empty($extension) ){ $extension = 'tsv'; }
 					if( empty($separator) ){ $separator = "\t"; }
-				
+
 					header("Content-disposition: attachment; filename=\"".$obj->object.".".$extension."\"");
 					header('Content-Type: application/octet-stream; charset=utf-8;');
 					header("Content-Transfer-Encoding: utf-8");
-					
+
 				case 'text/table':
-					
+
 					$withs = array();
 					if( !empty($obj->table_definition) ){
-						
+
 						forEach( $obj->table_definition as $name => $col ){
 							forEach( $col as $key => $prop ){ if( !in_array($key,['primary_key','label','required','data_type','type','slug_key','slug_value']) ){ $withs[] = $key; } }
 						}
-					
+
 					 }
-					
+
 					if( !empty($extension) ){ $fp = fopen('php://output', 'w'); }
-					if( !empty($obj->data) ){ 
+					if( !empty($obj->data) ){
 						$obj->data = $this->getCSVRows($obj->data);
-						
+
 						$columns = array();
 						$biggest_row = new stdClass(); $biggest_row->index = 0; $biggest_row->count = 0;
 						forEach( $obj->data as $i => $array ){
@@ -216,33 +216,33 @@
 							$columns = array_merge($columns,$new);
 							$columns = array_unique($columns);
 						}
-						
+
 						$path = preg_replace('/with=[^&]*/','',$path);$path = str_replace('?&','?',$path);$path = str_replace('&&','&',$path);
-						
-						if( !empty($extension) ){ fputcsv($fp,$columns,$separator); } else { 
+
+						if( !empty($extension) ){ fputcsv($fp,$columns,$separator); } else {
 							echo '<html>';
 							echo '<head><link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css"><script src="https://code.jquery.com/jquery-1.11.2.min.js"></script><script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script></head>';
 							echo '<body>';
 							$csv_path = str_replace('otable','ocsv',$path);
 							$tsv_path = str_replace('otable','otsv',$path);
 							$json_path = str_replace(['?otable','&otable'],'',$path);
-							
-							
+
+
 							$col_dropdown = '<div class="btn-group" role="group"><button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">Cols <span class="caret"></span></button><ul class="dropdown-menu" role="menu">';
 							forEach( $columns as $col ){
 								$col_dropdown .='<li><a href="'.$path.'">'.$col.'</a></li>';
 							}
 							$col_dropdown .='</ul></div>';
-							
+
 							$with_dropdown = '<div class="btn-group" role="group"><button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">With <span class="caret"></span></button><ul class="dropdown-menu" role="menu">';
 							forEach( $withs as $with ){
 								$with_dropdown .='<li><a href="'.$path.'&with='.$with.'">'.$with.'</a></li>';
 							}
 							$with_dropdown .='</ul></div>';
-							
-							
+
+
 							echo '<div class="pull-right"><div class="btn-group">'.$col_dropdown.$with_dropdown.'<a class="btn btn-default" target="_blank" href="'.$csv_path.'">Download CSV</a><a target="_blank" class="btn btn-default" href="'.$tsv_path.'">Download TSV</a><a target="_blank" class="btn btn-default" href="'.$json_path.'">Show JSON</a>&nbsp;</div></div> <h2>'.$obj->object.'</h2> <table class="table table-bordered table-striped table-condensed" cellpadding="3" cellspacing="0">'; $this->putTableRow($columns,'tr','th'); }
-						
+
 						forEach( $obj->data as $index => $row_data ){
 							$row = array_fill_keys($columns,'');
 							$row = array_merge($row,$row_data);
@@ -250,9 +250,9 @@
 							flush();
 						}
 						if( $content_type = 'text/html' ){ echo '</table></body>'; }
-						
+
 					}
-					
+
 					break;
 
 				case 'console':
@@ -264,7 +264,7 @@
 					$this->console($obj);
 					$this->console("\n");
 					break;
-					
+
     			case 'application/xml':                                                             // Handle XML
     				break;
     			case 'text/css';
@@ -272,58 +272,58 @@
     			case 'image/jpeg':
     				echo $obj->html;
     			    break;
-					
+
 			}
-			
+
 			/*****************************************************************************************
-				
+
 				3.	Returning the final object for output
-				
+
 			*****************************************************************************************/
-			
+
 			return $obj;
 
 		}
-		
+
 		private function putTableRow( $row,$r='tr',$d='td' ){
 			echo '<'.$r.'>';
 			forEach( $row as $value ){ echo '<'.$d.' style="white-space: nowrap;">'.$value.'</'.$d.'>'; }
 			echo '</'.$r.'>';
 		}
-		
+
 		private function getCSVRows( $data ){
-			
+
 			$columns = array();
 			$rows = array();
 			if( is_array($data) ){
 				forEach( $data as $row => $obj ){
 					$rows[] = $this->flattenForCSV($obj,'',$columns);
 				}
-				
+
 			} else {
 				$rows[] = $this->flattenForCSV($data,'',$columns);
 			}
 			return $rows;
-			
+
 		}
-		
+
 		private function flattenForCSV($obj,$prefix='',$columns=array()){
-			
+
 			$prefix .= (!empty($prefix)?'_':'');
 			$flat = array_fill_keys($columns,'');
 			if( is_object($obj) || is_array($obj) ){
 				forEach( $obj as $key => $value ){
-					if( is_object($value) || is_array($value) ){  
+					if( is_object($value) || is_array($value) ){
 						$flat = array_merge($flat,$this->flattenForCSV($value,$prefix.$key));
 					} else {
 						$flat[$prefix.$key] = $value;
 					}
-					
+
 				}
 			}
 			return $flat;
-			
-			
+
+
 		}
 
 	}
