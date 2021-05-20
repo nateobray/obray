@@ -56,7 +56,7 @@
 
 			$php_input = file_get_contents("php://input");
 			if( !empty($php_input) && empty($params['data']) ){
-				if( $_SERVER["CONTENT_TYPE"] === 'application/json' ){
+				if( strpos($_SERVER["CONTENT_TYPE"], 'application/json' ) !== -1 ){
 					$params = (array)json_decode($php_input);
 				} else {
 					$params["data"] = $php_input;
