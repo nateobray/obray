@@ -556,7 +556,6 @@
 			} catch (\Exception $e){
 				$this->handleDBError($e, $statement);
 			}
-			$statement->execute();
 			$statement->setFetchMode(PDO::FETCH_NUM);
 			$data = $statement->fetchAll(PDO::FETCH_OBJ);
 			
@@ -939,11 +938,10 @@
 				if (preg_match("/^select/i", $sql)) $isSelect = true;
 				$statement = ($forceReader && !empty($this->reader))?$this->reader->prepare($sql):$this->dbh->prepare($sql);
 				try {
-					$result = $statement->execute();
+					$result = $statement->execute($bind);
 				} catch (\Exception $e){
 					$result = $this->handleDBError($e, $statement);
 				}
-                $result = $statement->execute($bind);
                 $this->data = [];
                 if ($isSelect) {
                     $statement->setFetchMode(PDO::FETCH_OBJ);
