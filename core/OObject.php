@@ -48,7 +48,7 @@
 	{
 		global $readConn;
 		if(!defined('__OBRAY_DATABASE_HOST_READER__')){
-			return getDatabaseConnection($reconnect);
+			return false;
 		}
 		if( !isSet( $readConn ) || $reconnect ){
 			try {
@@ -548,7 +548,8 @@
 					        return $obj;
 
 				        } catch (Exception $e){
-				        	$this->throwError($e->getMessage());
+							$code = (!empty($e->getCode()))?$e->getCode():'general';
+				        	$this->throwError($e->getMessage(), 500, $code);
 							$this->logError(oCoreProjectEnum::OOBJECT,$e);
 				       	}
 
@@ -591,7 +592,8 @@
 						$this->$path($params);
 					}
 				} catch (Exception $e) {
-					$this->throwError($e->getMessage());
+					$code = (!empty($e->getCode()))?$e->getCode():'general';
+					$this->throwError($e->getMessage(), 500, $code);
 					$this->logError(oCoreProjectEnum::ODBO,$e);
 				}
 				return $this;
@@ -602,7 +604,8 @@
 						$this->index($params);
 					}
 				} catch (Exception $e) {
-					$this->throwError($e->getMessage());
+					$code = (!empty($e->getCode()))?$e->getCode():'general';
+					$this->throwError($e->getMessage(), 500, $code);
 					$this->logError(oCoreProjectEnum::ODBO,$e);
 				}
 				return $this;
