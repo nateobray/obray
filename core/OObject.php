@@ -48,7 +48,7 @@
 	{
 		global $readConn;
 		if(!defined('__OBRAY_DATABASE_HOST_READER__')){
-			return false;
+			return getDatabaseConnection($reconnect);
 		}
 		if( !isSet( $readConn ) || $reconnect ){
 			try {
