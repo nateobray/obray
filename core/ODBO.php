@@ -42,7 +42,7 @@
         public $dbh;
 		public $enable_system_columns = TRUE;
 		
-		private $shouldUseReader = true;
+		private static $shouldUseReader = true;
 
 	    public function __construct(){
 
@@ -75,6 +75,22 @@
             }
 
 	    }
+
+		/**
+		 * @param bool $shouldUseReader
+		 */
+		public static function setUseReader($shouldUseReader)
+		{
+			static::$shouldUseReader = $shouldUseReader;
+		}
+
+		/**
+		 * @return bool
+		 */
+		public static function getShouldUseReader()
+		{
+			return static::$shouldUseReader;
+		}
 
 	    public function startTransaction(){
 	    	$this->dbh->beginTransaction();
@@ -342,7 +358,7 @@
         	if( empty($this->is_transaction) ){
 				$get_params = array( $this->primary_key_column => $this->dbh->lastInsertId() );
 				if( !empty($option_is_set) ){ $get_params["with"] = "options"; }
-				$this->shouldUseReader = false;
+				static::$shouldUseReader = false;
 				$this->get( $get_params);
 			}
 
@@ -429,7 +445,7 @@
         	if( empty($this->is_transaction) ){
 				$get_params = array($this->primary_key_column=>$params[$this->primary_key_column]);
 				if( !empty($option_is_set) ){ $get_params["with"] = "options"; }
-				$this->shouldUseReader = false;
+				static::$shouldUseReader = false;
 				$this->get( $get_params);
 			}
 			
@@ -548,7 +564,7 @@
 	        $where_str = $this->getWhere($params,$values,$original_params);
 
 	        $this->sql = 'SELECT '.implode(',',$columns).' FROM '.$this->table . $this->getJoin() . $filter_join .$where_str . $order_by . $limit;
-			$statement = (!empty($this->reader) && $this->shouldUseReader)?$this->reader->prepare($this->sql):$this->dbh->prepare($this->sql);
+			$statement = (!empty($this->reader) && static::$shouldUseReader)?$this->reader->prepare($this->sql):$this->dbh->prepare($this->sql);
 			$this->shouldUserReader = true;
 			forEach($values as $value){ if( is_integer($value) ){ $statement->bindValue($value['key'], trim($value['value']), PDO::PARAM_INT); } else { $statement->bindValue($value['key'], trim((string)$value['value']), PDO::PARAM_STR); } }
 			try {
