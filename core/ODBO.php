@@ -565,7 +565,6 @@
 
 	        $this->sql = 'SELECT '.implode(',',$columns).' FROM '.$this->table . $this->getJoin() . $filter_join .$where_str . $order_by . $limit;
 			$statement = (!empty($this->reader) && static::$shouldUseReader)?$this->reader->prepare($this->sql):$this->dbh->prepare($this->sql);
-			$this->shouldUserReader = true;
 			forEach($values as $value){ if( is_integer($value) ){ $statement->bindValue($value['key'], trim($value['value']), PDO::PARAM_INT); } else { $statement->bindValue($value['key'], trim((string)$value['value']), PDO::PARAM_STR); } }
 			try {
 				$statement->execute();
