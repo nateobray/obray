@@ -81,7 +81,7 @@
 		 */
 		public static function setUseReader($shouldUseReader)
 		{
-			static::$shouldUseReader = $shouldUseReader;
+			self::$shouldUseReader = $shouldUseReader;
 		}
 
 		/**
@@ -89,7 +89,7 @@
 		 */
 		public static function getShouldUseReader()
 		{
-			return static::$shouldUseReader;
+			return self::$shouldUseReader;
 		}
 
 	    public function startTransaction(){
@@ -358,7 +358,7 @@
         	if( empty($this->is_transaction) ){
 				$get_params = array( $this->primary_key_column => $this->dbh->lastInsertId() );
 				if( !empty($option_is_set) ){ $get_params["with"] = "options"; }
-				static::$shouldUseReader = false;
+				self::$shouldUseReader = false;
 				$this->get( $get_params);
 			}
 
@@ -445,7 +445,7 @@
         	if( empty($this->is_transaction) ){
 				$get_params = array($this->primary_key_column=>$params[$this->primary_key_column]);
 				if( !empty($option_is_set) ){ $get_params["with"] = "options"; }
-				static::$shouldUseReader = false;
+				self::$shouldUseReader = false;
 				$this->get( $get_params);
 			}
 			
@@ -564,7 +564,7 @@
 	        $where_str = $this->getWhere($params,$values,$original_params);
 
 	        $this->sql = 'SELECT '.implode(',',$columns).' FROM '.$this->table . $this->getJoin() . $filter_join .$where_str . $order_by . $limit;
-			$statement = (!empty($this->reader) && static::$shouldUseReader)?$this->reader->prepare($this->sql):$this->dbh->prepare($this->sql);
+			$statement = (!empty($this->reader) && self::$shouldUseReader)?$this->reader->prepare($this->sql):$this->dbh->prepare($this->sql);
 			forEach($values as $value){ if( is_integer($value) ){ $statement->bindValue($value['key'], trim($value['value']), PDO::PARAM_INT); } else { $statement->bindValue($value['key'], trim((string)$value['value']), PDO::PARAM_STR); } }
 			try {
 				$statement->execute();
