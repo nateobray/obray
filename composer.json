@@ -5,9 +5,7 @@
   "homepage": "http://www.obray.net",
   "require": {
     "php": ">=7.1",
-    "ext-pdo": "*",
-    "php-di/php-di": "^6.0",
-    "ocramius/proxy-manager": "^2.1"
+    "ext-pdo": "*"
   },
   "autoload": {
     "psr-4": {
