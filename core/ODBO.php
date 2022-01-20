@@ -131,38 +131,132 @@
 
             SCRIPTTABLE
 
+			CREATE TABLE `oAccessorials` (
+  			`oaccessorial_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  			`oaccessorial_name` varchar(50) NOT NULL,
+  			`oaccessorial_description` varchar(255) DEFAULT '',
+  			`OCDT` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  			`OCU` int(10) unsigned NOT NULL DEFAULT '0',
+  			`OMDT` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  			`OMU` int(10) unsigned NOT NULL DEFAULT '0',
+  			PRIMARY KEY (`oaccessorial_id`),
+  			UNIQUE KEY `oAccessorials_oaccessorial_name_uindex` (`oaccessorial_name`)
+			) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+			CREATE TABLE `oAccountingCustomers` (
+			`oaccounting_customers_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+			`ocustomer_id` int(10) unsigned NOT NULL,
+			`ouser_id` int(10) unsigned NOT NULL,
+			`oaccounting_customers_start_date` datetime NOT NULL DEFAULT '2020-05-11 16:09:53',
+			`OCDT` datetime DEFAULT '2020-05-11 16:09:53',
+			`OCU` int(10) unsigned DEFAULT NULL,
+			`OMDT` datetime DEFAULT NULL,
+			`OMU` int(10) unsigned DEFAULT NULL,
+			PRIMARY KEY (`oaccounting_customers_id`),
+			UNIQUE KEY `oaccountingcustomers_ocustomer_id_unique` (`ocustomer_id`),
+			KEY `oaccountingcustomers_ouser_id_index` (`ouser_id`),
+			CONSTRAINT `oaccountingcustomers_ocustomer_id_foreign` FOREIGN KEY (`ocustomer_id`) REFERENCES `ocustomers` (`ocustomer_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+			CONSTRAINT `oaccountingcustomers_ouser_id_foreign` FOREIGN KEY (`ouser_id`) REFERENCES `ousers` (`ouser_id`) ON DELETE CASCADE ON UPDATE CASCADE
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
         *************************************************************************************************************/
+		public function disableConstraints()
+		{
+			$statement = $this->dbh->prepare('SET FOREIGN_KEY_CHECKS=0;');
+			$this->script = $statement->execute();
+		}
 
-        public function scriptTable($params=array()){
+		public function enableConstraints()
+		{
+			$statement = $this->dbh->prepare('SET FOREIGN_KEY_CHECKS=1;');
+			$this->script = $statement->execute();
+		}
 
-			$sql = 'CREATE DATABASE IF NOT EXISTS '.__OBRAY_DATABASE_NAME__.';'; $statement = $this->dbh->prepare($sql); $statement->execute();
-
+        public function scriptTable($params=array())
+		{
+			// create DB if it doesn't exist already
+			$sql = 'CREATE DATABASE IF NOT EXISTS `'.__OBRAY_DATABASE_NAME__.'`;'; 
+			$sql .= "\n";
+			$statement = $this->dbh->prepare($sql); 
+			$statement->execute();
+			
 			if( empty($this->dbh) ){ return $this; }
 
 			$sql = '';
+			$indexes = [];
+			$foreign = [];
 			$data_types = unserialize(__OBRAY_DATATYPES__);
 
 			forEach($this->table_definition as $name => $def){
 				if( isSet($def['data_type']) && $def['data_type'] == "filter" ){ continue; }
 			    if( array_key_exists('store',$def) == FALSE || (array_key_exists('store',$def) == TRUE && $def['store'] == TRUE ) ){
 
-			        if( !empty($sql) ){ $sql .= ','; }
+			        if( !empty($sql) ){ $sql .= ",\n"; }
 					if( isSet($def['data_type']) ){
 						$data_type = $this->getDataType($def);
-						$sql .= $name . str_replace('size',str_replace(')','',$data_type['size']),$data_types[$data_type['data_type']]['sql']);
+						if(!empty($data_type) && $def['data_type'] != 'ENUM'){
+							$sql .= "\t" . $name . str_replace('size',str_replace(')','',$data_type['size']),$data_types[$data_type['data_type']]['sql']);
+						}
+						if($def['data_type'] == 'ENUM' && !empty($def['options'])){
+							$sql .= "\t" . $name . ' ENUM (\'' . implode('\',\'', $def['options']) . '\')';
+						}
+						
+					}
+					if(!empty($def['nullable']) && $def['nullable'] == false){
+						$sql .= ' NOT NULL ';
+					}
+					if(!empty($def['default'])){
+						$sql .= ' DEFAULT \'' . $def['default'] . '\' ';
 					}
 
 					if( array_key_exists('primary_key',$def) && $def['primary_key'] === TRUE  ){
 						$this->primary_key_column = $name;
-						$sql .= $name . ' INT UNSIGNED NOT NULL AUTO_INCREMENT ';
+						$sql .= "\t" . $name . " INT(11) UNSIGNED NOT NULL AUTO_INCREMENT";
+					}
+
+					if(!empty($def['index'])){
+						$indexData = explode(':', $def['index']);
+						$columns = '`'.$name.'`';
+						if(count($indexData) == 2){
+							$indexableColumns = explode('|', $indexData[1]);
+							forEach($indexableColumns as $i => $ind){
+								if($ind !== $name){
+									$columns .= ',`'.$ind.'`';
+								}
+							}
+						}
+						if(strpos($def['index'], 'unique') !== false){	
+							$indexes[] = 'UNIQUE KEY `'.$this->table.'_'.$name.'_uindex` ('.$columns.')  USING BTREE';
+						} else {
+							$indexes[] = 'KEY `'.$this->table.'_'.$name.'_index` ('.$columns.') USING BTREE';
+						}
+					}
+
+					if(!empty($def['foreign'])){
+						$fk = explode(':', $def['foreign']);
+						if(count($fk) == 2){
+							$obj = $this->route($fk[1]);
+							$foreign[] = 'CONSTRAINT `'.$this->table.'_'.$name.'_foreign` FOREIGN KEY (`'.$name.'`) REFERENCES `'.$obj->getTable().'` (`'.$fk[0].'`) ON DELETE CASCADE ON UPDATE CASCADE';
+						}
 					}
 			    }
 			}
+			$indexesAndConstraints = array_merge($indexes, $foreign);
+			
 
-			$sql = 'CREATE TABLE IF NOT EXISTS ' . $this->table . ' ( ' . $sql;
-			if( $this->enable_system_columns ){ $sql .= ', OCDT DATETIME, OCU INT UNSIGNED, OMDT DATETIME, OMU INT UNSIGNED '; }
-			if( !empty($this->primary_key_column) ){ $sql .= ', PRIMARY KEY (' . $this->primary_key_column . ') ) ENGINE='.__OBRAY_DATABASE_ENGINE__.' DEFAULT CHARSET='.__OBRAY_DATABASE_CHARACTER_SET__.'; '; }
-
+			$sql = 'CREATE TABLE IF NOT EXISTS ' . $this->table . " (\n\n" . $sql;
+			if( $this->enable_system_columns ){ 
+				$sql .= ",\n\n\tOCDT DATETIME DEFAULT CURRENT_TIMESTAMP,\n\tOCU INT(11) UNSIGNED,\n\tOMDT DATETIME DEFAULT CURRENT_TIMESTAMP,\n\tOMU INT(11) UNSIGNED"; 
+			}
+			if( !empty($this->primary_key_column) ){ 
+				$sql .= ",\n\nPRIMARY KEY (" . $this->primary_key_column . ') '; 
+			}
+			if( !empty($indexesAndConstraints) ){
+				$sql .= ",\n";
+				$sql .= implode(",\n", $indexesAndConstraints);
+			}
+			$sql .= "\n\n) ENGINE=".__OBRAY_DATABASE_ENGINE__.' DEFAULT CHARSET='.__OBRAY_DATABASE_CHARACTER_SET__.'; ';
+			$this->console($sql);
 			$this->sql = $sql;
 			$statement = $this->dbh->prepare($sql);
 			$this->script = $statement->execute();
@@ -246,6 +340,7 @@
         ********************************************************************/
 
         public function getTableDefinition(){ $this->data = $this->table_definition; }
+		public function getTable(){ return $this->table; }
         private function getWorkingDef(){
         	$this->required = array();
 	        forEach($this->table_definition as $key => $def){

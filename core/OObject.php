@@ -393,6 +393,7 @@
 			$namespace_str = implode("/", $namespace_components);
 			$namespace = str_replace("/","\\", str_replace(__OBRAY_NAMESPACE_ROOT__,__OBRAY_APP_NAME__.'\\',$namespace_str));
 			$namespaced_path = "\\".$namespace."\\".$obj_name;
+			$namespaced_path = str_replace('\\\\','\\',$namespaced_path);
             $exists = class_exists($namespaced_path);
             if($exists){
                 $this->namespaced_path = $namespaced_path;
@@ -406,16 +407,6 @@
 			CREATE OBJECT
 
 		***********************************************************************/
-
-		private function getContainerSingleton() {
-			if(self::$container == null){
-				$builder = new \DI\ContainerBuilder();
-				$builder->addDefinitions(__OBRAY_SITE_ROOT__.'di-config.php');
-				return self::$container = $builder->build();
-
-			}
-			return self::$container;
-		}
 
 		private function createObject($path_array,$path,$base_path,&$params,$direct){
 			
@@ -432,7 +423,6 @@
 			if( empty($path_array) && empty($this->object) && empty($base_path)){
 				if(empty($path_array)){	$path_array[] = "index";	}
 			}
-
 			while(count($path_array)>0){
 
                 if(empty($base_path)){
@@ -452,7 +442,7 @@
 
 				$this->namespaced_controller_path = __OBRAY_SITE_ROOT__.$namespacedControllersPath.implode('/',$path_array).'/c'.str_replace(' ','',ucWords( str_replace('-',' ',$obj_name) ) ).'.php';
 				$this->deprecated_controller_path = __OBRAY_SITE_ROOT__.$deprecatedControllersPath.implode('/',$path_array).'/c'.str_replace(' ','',ucWords( str_replace('-',' ',$obj_name) ) ).'.php';
-
+				
 				$this->namespaced_model_path = __OBRAY_SITE_ROOT__.$namespacedModelsPath.implode('/',$path_array).'/'.$obj_name.'.php';
 				$this->deprecated_model_path = $base_path . implode('/',$path_array).'/'.$obj_name.'.php';
 
@@ -493,9 +483,9 @@
                 }
 
 				if (!empty($objectType)){
-
+					
 					$doesNamespaceClassExist = $this->_namespacedClassExists($this->path, $obj_name);
-
+					
 					if (!class_exists( $obj_name ) && !$doesNamespaceClassExist) {
 						require_once $this->path;
 					}
@@ -513,17 +503,7 @@
 
 						try{
 				    		//	CREATE OBJECT
-							if($isNamespacedPath){
-								$container = $this->getContainerSingleton();
-								$obj = $container->make($obj_name, [
-									'params' => $params,
-									'direct' => $direct,
-									'rPath' => $rPath
-								]);
-							}
-							else {
-								$obj = new $obj_name($params,$direct,$rPath);
-							}
+							$obj = new $obj_name($params,$direct,$rPath);
 				    		$obj->objectType = $objectType;
 				    		$obj->setObject(get_class($obj));
 				    		$obj->setContentType($obj->content_type);
