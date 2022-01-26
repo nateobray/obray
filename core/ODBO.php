@@ -236,7 +236,13 @@
 						$fk = explode(':', $def['foreign']);
 						if(count($fk) == 2){
 							$obj = $this->route($fk[1]);
-							$foreign[] = 'CONSTRAINT `'.$this->table.'_'.$name.'_foreign` FOREIGN KEY (`'.$name.'`) REFERENCES `'.$obj->getTable().'` (`'.$fk[0].'`) ON DELETE CASCADE ON UPDATE CASCADE';
+							$onDelete = 'ON DELETE CASCADE';
+							$onUpdate = 'ON UPDATE CASCADE';
+							if(isSet($def['onDelete']) && $def['onDelete'] == null ) $onDelete = 'ON DELETE SET NULL';
+							if(isSet($def['onUpdate']) && $def['onUpdate'] == null ) $onDelete = 'ON UPDATE SET NULL';
+							if(isSet($def['onDelete']) && $def['onDelete'] == 'restrict' ) $onDelete = 'ON DELETE RESTRICT';
+							if(isSet($def['onUpdate']) && $def['onUpdate'] == 'restrict' ) $onDelete = 'ON UPDATE RESTRICT';
+							$foreign[] = 'CONSTRAINT `' . hash('sha256', $this->table.'_'.$name.'_foreign') . '` FOREIGN KEY (`'.$name.'`) REFERENCES `'.$obj->getTable().'` (`'.$fk[0].'`) '.$onDelete.' '.$onUpdate;
 						}
 					}
 			    }
