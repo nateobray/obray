@@ -240,8 +240,8 @@
 							$onUpdate = 'ON UPDATE CASCADE';
 							if(isSet($def['onDelete']) && $def['onDelete'] == null ) $onDelete = 'ON DELETE SET NULL';
 							if(isSet($def['onUpdate']) && $def['onUpdate'] == null ) $onDelete = 'ON UPDATE SET NULL';
-							if(isSet($def['onDelete']) && $def['onDelete'] == 'restrict' ) $onDelete = 'ON DELETE RESTRICT';
-							if(isSet($def['onUpdate']) && $def['onUpdate'] == 'restrict' ) $onDelete = 'ON UPDATE RESTRICT';
+							if(isSet($def['onDelete']) && $def['onDelete'] == 'restrict' ) $onUpdate = 'ON DELETE RESTRICT';
+							if(isSet($def['onUpdate']) && $def['onUpdate'] == 'restrict' ) $onUpdate = 'ON UPDATE RESTRICT';
 							$foreign[] = 'CONSTRAINT `' . hash('sha256', $this->table.'_'.$name.'_foreign') . '` FOREIGN KEY (`'.$name.'`) REFERENCES `'.$obj->getTable().'` (`'.$fk[0].'`) '.$onDelete.' '.$onUpdate;
 						}
 					}
