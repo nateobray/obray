@@ -239,9 +239,9 @@
 							$onDelete = 'ON DELETE CASCADE';
 							$onUpdate = 'ON UPDATE CASCADE';
 							if(array_key_exists('onDelete', $def) && empty($def['onDelete']) ) $onDelete = 'ON DELETE SET NULL';
-							if(array_key_exists('onDelete', $def) && empty($def['onUpdate']) ) $onUpdate = 'ON UPDATE SET NULL';
+							if(array_key_exists('onUpdate', $def) && empty($def['onUpdate']) ) $onUpdate = 'ON UPDATE SET NULL';
 							if(array_key_exists('onDelete', $def) && $def['onDelete'] == 'restrict' ) $onDelete = 'ON DELETE RESTRICT';
-							if(array_key_exists('onDelete', $def) && $def['onUpdate'] == 'restrict' ) $onUpdate = 'ON UPDATE RESTRICT';
+							if(array_key_exists('onUpdate', $def) && $def['onUpdate'] == 'restrict' ) $onUpdate = 'ON UPDATE RESTRICT';
 							$foreign[] = 'CONSTRAINT `' . hash('sha256', $this->table.'_'.$name.'_foreign') . '` FOREIGN KEY (`'.$name.'`) REFERENCES `'.$obj->getTable().'` (`'.$fk[0].'`) '.$onDelete.' '.$onUpdate;
 						}
 					}
