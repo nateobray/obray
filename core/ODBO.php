@@ -215,20 +215,25 @@
 					}
 
 					if(!empty($def['index'])){
-						$indexData = explode(':', $def['index']);
-						$columns = '`'.$name.'`';
-						if(count($indexData) == 2){
-							$indexableColumns = explode('|', $indexData[1]);
-							forEach($indexableColumns as $i => $ind){
-								if($ind !== $name){
-									$columns .= ',`'.$ind.'`';
+						if(!is_array($def['index'])){
+							$def['index'] = [0 => $def['index']];
+						}
+						forEach($def['index'] as $index){
+							$indexData = explode(':', $index);
+							$columns = '`'.$name.'`';
+							if(count($indexData) == 2){
+								$indexableColumns = explode('|', $indexData[1]);
+								forEach($indexableColumns as $i => $ind){
+									if($ind !== $name){
+										$columns .= ',`'.$ind.'`';
+									}
 								}
 							}
-						}
-						if(strpos($def['index'], 'unique') !== false){	
-							$indexes[] = 'UNIQUE KEY `'.$this->table.'_'.$name.'_uindex` ('.$columns.')  USING BTREE';
-						} else {
-							$indexes[] = 'KEY `'.$this->table.'_'.$name.'_index` ('.$columns.') USING BTREE';
+							if(strpos($index, 'unique') !== false){	
+								$indexes[] = 'UNIQUE KEY `'.$this->table.'_'.$name.'_uindex` ('.$columns.')  USING BTREE';
+							} else {
+								$indexes[] = 'KEY `'.$this->table.'_'.$name.'_index` ('.$columns.') USING BTREE';
+							}
 						}
 					}
 
