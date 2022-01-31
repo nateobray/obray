@@ -50,8 +50,7 @@
 	    	$this->enable_column_additions = TRUE;
 	    	$this->enable_column_removal = TRUE;
 	    	$this->enable_data_type_changes = TRUE;
-	    	$this->enable_system_columns = TRUE;
-
+	    	
 	       if( !isSet($this->table) ){ $this->table = ''; }
 	       if( !isSet($this->table_definition) ){ $this->table_definition = array(); }
 	       if( !isSet($this->primary_key_column) ){ $this->primary_key_column = ''; }
