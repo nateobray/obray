@@ -202,10 +202,10 @@
 						}
 						
 					}
-					if(!empty($def['nullable']) && $def['nullable'] == false){
+					if(isSet($def['nullable']) && $def['nullable'] == false){
 						$sql .= ' NOT NULL ';
 					}
-					if(!empty($def['default'])){
+					if(isSet($def['default'])){
 						$sql .= ' DEFAULT \'' . $def['default'] . '\' ';
 					}
 
