@@ -415,6 +415,7 @@
 			$deprecatedControllersPath = "controllers/";
 			$namespacedControllersPath = "app/controllers/";
 			$namespacedModelsPath = "app/models/";
+			$namespacedDataPath = "app/data/";
 			$deprecatedControllersDirectoryExists = false;
 			$rPath = array();
 			$obj_name_loop_counter = 0;
@@ -446,9 +447,17 @@
 				$this->namespaced_model_path = __OBRAY_SITE_ROOT__.$namespacedModelsPath.implode('/',$path_array).'/'.$obj_name.'.php';
 				$this->deprecated_model_path = $base_path . implode('/',$path_array).'/'.$obj_name.'.php';
 
+				$this->namespaced_data_path = __OBRAY_SITE_ROOT__.$namespacedDataPath.implode('/',$path_array).'/'.$obj_name.'.php';
+				$this->deprecated_data_path = $base_path . implode('/',$path_array).'/'.$obj_name.'.php';
+
                 if(file_exists($this->namespaced_model_path)){
                     $objectType = "model";
                     $this->path = $this->namespaced_model_path;
+                    $isNamespacedPath = true;
+                }
+				if(file_exists($this->namespaced_data_path)){
+                    $objectType = "data";
+                    $this->path = $this->namespaced_data_path;
                     $isNamespacedPath = true;
                 }
 				else if(file_exists($this->deprecated_model_path)){
