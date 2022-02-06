@@ -283,7 +283,7 @@
         	$statement = $this->dbh->prepare($sql);
         	$statement->execute();
 
-        	$statement->setFetchMode(PDO::FETCH_OBJ);
+        	$statement->setFetchMode(\PDO::FETCH_OBJ);
         	$data = $statement->fetchAll();
 
         	$temp_def = $this->table_definition;
@@ -638,8 +638,8 @@
 	        $statement = (!empty($this->reader))?$this->reader->prepare($this->sql):$this->dbh->prepare($this->sql);
 	        forEach($values as $value){ if( is_integer($value) ){ $statement->bindValue($value['key'], trim($value['value']), PDO::PARAM_INT); } else { $statement->bindValue($value['key'], trim((string)$value['value']), PDO::PARAM_STR); } }
 			$statement->execute();
-			$statement->setFetchMode(PDO::FETCH_NUM);
-			$data = $statement->fetchAll(PDO::FETCH_OBJ);
+			$statement->setFetchMode(\PDO::FETCH_NUM);
+			$data = $statement->fetchAll(\PDO::FETCH_OBJ);
 			
 	        $this->data = $data;
 
@@ -683,18 +683,18 @@
 		        	$new_params = array(); parse_str($with[0],$new_params);
 		        	$sub_params = array_replace($sub_params,$new_params);
 
-		        	if( !empty($this->data) && !empty($withs) && in_array('children',$withs[0]) ){ $sub_params['with'] = 'children'; }
+		        	if( !empty($this->data) && !empty($withs[0]) && in_array('children',$withs[0]) ){ $sub_params['with'] = 'children'; }
 			        $with = $this->route($with_components['path'].'get/',$sub_params)->data;
-			        forEach( $with as &$w ){
-			        	if( isSet($ids_to_index[$w->$with_key]) ){
-				        	forEach( $ids_to_index[$w->$with_key] as $index ){
-				        		if( !isSet($this->data[$index]->$with_name) ){ $this->data[$index]->$with_name = array(); }
-				        		array_push($this->data[$index]->$with_name,$w);
-				        	}
-			        	}
-			        }
-
-
+					if(!empty($with)){
+						forEach( $with as &$w ){
+							if( isSet($ids_to_index[$w->$with_key]) ){
+								forEach( $ids_to_index[$w->$with_key] as $index ){
+									if( !isSet($this->data[$index]->$with_name) ){ $this->data[$index]->$with_name = array(); }
+									array_push($this->data[$index]->$with_name,$w);
+								}
+							}
+						}
+					}
 			        if($filter){ forEach( $this->data as $i => $data ){ if( empty($data->$with_name) ){ unset($this->data[$i]); } } $this->data = array_values((array)$this->data); }
 
 		        }
@@ -1023,7 +1023,7 @@
                 $result = $statement->execute($bind);
                 $this->data = [];
                 if ($isSelect) {
-                    $statement->setFetchMode(PDO::FETCH_OBJ);
+                    $statement->setFetchMode(\PDO::FETCH_OBJ);
                     while ($row = $statement->fetch()) {
                         $this->data[] = $row;
                     }
@@ -1093,7 +1093,7 @@
 
             try {
                 $statement->execute();
-                $statement->setFetchMode(PDO::FETCH_OBJ);
+                $statement->setFetchMode(\PDO::FETCH_OBJ);
                 $this->data = $statement->fetchAll();
             } catch (Exception $e) {
             	if(isset($this->is_transaction) && $this->is_transaction){
@@ -1140,8 +1140,8 @@
 	        $statement = $this->dbh->prepare('SELECT * FROM '.$this->table.' '.$where_str.' ORDER BY RAND() LIMIT '.$rows);
 	        forEach($values as $value){ if( is_integer($value) ){ $statement->bindValue($value['key'], trim($value['value']), PDO::PARAM_INT); } else { $statement->bindValue($value['key'], trim((string)$value['value']), PDO::PARAM_STR); } }
 	        $statement->execute();
-	        $statement->setFetchMode(PDO::FETCH_NUM);
-	        $this->data = $statement->fetchAll(PDO::FETCH_OBJ);
+	        $statement->setFetchMode(\PDO::FETCH_NUM);
+	        $this->data = $statement->fetchAll(\PDO::FETCH_OBJ);
 	        return $this;
 
         }
