@@ -41,6 +41,7 @@
          */
         public $dbh;
 	    public $enable_system_columns = TRUE;
+		protected $ignorePasswords = false;
 
 	    public function __construct(){
 
@@ -69,6 +70,11 @@
 				)));
             }
 	    }
+
+		public function ignorePasswords(bool $ignorePasswords)
+		{
+			$this->ignorePasswords = $ignorePasswords;
+		}
 
 	    public function startTransaction(){
 	    	$this->dbh->beginTransaction();
@@ -397,7 +403,7 @@
 					   $this->throwError((isSet($def['error_message'])?$def['error_message']:isSet($def['label']))?$def['label'].' is invalid.':$key.' is invalid.','500',$key);
 					}
 
-					if( isSet($def['data_type']) && $def['data_type'] == 'password' ){ $salt = '$2a$12$'.$this->generateToken(); $data[$key] = crypt($params[$key],$salt); }
+					if( isSet($def['data_type']) && $def['data_type'] == 'password' && $this->ignorePasswords === false ){ $salt = '$2a$12$'.$this->generateToken(); $data[$key] = crypt($params[$key],$salt); }
 
 					if( isSet($params[$key]) ){
 					   if( !empty($sql) ){ $sql .= ','; $sql_values .= ','; }
@@ -483,7 +489,7 @@
 						$this->throwError((isSet($def['error_message'])?$def['error_message']:isSet($def['label']))?$def['label'].' is invalid.':$key.' is invalid.',500,$key);
 					}
 
-					if( isSet($def['data_type']) && $def['data_type'] == 'password' ){ $salt = '$2a$12$'.$this->generateToken(); $data[$key] = crypt($params[$key],$salt); }
+					if( isSet($def['data_type']) && $def['data_type'] == 'password' && $this->ignorePasswords === false ){ $salt = '$2a$12$'.$this->generateToken(); $data[$key] = crypt($params[$key],$salt); }
 
 					if( !empty($sql) ){ $sql .= ','; $sql_values .= ','; }
 					$sql .= $key . ' = :'.$key.' ';
