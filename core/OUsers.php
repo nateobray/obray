@@ -35,38 +35,32 @@ if (!class_exists('OObject')) {
  ********************************************************************************************************************/
 Class oUsers extends ODBO
 {
+    
+    protected $table_definition = [
+        'ouser_id' =>               array('primary_key' => TRUE),
+        'ouser_first_name' =>       array('data_type' => 'varchar(128)', 'required' => FALSE, 'label' => 'First Name', 'error_message' => 'Please enter the user\'s first name'),
+        'ouser_last_name' =>        array('data_type' => 'varchar(128', 'required' => FALSE, 'label' => 'Last Name', 'error_message' => 'Please enter the user\'s last name'),
+        'ouser_email' =>            array('data_type' => 'varchar(128)', 'required' => TRUE, 'label' => 'Email Address', 'error_message' => 'Please enter the user\'s email address'),
+        'ouser_permission_level' => array('data_type' => 'integer', 'required' => FALSE, 'label' => 'Permission Level', 'error_message' => 'Please specify the user\'s permission level'),
+        'ouser_group' =>            array('data_type' => 'integer'),
+        'ouser_status' =>           array('data_type' => 'varchar(20)', 'required' => FALSE, 'label' => 'Status', 'error_message' => 'Please specify the user\'s status'),
+        'ouser_password' =>         array('data_type' => 'password', 'required' => TRUE, 'label' => 'Password', 'error_message' => 'Please specify the user\'s password'),
+        'ouser_failed_attempts' =>  array('data_type' => 'integer', 'required' => FALSE, 'label' => 'Failed Logins'),
+        'ouser_last_login' =>       array('data_type' => 'datetime', 'required' => FALSE, 'label' => 'Last Login'),
+        'ouser_settings' =>         array('data_type' => 'text', 'required' => FALSE, 'label' => 'Settings')
+    ];
+    protected $table = 'ousers';
 
-    public function __construct()
-    {
-
-        parent::__construct();
-
-        $this->table = 'ousers';
-        $this->table_definition = array(
-            'ouser_id' => array('primary_key' => TRUE),
-            'ouser_first_name' => array('data_type' => 'varchar(128)', 'required' => FALSE, 'label' => 'First Name', 'error_message' => 'Please enter the user\'s first name'),
-            'ouser_last_name' => array('data_type' => 'varchar(128', 'required' => FALSE, 'label' => 'Last Name', 'error_message' => 'Please enter the user\'s last name'),
-            'ouser_email' => array('data_type' => 'varchar(128)', 'required' => TRUE, 'label' => 'Email Address', 'error_message' => 'Please enter the user\'s email address'),
-            'ouser_permission_level' => array('data_type' => 'integer', 'required' => FALSE, 'label' => 'Permission Level', 'error_message' => 'Please specify the user\'s permission level'),
-            'ouser_group' => array('data_type' => 'integer', 'options' => unserialize(__OBRAY_USER_GROUPS__)),
-            'ouser_status' => array('data_type' => 'varchar(20)', 'required' => FALSE, 'label' => 'Status', 'error_message' => 'Please specify the user\'s status'),
-            'ouser_password' => array('data_type' => 'password', 'required' => TRUE, 'label' => 'Password', 'error_message' => 'Please specify the user\'s password'),
-            'ouser_failed_attempts' => array('data_type' => 'integer', 'required' => FALSE, 'label' => 'Failed Logins'),
-            'ouser_last_login' => array('data_type' => 'datetime', 'required' => FALSE, 'label' => 'Last Login'),
-            'ouser_settings' => array('data_type' => 'text', 'required' => FALSE, 'label' => 'Settings')
-        );
-
-        $this->permissions = array(
-            'object' => 'any',
-            'add' => 1,
-            'get' => 1,
-            'update' => 1,
-            'login' => 'any',
-            'logout' => 'any',
-            'count' => 1
-        );
-
-    }
+    
+    protected $permissions = array(
+        'object' => 'any',
+        'add' => 1,
+        'get' => 1,
+        'update' => 1,
+        'login' => 'any',
+        'logout' => 'any',
+        'count' => 1
+    );
 
     /********************************************************************************************************************
      *
