@@ -1,31 +1,5 @@
 <?php
 
-	/*****************************************************************************
-
-	The MIT License (MIT)
-
-	Copyright (c) 2014 Nathan A Obray <nathanobray@gmail.com>
-
-	Permission is hereby granted, free of charge, to any person obtaining a copy
-	of this software and associated documentation files (the 'Software"), to deal
-	in the Software without restriction, including without limitation the rights
-	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-	copies of the Software, and to permit persons to whom the Software is
-	furnished to do so, subject to the following conditions:
-
-	The above copyright notice and this permission notice shall be included in
-	all copies or substantial portions of the Software.
-
-	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-	THE SOFTWARE.
-
-	*****************************************************************************/
-
 	if (!class_exists( 'OObject' )) { die(); }
 
 	/********************************************************************************************************************
@@ -133,34 +107,6 @@
 
             SCRIPTTABLE
 
-			CREATE TABLE `oAccessorials` (
-  			`oaccessorial_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  			`oaccessorial_name` varchar(50) NOT NULL,
-  			`oaccessorial_description` varchar(255) DEFAULT '',
-  			`OCDT` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  			`OCU` int(10) unsigned NOT NULL DEFAULT '0',
-  			`OMDT` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  			`OMU` int(10) unsigned NOT NULL DEFAULT '0',
-  			PRIMARY KEY (`oaccessorial_id`),
-  			UNIQUE KEY `oAccessorials_oaccessorial_name_uindex` (`oaccessorial_name`)
-			) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
-			CREATE TABLE `oAccountingCustomers` (
-			`oaccounting_customers_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-			`ocustomer_id` int(10) unsigned NOT NULL,
-			`ouser_id` int(10) unsigned NOT NULL,
-			`oaccounting_customers_start_date` datetime NOT NULL DEFAULT '2020-05-11 16:09:53',
-			`OCDT` datetime DEFAULT '2020-05-11 16:09:53',
-			`OCU` int(10) unsigned DEFAULT NULL,
-			`OMDT` datetime DEFAULT NULL,
-			`OMU` int(10) unsigned DEFAULT NULL,
-			PRIMARY KEY (`oaccounting_customers_id`),
-			UNIQUE KEY `oaccountingcustomers_ocustomer_id_unique` (`ocustomer_id`),
-			KEY `oaccountingcustomers_ouser_id_index` (`ouser_id`),
-			CONSTRAINT `oaccountingcustomers_ocustomer_id_foreign` FOREIGN KEY (`ocustomer_id`) REFERENCES `ocustomers` (`ocustomer_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-			CONSTRAINT `oaccountingcustomers_ouser_id_foreign` FOREIGN KEY (`ouser_id`) REFERENCES `ousers` (`ouser_id`) ON DELETE CASCADE ON UPDATE CASCADE
-			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
         *************************************************************************************************************/
 		public function disableConstraints()
 		{
@@ -176,6 +122,7 @@
 
         public function scriptTable($params=array())
 		{
+			$this->disableConstraints();
 			// create DB if it doesn't exist already
 			$sql = 'CREATE DATABASE IF NOT EXISTS `'.__OBRAY_DATABASE_NAME__.'`;'; 
 			$sql .= "\n";
@@ -256,7 +203,6 @@
 			}
 			$indexesAndConstraints = array_merge($indexes, $foreign);
 			
-
 			$sql = 'CREATE TABLE IF NOT EXISTS ' . $this->table . " (\n\n" . $sql;
 			if( $this->enable_system_columns ){ 
 				$sql .= ",\n\n\tOCDT DATETIME DEFAULT CURRENT_TIMESTAMP,\n\tOCU INT(11) UNSIGNED,\n\tOMDT DATETIME DEFAULT CURRENT_TIMESTAMP,\n\tOMU INT(11) UNSIGNED"; 
@@ -269,10 +215,15 @@
 				$sql .= implode(",\n", $indexesAndConstraints);
 			}
 			$sql .= "\n\n) ENGINE=".__OBRAY_DATABASE_ENGINE__.' DEFAULT CHARSET='.__OBRAY_DATABASE_CHARACTER_SET__.'; ';
-			$this->console($sql);
+			if(!empty($params['debug'])) $this->console($sql);
 			$this->sql = $sql;
 			$statement = $this->dbh->prepare($sql);
 			$this->script = $statement->execute();
+			if($this->script === false) throw new \Exception("Script " . $this->table . "failed\n");
+
+			$this->run('LOCK TABLES `'.$this->table.'` WRITE;');
+			$this->run('UNLOCK TABLES;');
+			$this->enableConstraints();
 
         }
 
@@ -530,6 +481,11 @@
 			
 
         }
+
+		public function onDuplicateKeyUpdate()
+		{
+			
+		}
 
         /********************************************************************
 
