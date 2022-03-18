@@ -108,34 +108,55 @@
             SCRIPTTABLE
 
         *************************************************************************************************************/
-		public function disableConstraints()
+		public function disableConstraints($returnString=false)
 		{
-			$statement = $this->dbh->prepare('SET FOREIGN_KEY_CHECKS=0;');
-			$this->script = $statement->execute();
+			$sql = "
+				SET @ORIG_FOREIGN_KEY_CHECKS = @@FOREIGN_KEY_CHECKS;
+				SET FOREIGN_KEY_CHECKS = 0;
+				
+				SET @ORIG_UNIQUE_CHECKS = @@UNIQUE_CHECKS;
+				SET UNIQUE_CHECKS = 0;
+				
+				SET @ORIG_TIME_ZONE = @@TIME_ZONE;
+				SET TIME_ZONE = '+00:00';
+				
+				SET @ORIG_SQL_MODE = @@SQL_MODE;
+				SET SQL_MODE = 'NO_AUTO_VALUE_ON_ZERO';
+			";
+			if($returnString) return $sql;
+			$this->dbh->query($sql);
 		}
 
-		public function enableConstraints()
+		public function enableConstraints($returnString=false)
 		{
-			$statement = $this->dbh->prepare('SET FOREIGN_KEY_CHECKS=1;');
-			$this->script = $statement->execute();
+			$sql = "
+				SET FOREIGN_KEY_CHECKS = @ORIG_FOREIGN_KEY_CHECKS;
+
+				SET UNIQUE_CHECKS = @ORIG_UNIQUE_CHECKS;
+
+				SET @ORIG_TIME_ZONE = @@TIME_ZONE;
+				SET TIME_ZONE = @ORIG_TIME_ZONE;
+
+				SET SQL_MODE = @ORIG_SQL_MODE;
+			";
+			if($returnString) return $sql;
+			$this->dbh->query($sql);
 		}
 
         public function scriptTable($params=array())
 		{
-			$this->disableConstraints();
-			// create DB if it doesn't exist already
-			$sql = 'CREATE DATABASE IF NOT EXISTS `'.__OBRAY_DATABASE_NAME__.'`;'; 
-			$sql .= "\n";
-			$statement = $this->dbh->prepare($sql); 
-			$statement->execute();
+			$returnString = false;
+			if(!empty($params['returnString'])) $returnString = true;
+
+			if(!$returnString) $this->disableConstraints();
 			
-			if( empty($this->dbh) ){ return $this; }
+			//if( empty($this->dbh) ){ return $this; }
 
 			$sql = '';
 			$indexes = [];
 			$foreign = [];
 			$data_types = unserialize(__OBRAY_DATATYPES__);
-
+			
 			forEach($this->table_definition as $name => $def){
 				if( isSet($def['data_type']) && $def['data_type'] == "filter" ){ continue; }
 			    if( array_key_exists('store',$def) == FALSE || (array_key_exists('store',$def) == TRUE && $def['store'] == TRUE ) ){
@@ -167,7 +188,7 @@
 						if(!is_array($def['index'])){
 							$def['index'] = [0 => $def['index']];
 						}
-						forEach($def['index'] as $index){
+						forEach($def['index'] as $indexKey => $index){
 							$indexData = explode(':', $index);
 							$columns = '`'.$name.'`';
 							if(count($indexData) == 2){
@@ -179,9 +200,9 @@
 								}
 							}
 							if(strpos($index, 'unique') !== false){	
-								$indexes[] = 'UNIQUE KEY `'.$this->table.'_'.$name.'_uindex` ('.$columns.')  USING BTREE';
+								$indexes[] = 'UNIQUE KEY `'.hash('sha256', $this->table.'_'.$indexKey.'_'.$name.'_uindex').'` ('.$columns.')  USING BTREE';
 							} else {
-								$indexes[] = 'KEY `'.$this->table.'_'.$name.'_index` ('.$columns.') USING BTREE';
+								$indexes[] = 'KEY `'.hash('sha256', $this->table.'_'.$indexKey.'_'.$name.'index').'` ('.$columns.') USING BTREE';
 							}
 						}
 					}
@@ -215,11 +236,15 @@
 				$sql .= implode(",\n", $indexesAndConstraints);
 			}
 			$sql .= "\n\n) ENGINE=".__OBRAY_DATABASE_ENGINE__.' DEFAULT CHARSET='.__OBRAY_DATABASE_CHARACTER_SET__.'; ';
+			
 			if(!empty($params['debug'])) $this->console($sql);
 			$this->sql = $sql;
-			$statement = $this->dbh->prepare($sql);
-			$this->script = $statement->execute();
-			if($this->script === false) throw new \Exception("Script " . $this->table . "failed\n");
+			
+			if($returnString) return $this->data = $this->sql;
+
+			$this->statement = $this->dbh->query($sql);
+			
+			if($this->statement === false) throw new \Exception("Script " . $this->table . "failed\n");
 
 			$this->run('LOCK TABLES `'.$this->table.'` WRITE;');
 			$this->run('UNLOCK TABLES;');
