@@ -413,9 +413,9 @@
 			$path = '';
 			$isNamespacedPath = false;
 			$deprecatedControllersPath = "controllers/";
-			$namespacedControllersPath = "app/controllers/";
-			$namespacedModelsPath = "app/models/";
-			$namespacedDataPath = "app/data/";
+			$namespacedControllersPath = __NAMESPACE_ROOT__ ."controllers/";
+			$namespacedModelsPath = __NAMESPACE_ROOT__ . "models/";
+			$namespacedDataPath = __NAMESPACE_ROOT__ . "data/";
 			$deprecatedControllersDirectoryExists = false;
 			$rPath = array();
 			$obj_name_loop_counter = 0;
@@ -443,7 +443,7 @@
 
 				$this->namespaced_controller_path = __OBRAY_SITE_ROOT__.$namespacedControllersPath.implode('/',$path_array).'/c'.str_replace(' ','',ucWords( str_replace('-',' ',$obj_name) ) ).'.php';
 				$this->deprecated_controller_path = __OBRAY_SITE_ROOT__.$deprecatedControllersPath.implode('/',$path_array).'/c'.str_replace(' ','',ucWords( str_replace('-',' ',$obj_name) ) ).'.php';
-				
+
 				$this->namespaced_model_path = __OBRAY_SITE_ROOT__.$namespacedModelsPath.implode('/',$path_array).'/'.$obj_name.'.php';
 				$this->deprecated_model_path = $base_path . implode('/',$path_array).'/'.$obj_name.'.php';
 
