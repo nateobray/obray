@@ -241,7 +241,7 @@
 			$this->sql = $sql;
 			
 			if($returnString) return $this->data = $this->sql;
-
+			
 			$this->statement = $this->dbh->query($sql);
 			
 			if($this->statement === false) throw new \Exception("Script " . $this->table . "failed\n");
@@ -251,6 +251,39 @@
 			$this->enableConstraints();
 
         }
+
+		public function getConstraints()
+		{
+			/****
+			$sql = "SELECT tc.constraint_schema,tc.constraint_name,tc.table_name,tc.constraint_type,kcu.table_name,kcu.column_name,kcu.referenced_table_name,kcu.referenced_column_name,rc.update_rule,rc.delete_rule
+					  FROM information_schema.table_constraints tc
+				INNER JOIN information_schema.key_column_usage kcu ON tc.constraint_catalog = kcu.constraint_catalog
+																  AND tc.constraint_schema = kcu.constraint_schema
+																  AND tc.constraint_name = kcu.constraint_name
+																  AND tc.table_name = kcu.table_name
+				 LEFT JOIN information_schema.referential_constraints rc ON tc.constraint_catalog = rc.constraint_catalog
+																		AND tc.constraint_schema = rc.constraint_schema
+																		AND tc.constraint_name = rc.constraint_name
+																		AND tc.table_name = rc.table_name
+				     WHERE tc.constraint_schema = '" . __OBRAY_DATABASE_NAME__ . "' AND tc.table_name = '".$this->table."'";
+			 */
+			//$this->console($sql);
+			$sql = "SELECT * 
+			          FROM information_schema.table_constraints tc
+					  JOIN information_schema.key_column_usage kcu ON tc.constraint_catalog = kcu.constraint_catalog
+																  AND tc.constraint_schema = kcu.constraint_schema
+																  AND tc.constraint_name = kcu.constraint_name
+																  AND tc.table_name = kcu.table_name
+					 WHERE tc.constraint_schema = '".__OBRAY_DATABASE_NAME__."' AND tc.table_name = '".$this->table."';";
+			$statement = $this->dbh->prepare($sql);
+        	$statement->execute();
+
+			$statement->setFetchMode(\PDO::FETCH_OBJ);
+        	$constraints = $statement->fetchAll();
+			$this->data = $constraints;
+
+
+		}
 
         /*************************************************************************************************************
 
@@ -274,53 +307,89 @@
 
         	$data_types = unserialize(__OBRAY_DATATYPES__);
 
+
+
         	forEach($data as $def){
-        		if( isSet($def->data_type) && $def->data_type == "filter" ){ continue; }
-        		if( array_key_exists('store',$def) == FALSE || (array_key_exists('store',$def) == TRUE && $def['store'] == TRUE ) ){
+        		if($temp_def[$def->Field]){
+					$this->console("%s", "Found " . $def->Field . " checking column properties...\n", "GreenBold");
+					// if not a primary key, check that the data types, nullableness, and default value matches the definition (and if not change it)
+					if(empty($temp_def[$def->Field]['primary_key'])){
+						$alter = false;
+						// checking type
+						$this->console("%s", "\tChecking type............", "YellowBold");
+						if( false === $dataType = $this->alterCheckType($def->Type, $temp_def[$def->Field]['data_type'])){
+							$dataType = $defType;
+						} else { $alter = true;}
+						// checking nullable
+						$this->console("%s", "\tChecking nullable........", "YellowBold");
+						if( false === $nullable = $this->alterCheckNullable($def->Null, $temp_def[$def->Field]['nullable']??true)){
+							$nullable = ($def->Null=='YES')?'NULL':'NOT NULL';
+						} else { $alter = true;}
+						// checking default value
+						$this->console("%s", "\tChecking default value...", "YellowBold");
+						if( false === $default = $this->alterCheckDefaultValue($def->Default, $temp_def[$def->Field]['default']??null)){
+							$default = 'default ' . (($def->Default==null)?'NULL':"'".$def->Default."'");
+						} else { $alter = true;}
 
-		        	if( array_search($def->Field,$obray_fields) === FALSE ){
-			        	if( isSet($this->table_definition[$def->Field]) ){
+						if($alter === true) $this->alterTableColumn($def->Field, $dataType, $nullable, $default);
+					}
+					if(!empty($temp_def[$def->Field]['delete'])){
+						$this->console("%s", "Deleting column...\n", "GreenBold");
+					}
+					if(!empty($temp_def[$def->Field]['rename'])){
+						$this->console("%s", "Renaming column...\n", "GreenBold");
+					}
+				} else {
+					$this->console("%s","Field " . $def->Field . " does not exist.  Consider adding to the table definition and specifying delete = true\n", "RedBold");
+				}
 
-				        	if( $this->enable_data_type_changes && isSet($this->table_definition[$def->Field]['data_type']) ){
-				        		$data_type = $this->getDataType($this->table_definition[$def->Field]);
-				        		if( str_replace('size',$data_type['size'],$data_types[$data_type['data_type']]['my_sql_type']) != $def->Type ){
-					        		if( !isSet($this->table_alterations) ){ $this->table_alterations = array(); }
-					        		$sql = 'ALTER TABLE '.$this->table.' MODIFY COLUMN '.$def->Field.' '.str_replace('size',$data_type['size'],$data_types[$data_type['data_type']]['sql']);
-					        		$statement = $this->dbh->prepare($sql);
-					        		$this->table_alterations[] = $statement->execute();
-				        		}
-				        	}
-				        	unset( $this->table_definition[$def->Field] );
-
-			        	} else {
-				        	if( $this->enable_column_removal && isSet($_REQUEST['enableDrop']) ){
-				        		if( !isSet($this->table_alterations) ){ $this->table_alterations = array(); }
-	    						$sql = 'ALTER TABLE '.$this->table.' DROP COLUMN '.$def->Field.' ';
-				        		$statement = $this->dbh->prepare($sql);
-				        		$this->table_alterations[] = $statement->execute();
-				        	}
-			        	}
-		        	}
-
-	        	}
         	}
-
-        	if( $this->enable_column_additions ){
-	        	forEach($this->table_definition as $key => $def){
-	        		if( isSet($def['data_type']) && $def['data_type'] == "filter" ){ continue; }
-	        		if( array_key_exists('store',$def) == FALSE || (array_key_exists('store',$def) == TRUE && $def['store'] == TRUE ) ){
-		        		if( !isSet($this->table_alterations) ){ $this->table_alterations = array(); }
-		        		$data_type = $this->getDataType($def);
-			        	$sql = 'ALTER TABLE '.$this->table.' ADD ('.$key.' '.str_replace('size',$data_type['size'],$data_types[$data_type['data_type']]['sql']).')';
-		        		$statement = $this->dbh->prepare($sql);
-		        		$this->table_alterations[] = $statement->execute();
-	        		}
-	        	}
-        	}
-
-        	$this->table_definition = $temp_def;
 
         }
+
+		private function AlterTableColumn($column, $dataType, $nullable, $default)
+		{
+			$sql = "ALTER TABLE " . $this->table . " ALTER COLUMN `" . $column . "` " . $dataType . " " . $nullable . " " . $default . ";";
+			$this->console($sql . "\n");
+			//$statement = $this->dbh->prepare($sql);
+        	//$statement->execute();
+		}
+
+		private function alterCheckType($existingType, $definedType)
+		{
+			$data_types = unserialize(__OBRAY_DATATYPES__);
+			$definedTypeSQL = $data_types[$definedType]["my_sql_type"];
+			if(empty($definedTypeSQL)) $definedTypeSQL = $definedType;
+			if($existingType !== $definedTypeSQL){
+				$this->console("%s", " error: The existing type '" . $existingType . "' does not match defined type '" . $definedTypeSQL . "'\n", "RedBold");
+				return $definedTypeSQL;
+			}
+			$this->console("%s", " ✔\n", "GreenBold");
+			return false;
+		}
+
+		private function alterCheckNullable($existingNullable, $definedNullable)
+		{
+			if($existingNullable === false) $definedNullable = 'NO';
+			if($existingNullable === true) $definedNullable = 'YES';
+			if($definedNullable != $definedNullable){
+				$this->console("%s", " error: The existing nullable '" . $existingNullable . "' does not match the defined nullable '" . $definedNullable . "'\n", "RedBold");
+				if($definedNullable == 'YES') return 'NULL';
+				return 'NOT NULL';
+			}
+			$this->console("%s", " ✔\n", "GreenBold");
+			return false;
+		}
+
+		private function alterCheckDefaultValue($existingDefault, $definedDefault)
+		{
+			if($existingDefault != $definedDefault){
+				$this->console("%s", " error: The existing defualt value '" . $existingDefault . "' does not match the defined default value '" . $definedDefault . "'\n", "RedBold");
+				return "default " . (($definedDefault==null)?'NULL':"'".$definedDefault."'");
+			}
+			$this->console("%s", " ✔\n", "GreenBold");
+			return false;
+		}
 
 		/********************************************************************
 
@@ -328,8 +397,37 @@
 
         ********************************************************************/
 
-        public function getTableDefinition(){ $this->data = $this->table_definition; }
+        public function getTableDefinition(){ return $this->data = $this->table_definition; }
 		public function getTable(){ return $this->table; }
+		public function getPublicDef()
+		{
+			$publicDef = (object)[
+				'primary_key' => null,
+				'name' => $this->name??null,
+				'columns' => []
+			];
+			forEach($this->table_definition as $key => $def){
+				$options = null;
+				if($def['primary_key']){
+					$publicDef->primary_key = $key;
+				}
+				if($def['type']){
+					if(!empty($def['options'])){
+						$options = $this->route($def['options'])->data;
+					}
+					$publicDef->columns[$key] = (object)[
+						'type' => $def['type'],
+						'label' => $def['label']??null,
+						'required' => $def['required']??false,
+						'placehoder' => $def['required']??'',
+						'options' => $options??[]
+					];
+					if(!empty($def['form_label'])) $publicDef->columns[$key]->{'form_label'} = $def['form_label'];
+					
+				}
+			}
+			return $publicDef;
+		}
         private function getWorkingDef(){
         	$this->required = array();
 	        forEach($this->table_definition as $key => $def){
@@ -366,12 +464,12 @@
 				if( isSet($this->table_definition[$key]) ){
 
 					$def = $this->table_definition[$key];
-					if( !empty($def["options"]) ){
-						$options = array_change_key_case($def["options"],CASE_LOWER);
-						if( !empty($options[strtolower($param)]) && !is_array($options[strtolower($param)]) ){ $data[$key] = $options[strtolower($param)]; $option_is_set = TRUE; } else { $data[$key] = $param; }
-					} else {
+					//if( !empty($def["options"]) ){
+					//	$options = array_change_key_case($def["options"],CASE_LOWER);
+					//	if( !empty($options[strtolower($param)]) && !is_array($options[strtolower($param)]) ){ $data[$key] = $options[strtolower($param)]; $option_is_set = TRUE; } else { $data[$key] = $param; }
+					//} else {
 						$data[$key] = $param;
-					}
+					//}
 					$data_type = $this->getDataType($def);
 
 					if( isSet($this->required[$key]) ){ unset($this->required[$key]); }
@@ -449,12 +547,12 @@
 	        	if( isSet($this->table_definition[$key]) ){
 
 					$def = $this->table_definition[$key];
-					if( !empty($def["options"]) ){
-						$options = array_change_key_case($def["options"],CASE_LOWER);
-						if( !empty($options[strtolower($param)]) && !is_array($options[strtolower($param)]) ){ $data[$key] = $options[strtolower($param)]; $option_is_set = TRUE; } else { $data[$key] = $param; }
-					} else {
+					//if( !empty($def["options"]) ){
+					//	$options = array_change_key_case($def["options"],CASE_LOWER);
+					//	if( !empty($options[strtolower($param)]) && !is_array($options[strtolower($param)]) ){ $data[$key] = $options[strtolower($param)]; $option_is_set = TRUE; } else { $data[$key] = $param; }
+					//} else {
 						$data[$key] = $param;
-					}
+					//}
 		        	$data_type = $this->getDataType($def);
 
 					if( isSet($def['required']) && $def['required'] === TRUE && (!isSet($params[$key]) || $params[$key] === NULL || $params[$key] === '') ){

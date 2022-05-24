@@ -580,7 +580,7 @@ Class OObject {
 	public function cleanUp(){
 		if( !in_array($this->content_type,['text/csv','text/tsv','text/table']) ){
 			// remove all object keys not white listed for output - this is so we don't expose unnecessary information
-			$keys = ['object','errors','data','runtime','html','recordcount']; if( __OBRAY_DEBUG_MODE__ ){ $keys[] = 'sql'; $keys[] = 'filter'; }
+			$keys = ['object','errors','data','runtime','html','recordcount','def']; if( __OBRAY_DEBUG_MODE__ ){ $keys[] = 'sql'; $keys[] = 'filter'; }
 			foreach($this as $key => $value) { if( !in_array($key,$keys) ){ unset($this->$key); } }
 		}
 	}
