@@ -897,7 +897,11 @@
 						        	$where[] = array('join'=>$or_key,'key'=>$key,'value'=>':'.$key.'_'.$count,'operator'=>$operator);
 						        	$or_key = 'OR';
 								} else {
-									$where[] = array('join'=>$or_key,'key'=>$key,'value'=>' IS NULL ','operator'=>'');
+                                    if ( $operator == '!=' ) {
+									    $where[] = array('join'=>$or_key,'key'=>$key,'value'=>' IS NOT NULL ','operator'=>'');
+                                    } else if ( $operator == '=' ) {
+									    $where[] = array('join'=>$or_key,'key'=>$key,'value'=>' IS NULL ','operator'=>'');
+                                    }
 								}
 
 					        }
