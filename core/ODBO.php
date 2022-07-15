@@ -16,6 +16,7 @@
         public $dbh;
 	    public $enable_system_columns = TRUE;
 		protected $ignorePasswords = false;
+		protected $isSeeded = false;
 
 	    public function __construct(){
 
@@ -155,6 +156,7 @@
 			$sql = '';
 			$indexes = [];
 			$foreign = [];
+			$keys = [];
 			$data_types = unserialize(__OBRAY_DATATYPES__);
 			
 			forEach($this->table_definition as $name => $def){
@@ -165,10 +167,10 @@
 					if( isSet($def['data_type']) ){
 						$data_type = $this->getDataType($def);
 						if(!empty($data_type) && $def['data_type'] != 'ENUM'){
-							$sql .= "\t" . $name . str_replace('size',str_replace(')','',$data_type['size']),$data_types[$data_type['data_type']]['sql']);
+							$sql .= "\t`" . $name . '` '. str_replace('size',str_replace(')','',$data_type['size']),$data_types[$data_type['data_type']]['sql']);
 						}
 						if($def['data_type'] == 'ENUM' && !empty($def['options'])){
-							$sql .= "\t" . $name . ' ENUM (\'' . implode('\',\'', $def['options']) . '\')';
+							$sql .= "\t`" . $name . '` ENUM (\'' . implode('\',\'', $def['options']) . '\')';
 						}
 						
 					}
@@ -177,11 +179,13 @@
 					}
 					if(isSet($def['default'])){
 						$sql .= ' DEFAULT \'' . $def['default'] . '\' ';
+					} else if($def['primary_key'] != true && empty($def['nullable']) && $def['nullable'] !== false) {
+						$sql .= ' DEFAULT NULL ';
 					}
 
 					if( array_key_exists('primary_key',$def) && $def['primary_key'] === TRUE  ){
 						$this->primary_key_column = $name;
-						$sql .= "\t" . $name . " INT(11) UNSIGNED NOT NULL AUTO_INCREMENT";
+						$sql .= "\t`" . $name . "` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT";
 					}
 
 					if(!empty($def['index'])){
@@ -217,19 +221,21 @@
 							if(array_key_exists('onUpdate', $def) && empty($def['onUpdate']) ) $onUpdate = 'ON UPDATE SET NULL';
 							if(array_key_exists('onDelete', $def) && $def['onDelete'] == 'restrict' ) $onDelete = 'ON DELETE RESTRICT';
 							if(array_key_exists('onUpdate', $def) && $def['onUpdate'] == 'restrict' ) $onUpdate = 'ON UPDATE RESTRICT';
-							$foreign[] = 'CONSTRAINT `' . hash('sha256', $this->table.'_'.$name.'_foreign') . '` FOREIGN KEY (`'.$name.'`) REFERENCES `'.$obj->getTable().'` (`'.$fk[0].'`) '.$onDelete.' '.$onUpdate;
+							$key_name = hash('sha256', $this->table.'_'.$name.'_foreign');
+							$foreign[] = 'CONSTRAINT `' . $key_name . '` FOREIGN KEY (`'.$name.'`) REFERENCES `'.$obj->getTable().'` (`'.$fk[0].'`) '.$onDelete.' '.$onUpdate;
+							$keys[] = 'KEY `' . $key_name . '` (`'.$name.'`)';
 						}
 					}
 			    }
 			}
-			$indexesAndConstraints = array_merge($indexes, $foreign);
+			$indexesAndConstraints = array_merge($indexes, $keys, $foreign);
 			
-			$sql = 'CREATE TABLE IF NOT EXISTS ' . $this->table . " (\n\n" . $sql;
+			$sql = 'CREATE TABLE `' . $this->table . "` (\n\n" . $sql;
 			if( $this->enable_system_columns ){ 
-				$sql .= ",\n\n\tOCDT DATETIME DEFAULT CURRENT_TIMESTAMP,\n\tOCU INT(11) UNSIGNED,\n\tOMDT DATETIME DEFAULT CURRENT_TIMESTAMP,\n\tOMU INT(11) UNSIGNED"; 
+				$sql .= ",\n\n\t`OCDT` DATETIME DEFAULT CURRENT_TIMESTAMP,\n\t`OCU` INT(11) UNSIGNED,\n\t`OMDT` DATETIME DEFAULT CURRENT_TIMESTAMP,\n\t`OMU` INT(11) UNSIGNED"; 
 			}
 			if( !empty($this->primary_key_column) ){ 
-				$sql .= ",\n\nPRIMARY KEY (" . $this->primary_key_column . ') '; 
+				$sql .= ",\n\nPRIMARY KEY (`" . $this->primary_key_column . '`) '; 
 			}
 			if( !empty($indexesAndConstraints) ){
 				$sql .= ",\n";
@@ -242,6 +248,7 @@
 			
 			if($returnString) return $this->data = $this->sql;
 			
+			$this->console($sql. "\n");
 			$this->statement = $this->dbh->query($sql);
 			
 			if($this->statement === false) throw new \Exception("Script " . $this->table . "failed\n");
